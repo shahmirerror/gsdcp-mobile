@@ -1,0 +1,253 @@
+Create a production-ready Flutter mobile application using Material 3.
+
+The UI must follow the Figma design I will provide. Convert the Figma screens into Flutter widgets with pixel-accurate spacing and layout.
+
+App Name: GSDCP Mobile
+Purpose: Mobile registry and directory app for the German Shepherd Dog Club of Pakistan.
+
+---
+
+TECH STACK
+
+Flutter 3+
+Dart
+Material 3
+Provider or Riverpod for state management
+GoRouter for navigation
+HTTP or Dio for API communication
+
+---
+
+PROJECT STRUCTURE
+
+Use a clean scalable architecture.
+
+lib/
+
+core/
+theme/
+colors.dart
+typography.dart
+app_theme.dart
+
+models/
+dog.dart
+breeder.dart
+show_event.dart
+user.dart
+
+services/
+api_service.dart
+auth_service.dart
+
+providers/
+auth_provider.dart
+dog_provider.dart
+event_provider.dart
+
+screens/
+
+auth/
+login_screen.dart
+register_screen.dart
+
+home/
+dashboard_screen.dart
+
+dogs/
+dog_search_screen.dart
+dog_profile_screen.dart
+
+breeders/
+breeder_directory_screen.dart
+breeder_profile_screen.dart
+
+shows/
+shows_screen.dart
+show_results_screen.dart
+
+profile/
+profile_screen.dart
+
+widgets/
+primary_button.dart
+app_card.dart
+dog_list_tile.dart
+search_bar.dart
+bottom_nav_bar.dart
+
+main.dart
+router.dart
+
+---
+
+THEME SYSTEM
+
+Implement a reusable theme.
+
+Primary Color: #0F5C3A
+Dark Green: #083A24
+Accent Gold: #C7A45C
+Background: #F5F5F2
+
+Text Primary: #222222
+Text Secondary: #666666
+
+Rounded Corners: 10–14px
+
+Cards:
+white background
+soft shadow
+border radius 14
+
+Buttons:
+primary button
+green background
+white text
+rounded
+
+---
+
+NAVIGATION
+
+Bottom Navigation Bar with 5 tabs:
+
+Home
+Dogs
+Breeders
+Shows
+Profile
+
+Use GoRouter nested navigation.
+
+---
+
+SCREENS TO IMPLEMENT
+
+1 Dashboard Screen
+Sections:
+Search Dogs
+Quick Actions
+Register Dog
+Find Breeder
+Upcoming Shows
+Recent Show Results
+
+2 Dog Search Screen
+Search bar at top
+Filter options
+Scrollable dog list
+Dog cards
+
+3 Dog Profile Screen
+Dog image
+Name
+Registration number
+Breed
+Gender
+Owner
+Breeder
+Sire
+Dam
+Show results section
+
+4 Breeder Directory
+Search bar
+Breeder cards
+Location
+Kennel name
+
+5 Shows Screen
+Upcoming shows list
+Show cards with date and location
+
+6 Show Results Screen
+Table style layout
+Dog name
+Handler
+Awards
+
+7 Profile Screen
+Member info
+Membership status
+My Dogs
+Logout
+
+---
+
+WIDGET RULES
+
+Create reusable widgets.
+
+PrimaryButton
+AppCard
+DogListTile
+SectionHeader
+SearchInput
+EmptyState
+
+---
+
+STATE MANAGEMENT
+
+Use Riverpod.
+
+AuthProvider
+DogProvider
+BreederProvider
+ShowProvider
+
+---
+
+API INTEGRATION PLACEHOLDERS
+
+Prepare services for REST API.
+
+Endpoints:
+
+GET /dogs
+GET /dogs/{id}
+GET /breeders
+GET /shows
+GET /show-results
+
+---
+
+UI BEHAVIOR
+
+Smooth scrolling
+Loading skeletons
+Empty states
+Error states
+
+---
+
+DESIGN REQUIREMENTS
+
+Follow the provided Figma layouts exactly.
+
+Spacing scale:
+4
+8
+12
+16
+24
+32
+
+Cards should be visually consistent across all screens.
+
+---
+
+DELIVERABLE
+
+Generate the full Flutter project including:
+
+main.dart
+router.dart
+theme system
+all screens
+reusable widgets
+mock API service
+dummy data
+
+Code must be modular, readable, and ready to connect to a backend later.
