@@ -7,13 +7,18 @@ import type { Pedigree, PedigreeAncestor } from "../lib/api";
 
 type Nav = NativeStackNavigationProp<any>;
 
-const CARD_W = 160;
-const CARD_H = 56;
+const CARD_W = 150;
+const CARD_H = 54;
 const GAP = 4;
-const CONN_W = 16;
+const CONN_W = 18;
 const DARK_GREEN = "#2E4A2E";
 const LINE_COLOR = "#B0B0B0";
 const LINE_W = 1.5;
+
+const G4_CELL = CARD_H;
+const G3_CELL = 2 * G4_CELL + GAP;
+const G2_CELL = 2 * G3_CELL + GAP;
+const G1_CELL = 2 * G2_CELL + GAP;
 
 function getTitle(a: PedigreeAncestor): string | null {
   if (!a || typeof a === "string") return null;
@@ -66,30 +71,46 @@ function AncestorCard({ ancestor }: { ancestor: PedigreeAncestor }) {
   );
 }
 
-function BracketConnector({ pairH }: { pairH: number }) {
-  const half = pairH / 2;
+function Bracket({ cellH, childCellH }: { cellH: number; childCellH: number }) {
+  const parentY = cellH / 2;
+  const topY = childCellH / 2;
+  const botY = cellH - childCellH / 2;
+
   return (
-    <View style={{ width: CONN_W, height: pairH }}>
-      <View style={{ position: "absolute", left: 0, top: half - LINE_W / 2, width: CONN_W, height: LINE_W, backgroundColor: LINE_COLOR }} />
-      <View style={{ position: "absolute", right: 0, top: 0, width: LINE_W, height: pairH, backgroundColor: LINE_COLOR }} />
-      <View style={{ position: "absolute", right: 0, top: CARD_H / 2 - LINE_W / 2, width: CONN_W, height: LINE_W, backgroundColor: LINE_COLOR }} />
-      <View style={{ position: "absolute", right: 0, bottom: CARD_H / 2 - LINE_W / 2, width: CONN_W, height: LINE_W, backgroundColor: LINE_COLOR }} />
+    <View style={{ width: CONN_W, height: cellH }}>
+      <View style={{ position: "absolute", left: 0, top: parentY - LINE_W / 2, width: CONN_W / 2 + LINE_W, height: LINE_W, backgroundColor: LINE_COLOR }} />
+      <View style={{ position: "absolute", left: CONN_W / 2, top: topY, width: LINE_W, height: botY - topY + LINE_W, backgroundColor: LINE_COLOR }} />
+      <View style={{ position: "absolute", left: CONN_W / 2, top: topY - LINE_W / 2, width: CONN_W / 2 + LINE_W, height: LINE_W, backgroundColor: LINE_COLOR }} />
+      <View style={{ position: "absolute", left: CONN_W / 2, top: botY - LINE_W / 2, width: CONN_W / 2 + LINE_W, height: LINE_W, backgroundColor: LINE_COLOR }} />
+    </View>
+  );
+}
+
+function CardColumn({ keys, gen, cellH }: { keys: string[]; gen: Record<string, PedigreeAncestor> | undefined; cellH: number }) {
+  return (
+    <View>
+      {keys.map((k, i) => (
+        <View key={k} style={{ height: cellH, justifyContent: "center", marginBottom: i < keys.length - 1 ? GAP : 0 }}>
+          <AncestorCard ancestor={gen?.[k] ?? null} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function BracketColumn({ count, cellH, childCellH }: { count: number; cellH: number; childCellH: number }) {
+  return (
+    <View>
+      {Array.from({ length: count }, (_, i) => (
+        <View key={i} style={{ marginBottom: i < count - 1 ? GAP : 0 }}>
+          <Bracket cellH={cellH} childCellH={childCellH} />
+        </View>
+      ))}
     </View>
   );
 }
 
 export function PedigreeTree({ pedigree }: { pedigree: Pedigree }) {
-  const a = (gen: Record<string, PedigreeAncestor> | undefined, key: string): PedigreeAncestor =>
-    gen?.[key] ?? null;
-
-  const g4H = CARD_H;
-  const g4PairH = g4H * 2 + GAP;
-  const g3H = g4PairH;
-  const g3PairH = g3H * 2 + GAP;
-  const g2H = g3PairH;
-  const g2PairH = g2H * 2 + GAP;
-  const totalH = g2PairH;
-
   const gen1Keys = ["sire", "dam"];
   const gen2Keys = ["sire_sire", "sire_dam", "dam_sire", "dam_dam"];
   const gen3Keys = [
@@ -97,78 +118,26 @@ export function PedigreeTree({ pedigree }: { pedigree: Pedigree }) {
     "dam_sire_sire", "dam_sire_dam", "dam_dam_sire", "dam_dam_dam",
   ];
   const gen4Keys = [
-    "sire_sire_sire_sire", "sire_sire_sire_dam", "sire_sire_dam_sire", "sire_sire_dam_dam",
-    "sire_dam_sire_sire", "sire_dam_sire_dam", "sire_dam_dam_sire", "sire_dam_dam_dam",
-    "dam_sire_sire_sire", "dam_sire_sire_dam", "dam_sire_dam_sire", "dam_sire_dam_dam",
-    "dam_dam_sire_sire", "dam_dam_sire_dam", "dam_dam_dam_sire", "dam_dam_dam_dam",
+    "sire_sire_sire_sire", "sire_sire_sire_dam",
+    "sire_sire_dam_sire", "sire_sire_dam_dam",
+    "sire_dam_sire_sire", "sire_dam_sire_dam",
+    "sire_dam_dam_sire", "sire_dam_dam_dam",
+    "dam_sire_sire_sire", "dam_sire_sire_dam",
+    "dam_sire_dam_sire", "dam_sire_dam_dam",
+    "dam_dam_sire_sire", "dam_dam_sire_dam",
+    "dam_dam_dam_sire", "dam_dam_dam_dam",
   ];
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={true}>
       <View style={styles.tree}>
-
-        {/* Gen 1: 2 cards */}
-        <View style={{ height: totalH }}>
-          {gen1Keys.map((k, i) => (
-            <View key={k} style={{ height: g2H, justifyContent: "center", marginBottom: i === 0 ? GAP : 0 }}>
-              <AncestorCard ancestor={a(pedigree.gen1, k)} />
-            </View>
-          ))}
-        </View>
-
-        {/* Bracket 1→2 */}
-        <View style={{ height: totalH }}>
-          {gen1Keys.map((k, i) => (
-            <View key={k} style={{ height: g2H, justifyContent: "center", marginBottom: i === 0 ? GAP : 0 }}>
-              <BracketConnector pairH={g2H} />
-            </View>
-          ))}
-        </View>
-
-        {/* Gen 2: 4 cards */}
-        <View style={{ height: totalH }}>
-          {gen2Keys.map((k, i) => (
-            <View key={k} style={{ height: g3H, justifyContent: "center", marginBottom: i < 3 ? GAP : 0 }}>
-              <AncestorCard ancestor={a(pedigree.gen2, k)} />
-            </View>
-          ))}
-        </View>
-
-        {/* Bracket 2→3 */}
-        <View style={{ height: totalH }}>
-          {gen2Keys.map((k, i) => (
-            <View key={k} style={{ height: g3H, justifyContent: "center", marginBottom: i < 3 ? GAP : 0 }}>
-              <BracketConnector pairH={g3H} />
-            </View>
-          ))}
-        </View>
-
-        {/* Gen 3: 8 cards */}
-        <View style={{ height: totalH }}>
-          {gen3Keys.map((k, i) => (
-            <View key={k} style={{ height: g4PairH, justifyContent: "center", marginBottom: i < 7 ? GAP : 0 }}>
-              <AncestorCard ancestor={a(pedigree.gen3, k)} />
-            </View>
-          ))}
-        </View>
-
-        {/* Bracket 3→4 */}
-        <View style={{ height: totalH }}>
-          {gen3Keys.map((k, i) => (
-            <View key={k} style={{ height: g4PairH, justifyContent: "center", marginBottom: i < 7 ? GAP : 0 }}>
-              <BracketConnector pairH={g4PairH} />
-            </View>
-          ))}
-        </View>
-
-        {/* Gen 4: 16 cards */}
-        <View style={{ height: totalH }}>
-          {gen4Keys.map((k, i) => (
-            <View key={k} style={{ height: g4H, justifyContent: "center", marginBottom: i < 15 ? GAP : 0 }}>
-              <AncestorCard ancestor={a(pedigree.gen4, k)} />
-            </View>
-          ))}
-        </View>
+        <CardColumn keys={gen1Keys} gen={pedigree.gen1} cellH={G1_CELL} />
+        <BracketColumn count={2} cellH={G1_CELL} childCellH={G2_CELL} />
+        <CardColumn keys={gen2Keys} gen={pedigree.gen2} cellH={G2_CELL} />
+        <BracketColumn count={4} cellH={G2_CELL} childCellH={G3_CELL} />
+        <CardColumn keys={gen3Keys} gen={pedigree.gen3} cellH={G3_CELL} />
+        <BracketColumn count={8} cellH={G3_CELL} childCellH={G4_CELL} />
+        <CardColumn keys={gen4Keys} gen={pedigree.gen4} cellH={G4_CELL} />
       </View>
     </ScrollView>
   );
