@@ -81,16 +81,16 @@ function DogsStackNavigator() {
         name="DogSearch"
         component={DogSearchScreen}
         options={{
-          title: "Dog Search",
-          headerLeft: () => <HeaderLogoSmall />,
+          headerTitle: () => <HeaderLogo />,
         }}
       />
       <DogsStack.Screen
         name="DogProfile"
         component={DogProfileScreen}
-        options={({ route }) => ({
-          title: route.params?.name || "Dog Profile",
-        })}
+        options={{
+          headerTitle: () => <HeaderLogo />,
+          headerBackTitleVisible: false,
+        }}
       />
     </DogsStack.Navigator>
   );
