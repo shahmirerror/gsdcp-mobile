@@ -14,7 +14,6 @@ import BreederDirectoryScreen from "../screens/BreederDirectoryScreen";
 import ShowsScreen from "../screens/ShowsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 
-const logoLandscape = require("../../assets/logo-landscape.png");
 const logoSquare = require("../../assets/logo-square.png");
 
 export type DogsStackParamList = {
@@ -33,62 +32,23 @@ export type RootTabParamList = {
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const DogsStack = createNativeStackNavigator<DogsStackParamList>();
 
-function HeaderLogo() {
-  return (
-    <View style={headerStyles.container}>
-      <Image source={logoLandscape} style={headerStyles.logo} resizeMode="contain" />
-    </View>
-  );
-}
-
-function HeaderLogoSmall() {
-  return (
-    <View style={headerStyles.smallContainer}>
-      <Image source={logoSquare} style={headerStyles.smallLogo} resizeMode="contain" />
-    </View>
-  );
-}
-
-const headerStyles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  logo: {
-    height: 36,
-    width: 160,
-  },
-  smallContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  smallLogo: {
-    height: 32,
-    width: 32,
-  },
-});
-
 function DogsStackNavigator() {
   return (
     <DogsStack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: COLORS.primary },
-        headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "600" },
+        headerShown: false,
       }}
     >
-      <DogsStack.Screen
-        name="DogSearch"
-        component={DogSearchScreen}
-        options={{
-          headerTitle: () => <HeaderLogo />,
-        }}
-      />
+      <DogsStack.Screen name="DogSearch" component={DogSearchScreen} />
       <DogsStack.Screen
         name="DogProfile"
         component={DogProfileScreen}
         options={{
-          headerTitle: () => <HeaderLogo />,
+          headerShown: true,
+          headerTransparent: true,
+          headerTitle: "",
+          headerTintColor: COLORS.primary,
+          headerStyle: { backgroundColor: "transparent" },
         }}
       />
     </DogsStack.Navigator>
@@ -155,47 +115,33 @@ export default function AppNavigator() {
               height: 60,
             },
             tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
-            headerStyle: { backgroundColor: COLORS.primary },
-            headerTintColor: "#fff",
-            headerTitleStyle: { fontWeight: "600" },
+            headerShown: false,
           })}
         >
           <Tab.Screen
             name="DogsTab"
             component={DogsStackNavigator}
-            options={{ title: "Dogs", headerShown: false }}
+            options={{ title: "Dogs" }}
           />
           <Tab.Screen
             name="BreedersTab"
             component={BreederDirectoryScreen}
-            options={{
-              title: "Breeders",
-              headerTitle: () => <HeaderLogo />,
-            }}
+            options={{ title: "Breeders" }}
           />
           <Tab.Screen
             name="HomeTab"
             component={DashboardScreen}
-            options={{
-              title: "Home",
-              headerTitle: () => <HeaderLogo />,
-            }}
+            options={{ title: "Home" }}
           />
           <Tab.Screen
             name="ShowsTab"
             component={ShowsScreen}
-            options={{
-              title: "Shows",
-              headerTitle: () => <HeaderLogo />,
-            }}
+            options={{ title: "Shows" }}
           />
           <Tab.Screen
             name="ProfileTab"
             component={ProfileScreen}
-            options={{
-              title: "Profile",
-              headerTitle: () => <HeaderLogo />,
-            }}
+            options={{ title: "Profile" }}
           />
         </Tab.Navigator>
       </NavigationContainer>

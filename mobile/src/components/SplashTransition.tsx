@@ -44,13 +44,13 @@ export function SplashTransition({ visible }: { visible: boolean }) {
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 92, 58, 0.95)",
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 140,
+    height: 140,
   },
 });
