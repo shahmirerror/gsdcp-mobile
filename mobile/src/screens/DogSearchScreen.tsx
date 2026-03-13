@@ -2,10 +2,10 @@ import { useState, useMemo } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchDogs, Dog } from "../lib/api";
+import { fetchDogsPage, Dog, DogsPage } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import type { DogsStackParamList } from "../navigation/AppNavigator";
 
@@ -21,13 +21,30 @@ export default function DogSearchScreen() {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [genderFilter, setGenderFilter] = useState<string>("All");
 
-  const { data: dogs, isLoading, isError } = useQuery<Dog[]>({
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery<DogsPage>({
     queryKey: ["dogs"],
-    queryFn: fetchDogs,
+    queryFn: ({ pageParam }) => fetchDogsPage(pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasMorePages
+        ? lastPage.pagination.currentPage + 1
+        : undefined,
   });
 
+  const allDogs = useMemo(() => {
+    if (!data) return [];
+    return data.pages.flatMap((page) => page.data);
+  }, [data]);
+
   const filteredDogs = useMemo(() => {
-    let results = dogs ?? [];
+    let results = allDogs;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       results = results.filter(
@@ -44,7 +61,13 @@ export default function DogSearchScreen() {
       results = results.filter((dog) => dog.sex === genderFilter);
     }
     return results;
-  }, [dogs, searchQuery, genderFilter]);
+  }, [allDogs, searchQuery, genderFilter]);
+
+  const handleEndReached = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -95,6 +118,8 @@ export default function DogSearchScreen() {
           data={filteredDogs}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
           renderItem={({ item }) => (
             <DogListItem
               dog={item}
@@ -103,6 +128,15 @@ export default function DogSearchScreen() {
               }
             />
           )}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator
+                size="small"
+                color={COLORS.primary}
+                style={{ paddingVertical: 20 }}
+              />
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />

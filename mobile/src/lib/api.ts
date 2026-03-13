@@ -1,10 +1,23 @@
 const BASE_URL = "https://gsdcp.org/api/mobile";
 
-export async function fetchDogs(): Promise<Dog[]> {
-  const res = await fetch(`${BASE_URL}/dogs`);
+export type PaginationMeta = {
+  perPage: number;
+  currentPage: number;
+  nextPageUrl: string | null;
+  prevPageUrl: string | null;
+  hasMorePages: boolean;
+};
+
+export type DogsPage = {
+  data: Dog[];
+  pagination: PaginationMeta;
+};
+
+export async function fetchDogsPage(page: number = 1): Promise<DogsPage> {
+  const res = await fetch(`${BASE_URL}/dogs?page=${page}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch dogs");
-  return json.data;
+  return { data: json.data, pagination: json.pagination };
 }
 
 export async function fetchDog(id: string): Promise<DogDetail> {
