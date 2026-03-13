@@ -188,7 +188,7 @@ export default function DogProfileScreen() {
           </div>
         </AppCard>
 
-        {(dog.sire ?? dog.dam) && (
+        {(dog.sire || dog.dam) && (
           <AppCard className="p-4 space-y-3" data-testid="card-dog-pedigree">
             <SectionHeader title="Pedigree" />
             <div className="flex gap-4">
