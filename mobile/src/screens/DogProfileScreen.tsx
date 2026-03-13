@@ -116,6 +116,13 @@ export default function DogProfileScreen() {
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
           style={styles.heroGradient}
         />
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
       </ImageBackground>
 
       <View style={styles.profileSection}>
@@ -346,6 +353,18 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 256,
+  },
+  backButton: {
+    position: "absolute",
+    top: 48,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
   profileSection: {
     alignItems: "center",

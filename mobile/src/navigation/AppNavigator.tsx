@@ -43,13 +43,7 @@ function DogsStackNavigator() {
       <DogsStack.Screen
         name="DogProfile"
         component={DogProfileScreen}
-        options={{
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: "",
-          headerTintColor: COLORS.primary,
-          headerStyle: { backgroundColor: "transparent" },
-        }}
+        options={{ headerShown: false }}
       />
     </DogsStack.Navigator>
   );
