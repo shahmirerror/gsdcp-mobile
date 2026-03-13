@@ -85,6 +85,8 @@ Bottom navigation with 5 tabs: Home, Dogs, Breeders, Shows, Profile
 ## Backend API Contract
 - See `API_RESPONSE_TEMPLATES.md` for full response format documentation
 - Dog fields are nullable: `KP`, `dob`, `color`, `imageUrl`, `owner`, `breeder`, `sire`, `dam`, `microchip`
+- Dog detail API includes `pedigree` object with gen1-gen4 (4-generation pedigree tree)
+- Pedigree may be empty array `[]` when no data exists, or object with `gen1`-`gen4` keys
 
 ## Development
 - Server runs on port 5000

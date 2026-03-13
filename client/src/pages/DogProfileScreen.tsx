@@ -3,23 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { AppCard } from "@/components/AppCard";
 import { SectionHeader } from "@/components/SectionHeader";
+import { PedigreeTree } from "@/components/PedigreeTree";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Calendar, MapPin, User, Dna } from "lucide-react";
-import type { Dog, ShowResult } from "@shared/schema";
-
-function PedigreeCard({ label, name }: { label: string; name: string | null }) {
-  return (
-    <div className="flex-1 min-w-0">
-      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-      <p className="text-sm font-medium truncate" data-testid={`text-pedigree-${label.toLowerCase()}`}>
-        {name || "Unknown"}
-      </p>
-    </div>
-  );
-}
+import type { Dog, ShowResult, Pedigree } from "@shared/schema";
 
 function ResultRow({ result }: { result: ShowResult }) {
   return (
@@ -33,17 +23,26 @@ function ResultRow({ result }: { result: ShowResult }) {
   );
 }
 
+function isPedigreePopulated(pedigree: Pedigree | any[] | null | undefined): pedigree is Pedigree {
+  if (!pedigree || Array.isArray(pedigree)) return false;
+  return pedigree.gen1 !== undefined;
+}
+
 export default function DogProfileScreen() {
   const [, params] = useRoute("/dogs/:id");
   const dogId = params?.id;
 
-  const { data: response, isLoading, isError } = useQuery<{ success: boolean; data: { dog: Dog; showResults: ShowResult[] } }>({
+  const { data: response, isLoading, isError } = useQuery<{
+    success: boolean;
+    data: { dog: Dog; showResults: ShowResult[]; pedigree: Pedigree | any[] };
+  }>({
     queryKey: ["/api/dogs", dogId],
     enabled: !!dogId,
   });
 
   const dog = response?.data?.dog;
   const dogResults = response?.data?.showResults ?? [];
+  const pedigree = response?.data?.pedigree;
 
   if (isLoading) {
     return (
@@ -99,6 +98,8 @@ export default function DogProfileScreen() {
     if (years > 0) return `${years}y ${months >= 0 ? months : 12 + months}m`;
     return `${months >= 0 ? months : 12 + months}m`;
   })();
+
+  const hasPedigree = isPedigreePopulated(pedigree);
 
   return (
     <AppLayout>
@@ -188,13 +189,10 @@ export default function DogProfileScreen() {
           </div>
         </AppCard>
 
-        {(dog.sire || dog.dam) && (
+        {hasPedigree && (
           <AppCard className="p-4 space-y-3" data-testid="card-dog-pedigree">
-            <SectionHeader title="Pedigree" />
-            <div className="flex gap-4">
-              <PedigreeCard label="Sire" name={dog.sire} />
-              <PedigreeCard label="Dam" name={dog.dam} />
-            </div>
+            <SectionHeader title="4-Generation Pedigree" />
+            <PedigreeTree pedigree={pedigree} />
           </AppCard>
         )}
 

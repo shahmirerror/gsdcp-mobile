@@ -34,6 +34,55 @@ export type Dog = {
   microchip: string | null;
 };
 
+export type PedigreeGen1 = {
+  sire: string;
+  dam: string;
+};
+
+export type PedigreeGen2 = {
+  sire_sire: string;
+  sire_dam: string;
+  dam_sire: string;
+  dam_dam: string;
+};
+
+export type PedigreeGen3 = {
+  sire_sire_sire: string;
+  sire_sire_dam: string;
+  sire_dam_sire: string;
+  sire_dam_dam: string;
+  dam_sire_sire: string;
+  dam_sire_dam: string;
+  dam_dam_sire: string;
+  dam_dam_dam: string;
+};
+
+export type PedigreeGen4 = {
+  sire_sire_sire_sire: string;
+  sire_sire_sire_dam: string;
+  sire_sire_dam_sire: string;
+  sire_sire_dam_dam: string;
+  sire_dam_sire_sire: string;
+  sire_dam_sire_dam: string;
+  sire_dam_dam_sire: string;
+  sire_dam_dam_dam: string;
+  dam_sire_sire_sire: string;
+  dam_sire_sire_dam: string;
+  dam_sire_dam_sire: string;
+  dam_sire_dam_dam: string;
+  dam_dam_sire_sire: string;
+  dam_dam_sire_dam: string;
+  dam_dam_dam_sire: string;
+  dam_dam_dam_dam: string;
+};
+
+export type Pedigree = {
+  gen1: PedigreeGen1;
+  gen2: PedigreeGen2;
+  gen3: PedigreeGen3;
+  gen4: PedigreeGen4;
+};
+
 export type Breeder = {
   id: string;
   name: string;
