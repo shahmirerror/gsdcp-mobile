@@ -89,7 +89,6 @@ function DogsStackNavigator() {
         component={DogProfileScreen}
         options={{
           headerTitle: () => <HeaderLogo />,
-          headerBackTitleVisible: false,
         }}
       />
     </DogsStack.Navigator>
