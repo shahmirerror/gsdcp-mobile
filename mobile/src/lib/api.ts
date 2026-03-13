@@ -39,7 +39,9 @@ export type Dog = {
   owner: string | null;
   breeder: string | null;
   sire: string | null;
+  sire_id: string | null;
   dam: string | null;
+  dam_id: string | null;
   titles: string[];
   microchip: string | null;
   foreign_reg_no: string | null;

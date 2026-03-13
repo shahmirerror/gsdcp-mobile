@@ -39,10 +39,12 @@ function DetailItem({
   icon,
   label,
   value,
+  onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
+  onPress?: () => void;
 }) {
   return (
     <View style={styles.detailItem}>
@@ -51,7 +53,13 @@ function DetailItem({
       </View>
       <View style={styles.detailTextWrap}>
         <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={styles.detailValue}>{value}</Text>
+        {onPress ? (
+          <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+            <Text style={[styles.detailValue, styles.detailValueLink]}>{value}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.detailValue}>{value}</Text>
+        )}
       </View>
     </View>
   );
@@ -228,8 +236,18 @@ export default function DogProfileScreen() {
                 <DetailItem icon="hardware-chip" label="Microchip" value={dog.microchip || "-"} />
                 <DetailItem icon="person" label="Owner" value={dog.owner || "-"} />
                 <DetailItem icon="build" label="Breeder" value={dog.breeder || "-"} />
-                <DetailItem icon="arrow-up-circle" label="Sire" value={dog.sire || "-"} />
-                <DetailItem icon="arrow-down-circle" label="Dam" value={dog.dam || "-"} />
+                <DetailItem
+                  icon="arrow-up-circle"
+                  label="Sire"
+                  value={dog.sire || "-"}
+                  onPress={dog.sire_id ? () => navigation.push("DogProfile", { id: dog.sire_id }) : undefined}
+                />
+                <DetailItem
+                  icon="arrow-down-circle"
+                  label="Dam"
+                  value={dog.dam || "-"}
+                  onPress={dog.dam_id ? () => navigation.push("DogProfile", { id: dog.dam_id }) : undefined}
+                />
               </View>
             </View>
 
@@ -532,6 +550,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#0F172A",
+  },
+  detailValueLink: {
+    color: COLORS.primary,
+    textDecorationLine: "underline",
   },
   infoRow: {
     flexDirection: "row",
