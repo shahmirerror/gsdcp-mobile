@@ -42,6 +42,7 @@ export type Dog = {
   dam: string | null;
   titles: string[];
   microchip: string | null;
+  foreign_reg_no: string | null;
 };
 
 export type ShowResult = {
