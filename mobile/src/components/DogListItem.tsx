@@ -39,6 +39,11 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
               <Text style={styles.badgeText}>{dog.color}</Text>
             </View>
           ) : null}
+          {dog.hair ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{dog.hair}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
       {dog.titles.length > 0 && (
