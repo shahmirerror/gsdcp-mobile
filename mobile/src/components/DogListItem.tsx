@@ -23,6 +23,7 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{dog.dog_name}</Text>
         {dog.KP ? <Text style={styles.kp}>KP: {dog.KP}</Text> : null}
+        {dog.microchip ? <Text style={styles.kp}>Microchip: {dog.microchip}</Text> : null}
         <View style={styles.badges}>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{dog.sex}</Text>
