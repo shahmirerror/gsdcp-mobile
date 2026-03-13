@@ -44,11 +44,20 @@ export type ShowResult = {
   date: string;
 };
 
+export type PedigreeAncestor = {
+  id: number;
+  dog_name: string;
+  sex?: string;
+  [key: string]: any;
+} | string | null;
+
+export type PedigreeGen = Record<string, PedigreeAncestor>;
+
 export type Pedigree = {
-  gen1: { sire: string; dam: string };
-  gen2: { sire_sire: string; sire_dam: string; dam_sire: string; dam_dam: string };
-  gen3: Record<string, string>;
-  gen4: Record<string, string>;
+  gen1: PedigreeGen;
+  gen2: PedigreeGen;
+  gen3: PedigreeGen;
+  gen4: PedigreeGen;
 };
 
 export type DogDetail = {
@@ -56,3 +65,14 @@ export type DogDetail = {
   showResults: ShowResult[];
   pedigree: Pedigree | any[];
 };
+
+export function getAncestorName(ancestor: PedigreeAncestor): string {
+  if (!ancestor) return "Unknown";
+  if (typeof ancestor === "string") return ancestor || "Unknown";
+  return ancestor.dog_name || "Unknown";
+}
+
+export function getAncestorId(ancestor: PedigreeAncestor): string | null {
+  if (!ancestor || typeof ancestor === "string") return null;
+  return `dog-${ancestor.id}`;
+}

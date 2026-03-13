@@ -2,17 +2,25 @@ import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-nati
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import type { Pedigree } from "../lib/api";
+import { getAncestorName, getAncestorId } from "../lib/api";
+import type { Pedigree, PedigreeAncestor } from "../lib/api";
 
 type Nav = NativeStackNavigationProp<any>;
 
-function AncestorCell({ name, type }: { name: string; type: "sire" | "dam" }) {
+function AncestorCell({ ancestor, type }: { ancestor: PedigreeAncestor; type: "sire" | "dam" }) {
   const navigation = useNavigation<Nav>();
-  const isUnknown = !name || name === "Unknown";
+  const name = getAncestorName(ancestor);
+  const dogId = getAncestorId(ancestor);
+  const isUnknown = name === "Unknown";
   const isSire = type === "sire";
 
   const handlePress = () => {
-    if (!isUnknown) {
+    if (dogId) {
+      navigation.navigate("DogsTab", {
+        screen: "DogProfile",
+        params: { id: dogId, name },
+      });
+    } else if (!isUnknown) {
       navigation.navigate("DogsTab", {
         screen: "DogSearch",
         params: { searchQuery: name },
@@ -35,7 +43,7 @@ function AncestorCell({ name, type }: { name: string; type: "sire" | "dam" }) {
         style={[styles.cellName, isUnknown && styles.unknownText]}
         numberOfLines={2}
       >
-        {isUnknown ? "Unknown" : name}
+        {name}
       </Text>
       <Text style={[styles.cellIcon, isSire ? styles.sireIcon : styles.damIcon]}>
         {isSire ? "♂" : "♀"}
@@ -44,34 +52,36 @@ function AncestorCell({ name, type }: { name: string; type: "sire" | "dam" }) {
   );
 }
 
-function GenColumn({ label, ancestors }: { label: string; ancestors: { name: string; type: "sire" | "dam" }[] }) {
+function GenColumn({ label, ancestors }: { label: string; ancestors: { ancestor: PedigreeAncestor; type: "sire" | "dam" }[] }) {
   return (
     <View style={styles.column}>
       <Text style={styles.columnLabel}>{label}</Text>
       {ancestors.map((a, i) => (
-        <AncestorCell key={`${label}-${i}`} name={a.name} type={a.type} />
+        <AncestorCell key={`${label}-${i}`} ancestor={a.ancestor} type={a.type} />
       ))}
     </View>
   );
 }
 
 export function PedigreeTree({ pedigree }: { pedigree: Pedigree }) {
+  const g = (gen: Record<string, PedigreeAncestor>, key: string): PedigreeAncestor => gen[key] ?? null;
+
   const gen1 = [
-    { name: pedigree.gen1.sire, type: "sire" as const },
-    { name: pedigree.gen1.dam, type: "dam" as const },
+    { ancestor: g(pedigree.gen1, "sire"), type: "sire" as const },
+    { ancestor: g(pedigree.gen1, "dam"), type: "dam" as const },
   ];
   const gen2 = [
-    { name: pedigree.gen2.sire_sire, type: "sire" as const },
-    { name: pedigree.gen2.sire_dam, type: "dam" as const },
-    { name: pedigree.gen2.dam_sire, type: "sire" as const },
-    { name: pedigree.gen2.dam_dam, type: "dam" as const },
+    { ancestor: g(pedigree.gen2, "sire_sire"), type: "sire" as const },
+    { ancestor: g(pedigree.gen2, "sire_dam"), type: "dam" as const },
+    { ancestor: g(pedigree.gen2, "dam_sire"), type: "sire" as const },
+    { ancestor: g(pedigree.gen2, "dam_dam"), type: "dam" as const },
   ];
   const gen3Keys = [
     "sire_sire_sire", "sire_sire_dam", "sire_dam_sire", "sire_dam_dam",
     "dam_sire_sire", "dam_sire_dam", "dam_dam_sire", "dam_dam_dam",
   ];
   const gen3 = gen3Keys.map((k, i) => ({
-    name: (pedigree.gen3 as any)[k] || "Unknown",
+    ancestor: g(pedigree.gen3, k),
     type: (i % 2 === 0 ? "sire" : "dam") as "sire" | "dam",
   }));
   const gen4Keys = [
@@ -81,7 +91,7 @@ export function PedigreeTree({ pedigree }: { pedigree: Pedigree }) {
     "dam_dam_sire_sire", "dam_dam_sire_dam", "dam_dam_dam_sire", "dam_dam_dam_dam",
   ];
   const gen4 = gen4Keys.map((k, i) => ({
-    name: (pedigree.gen4 as any)[k] || "Unknown",
+    ancestor: g(pedigree.gen4, k),
     type: (i % 2 === 0 ? "sire" : "dam") as "sire" | "dam",
   }));
 
