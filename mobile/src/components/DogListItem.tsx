@@ -2,10 +2,8 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import type { Dog } from "../lib/api";
 
-const PLACEHOLDER = "dog_not_found";
-
-function hasRealImage(url: string | null): url is string {
-  return !!url && url.length > 0 && !url.includes(PLACEHOLDER);
+function hasImage(url: string | null): url is string {
+  return !!url && url.length > 0;
 }
 
 interface DogListItemProps {
@@ -23,7 +21,7 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
     .join("")
     .toUpperCase();
 
-  const showImage = hasRealImage(dog.imageUrl);
+  const showImage = hasImage(dog.imageUrl);
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>

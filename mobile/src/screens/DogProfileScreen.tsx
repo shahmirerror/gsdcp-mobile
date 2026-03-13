@@ -120,7 +120,7 @@ export default function DogProfileScreen() {
 
       <View style={styles.profileSection}>
         <View style={styles.avatarOuter}>
-          {dog.imageUrl && dog.imageUrl.length > 0 && !dog.imageUrl.includes("dog_not_found") ? (
+          {dog.imageUrl && dog.imageUrl.length > 0 ? (
             <Image source={{ uri: dog.imageUrl }} style={styles.avatarPhoto} resizeMode="cover" />
           ) : (
             <View style={styles.avatarInner}>
