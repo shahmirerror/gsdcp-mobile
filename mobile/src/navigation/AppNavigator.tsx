@@ -126,9 +126,21 @@ export default function AppNavigator() {
         <Tab.Navigator
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
+              if (route.name === "HomeTab") {
+                return (
+                  <Image
+                    source={logoSquare}
+                    style={{
+                      width: size + 4,
+                      height: size + 4,
+                      opacity: focused ? 1 : 0.5,
+                    }}
+                    resizeMode="contain"
+                  />
+                );
+              }
               let iconName: keyof typeof Ionicons.glyphMap = "home";
-              if (route.name === "HomeTab") iconName = focused ? "home" : "home-outline";
-              else if (route.name === "DogsTab") iconName = focused ? "search" : "search-outline";
+              if (route.name === "DogsTab") iconName = focused ? "paw" : "paw-outline";
               else if (route.name === "BreedersTab") iconName = focused ? "people" : "people-outline";
               else if (route.name === "ShowsTab") iconName = focused ? "trophy" : "trophy-outline";
               else if (route.name === "ProfileTab") iconName = focused ? "person" : "person-outline";
