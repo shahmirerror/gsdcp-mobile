@@ -74,5 +74,6 @@ export function getAncestorName(ancestor: PedigreeAncestor): string {
 
 export function getAncestorId(ancestor: PedigreeAncestor): string | null {
   if (!ancestor || typeof ancestor === "string") return null;
+  if (ancestor.id == null) return null;
   return `dog-${ancestor.id}`;
 }
