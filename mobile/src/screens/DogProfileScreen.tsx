@@ -1,30 +1,42 @@
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  ImageBackground,
+} from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { LinearGradient } from "expo-linear-gradient";
+import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
 import { fetchDog, DogDetail, Pedigree, Dog } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 
-function DetailRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+const heroBg = require("../../assets/hero-bg.jpg");
+
+function DetailItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+}) {
   return (
-    <View style={styles.detailRow}>
-      <Ionicons name={icon} size={16} color={COLORS.textMuted} />
-      <View>
+    <View style={styles.detailItem}>
+      <View style={styles.detailIconWrap}>
+        <Ionicons name={icon} size={18} color={COLORS.primary} />
+      </View>
+      <View style={styles.detailTextWrap}>
         <Text style={styles.detailLabel}>{label}</Text>
         <Text style={styles.detailValue}>{value}</Text>
       </View>
-    </View>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -34,13 +46,13 @@ function isPedigreePopulated(p: Pedigree | any[] | null | undefined): p is Pedig
   return p.gen1 !== undefined;
 }
 
-type TabKey = "pedigree" | "siblings";
+type TabKey = "details" | "pedigree" | "siblings";
 
 export default function DogProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const dogId = route.params?.id;
-  const [activeTab, setActiveTab] = useState<TabKey>("pedigree");
+  const [activeTab, setActiveTab] = useState<TabKey>("details");
 
   const { data, isLoading, isError } = useQuery<DogDetail>({
     queryKey: ["dog", dogId],
@@ -91,44 +103,56 @@ export default function DogProfileScreen() {
   })();
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
+    { key: "details", label: "Details" },
     { key: "pedigree", label: "Pedigree" },
     { key: "siblings", label: "Siblings", count: siblings.length },
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
+        <LinearGradient
+          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
+          style={styles.heroGradient}
+        />
+      </ImageBackground>
+
+      <View style={styles.profileSection}>
+        <View style={styles.avatarOuter}>
+          <View style={styles.avatarInner}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
         </View>
-        {dog.KP ? <Text style={styles.kp}>KP: {dog.KP}</Text> : null}
-        {dog.titles.length > 0 && (
-          <View style={styles.titlesRow}>
+
+        {(dog.titles.length > 0 || dog.KP) && (
+          <View style={styles.badgesRow}>
             {dog.titles.map((t) => (
-              <View key={t} style={styles.titleBadge}>
-                <Text style={styles.titleBadgeText}>{t}</Text>
+              <View
+                key={t}
+                style={[
+                  styles.badge,
+                  t.startsWith("VA") || t.startsWith("V ")
+                    ? styles.badgeGold
+                    : styles.badgeGreen,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.badgeText,
+                    t.startsWith("VA") || t.startsWith("V ")
+                      ? styles.badgeTextGold
+                      : styles.badgeTextGreen,
+                  ]}
+                >
+                  {t}
+                </Text>
               </View>
             ))}
           </View>
         )}
-      </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Details</Text>
-        <View style={styles.detailGrid}>
-          <DetailRow icon="paw" label="Breed" value={dog.breed} />
-          <DetailRow icon="male-female" label="Sex" value={dog.sex} />
-          <DetailRow
-            icon="calendar"
-            label="Date of Birth"
-            value={dog.dob ? `${dog.dob}${age ? ` (${age})` : ""}` : "Unknown"}
-          />
-          <DetailRow icon="color-palette" label="Color" value={dog.color || "Unknown"} />
-        </View>
-        <View style={styles.divider} />
-        {dog.owner ? <InfoRow label="Owner" value={dog.owner} /> : null}
-        {dog.breeder ? <InfoRow label="Breeder" value={dog.breeder} /> : null}
-        {dog.microchip ? <InfoRow label="Microchip" value={dog.microchip} /> : null}
+        <Text style={styles.dogName}>{dog.dog_name}</Text>
+        {dog.KP ? <Text style={styles.kpText}>KP: {dog.KP}</Text> : null}
       </View>
 
       <View style={styles.tabBar}>
@@ -143,63 +167,139 @@ export default function DogProfileScreen() {
               {tab.label}
               {tab.count != null ? ` (${tab.count})` : ""}
             </Text>
+            {activeTab === tab.key && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
         ))}
       </View>
 
-      {activeTab === "pedigree" && (
-        hasPedigree ? (
-          <View style={styles.card}>
-            <PedigreeTree pedigree={pedigree} />
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="git-branch-outline" size={36} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>No pedigree data available</Text>
-          </View>
-        )
-      )}
-
-      {activeTab === "siblings" && (
-        siblings.length > 0 ? (
-          <View style={styles.tabContent}>
-            {siblings.map((sibling: Dog) => (
-              <DogListItem
-                key={sibling.id}
-                dog={sibling}
-                onPress={() =>
-                  navigation.push("DogProfile", {
-                    id: sibling.id,
-                    name: sibling.dog_name,
-                  })
-                }
-              />
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="people-outline" size={36} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>No siblings found</Text>
-          </View>
-        )
-      )}
-
-      {showResults.length > 0 && (
-        <View style={[styles.card, { marginTop: SPACING.lg }]}>
-          <Text style={styles.cardTitle}>Show Results</Text>
-          {showResults.map((result) => (
-            <View key={result.id} style={styles.resultRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.resultShow} numberOfLines={1}>{result.showName}</Text>
-                <Text style={styles.resultMeta}>{result.className} · {result.date}</Text>
-              </View>
-              <View style={styles.awardBadge}>
-                <Text style={styles.awardBadgeText}>{result.award}</Text>
+      <View style={styles.contentArea}>
+        {activeTab === "details" && (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Dog Information</Text>
+              <View style={styles.detailsGrid}>
+                <DetailItem icon="paw" label="Breed" value={dog.breed} />
+                <DetailItem icon="male-female" label="Sex" value={dog.sex} />
+                <DetailItem
+                  icon="calendar"
+                  label="Date of Birth"
+                  value={dog.dob ? `${dog.dob}${age ? ` (${age})` : ""}` : "Unknown"}
+                />
+                <DetailItem icon="color-palette" label="Color" value={dog.color || "Unknown"} />
               </View>
             </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Registration</Text>
+              {dog.KP && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>KP Number</Text>
+                  <Text style={styles.infoValue}>{dog.KP}</Text>
+                </View>
+              )}
+              {dog.microchip && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Microchip</Text>
+                  <Text style={styles.infoValue}>{dog.microchip}</Text>
+                </View>
+              )}
+              {dog.owner && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Owner</Text>
+                  <Text style={styles.infoValue}>{dog.owner}</Text>
+                </View>
+              )}
+              {dog.breeder && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Breeder</Text>
+                  <Text style={styles.infoValue}>{dog.breeder}</Text>
+                </View>
+              )}
+              {dog.sire && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Sire</Text>
+                  <Text style={styles.infoValue}>{dog.sire}</Text>
+                </View>
+              )}
+              {dog.dam && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Dam</Text>
+                  <Text style={styles.infoValue}>{dog.dam}</Text>
+                </View>
+              )}
+            </View>
+
+            {showResults.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardHeading}>Show Results</Text>
+                {showResults.map((result) => (
+                  <View key={result.id} style={styles.resultRow}>
+                    <View style={styles.resultLeft}>
+                      <Text style={styles.resultShow} numberOfLines={1}>
+                        {result.showName}
+                      </Text>
+                      <Text style={styles.resultMeta}>
+                        {result.className} · {result.date}
+                      </Text>
+                    </View>
+                    <View style={styles.awardBadge}>
+                      <Text style={styles.awardBadgeText}>{result.award}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+
+        {activeTab === "pedigree" &&
+          (hasPedigree ? (
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>4-Generation Pedigree</Text>
+              <PedigreeTree pedigree={pedigree} />
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="git-branch-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Pedigree Data</Text>
+              <Text style={styles.emptyDesc}>
+                Pedigree information is not yet available for this dog.
+              </Text>
+            </View>
           ))}
-        </View>
-      )}
+
+        {activeTab === "siblings" &&
+          (siblings.length > 0 ? (
+            <View>
+              {siblings.map((sibling: Dog) => (
+                <DogListItem
+                  key={sibling.id}
+                  dog={sibling}
+                  onPress={() =>
+                    navigation.push("DogProfile", {
+                      id: sibling.id,
+                      name: sibling.dog_name,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="people-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Siblings Found</Text>
+              <Text style={styles.emptyDesc}>
+                No sibling records are available for this dog.
+              </Text>
+            </View>
+          ))}
+      </View>
+
+      <View style={{ height: 32 }} />
     </ScrollView>
   );
 }
@@ -207,181 +307,264 @@ export default function DogProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  content: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxl,
+    backgroundColor: "#f6f8f7",
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: "#f6f8f7",
     gap: SPACING.md,
   },
   errorText: {
-    fontSize: FONT_SIZES.md,
+    fontSize: 14,
     color: COLORS.textMuted,
   },
-  avatarSection: {
-    alignItems: "center",
-    marginBottom: SPACING.xl,
+  heroBanner: {
+    width: "100%",
+    height: 256,
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#E8F5E9",
+  heroGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 256,
+  },
+  profileSection: {
+    alignItems: "center",
+    marginTop: -80,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  avatarOuter: {
+    width: 144,
+    height: 144,
+    borderRadius: 72,
+    borderWidth: 4,
+    borderColor: COLORS.accent,
+    backgroundColor: "#fff",
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.1,
+    shadowRadius: 25,
+    elevation: 8,
+  },
+  avatarInner: {
+    flex: 1,
+    borderRadius: 9999,
+    backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: SPACING.sm,
   },
   avatarText: {
-    fontSize: FONT_SIZES.xxl,
-    fontWeight: "700",
+    fontSize: 36,
+    fontWeight: "800",
     color: COLORS.primary,
   },
-  kp: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    marginBottom: 4,
-  },
-  titlesRow: {
+  badgesRow: {
     flexDirection: "row",
-    gap: 6,
+    gap: 8,
     flexWrap: "wrap",
     justifyContent: "center",
+    marginTop: 16,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 9999,
+  },
+  badgeGold: {
+    backgroundColor: COLORS.accent,
+  },
+  badgeGreen: {
+    backgroundColor: COLORS.primary,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: -0.5,
+  },
+  badgeTextGold: {
+    color: "#FFFFFF",
+  },
+  badgeTextGreen: {
+    color: "#FFFFFF",
+  },
+  dogName: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#0F172A",
+    textAlign: "center",
+    marginTop: 12,
+    lineHeight: 32,
+  },
+  kpText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#64748B",
     marginTop: 4,
   },
-  titleBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: BORDER_RADIUS.sm,
+  tabBar: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.1)",
+    marginHorizontal: 16,
+    marginBottom: 24,
   },
-  titleBadgeText: {
-    color: "#fff",
-    fontSize: FONT_SIZES.xs,
-    fontWeight: "500",
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    position: "relative",
+  },
+  tabActive: {},
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#94A3B8",
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+  },
+  tabIndicator: {
+    position: "absolute",
+    bottom: -1,
+    left: 16,
+    right: 16,
+    height: 3,
+    borderRadius: 9999,
+    backgroundColor: COLORS.accent,
+  },
+  contentArea: {
+    paddingHorizontal: 16,
   },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: "rgba(15,92,59,0.05)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  cardTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginBottom: SPACING.md,
+  cardHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 20,
   },
-  detailGrid: {
-    gap: SPACING.md,
+  detailsGrid: {
+    gap: 20,
   },
-  detailRow: {
+  detailItem: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: SPACING.sm,
+    alignItems: "center",
+    gap: 16,
+  },
+  detailIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "rgba(15,92,59,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  detailTextWrap: {
+    flex: 1,
   },
   detailLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#94A3B8",
+    marginBottom: 2,
   },
   detailValue: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "500",
-    color: COLORS.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: SPACING.md,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0F172A",
   },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 4,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.05)",
   },
   infoLabel: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#64748B",
   },
   infoValue: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "500",
-    color: COLORS.text,
-  },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 3,
-    marginBottom: SPACING.md,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  tabActive: {
-    backgroundColor: COLORS.primary,
-  },
-  tabText: {
-    fontSize: FONT_SIZES.sm,
+    fontSize: 14,
     fontWeight: "600",
-    color: COLORS.textSecondary,
-  },
-  tabTextActive: {
-    color: "#fff",
-  },
-  tabContent: {
-    marginBottom: SPACING.lg,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: SPACING.xxl,
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  emptyText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textMuted,
+    color: "#0F172A",
+    maxWidth: "60%",
+    textAlign: "right",
   },
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: SPACING.sm,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: SPACING.sm,
+    borderBottomColor: "rgba(15,92,59,0.05)",
+    gap: 12,
+  },
+  resultLeft: {
+    flex: 1,
   },
   resultShow: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "500",
-    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
   },
   resultMeta: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+    fontSize: 12,
+    color: "#94A3B8",
     marginTop: 2,
   },
   awardBadge: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
   },
   awardBadgeText: {
     color: "#fff",
-    fontSize: FONT_SIZES.xs,
-    fontWeight: "500",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(15,92,59,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  emptyDesc: {
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+    maxWidth: 280,
   },
 });
