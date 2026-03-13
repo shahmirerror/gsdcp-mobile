@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -33,9 +34,13 @@ function isPedigreePopulated(p: Pedigree | any[] | null | undefined): p is Pedig
   return p.gen1 !== undefined;
 }
 
+type TabKey = "pedigree" | "siblings";
+
 export default function DogProfileScreen() {
   const route = useRoute<any>();
+  const navigation = useNavigation<any>();
   const dogId = route.params?.id;
+  const [activeTab, setActiveTab] = useState<TabKey>("pedigree");
 
   const { data, isLoading, isError } = useQuery<DogDetail>({
     queryKey: ["dog", dogId],
@@ -62,7 +67,6 @@ export default function DogProfileScreen() {
     );
   }
 
-  const navigation = useNavigation<any>();
   const dog = data.dog;
   const showResults = data.showResults ?? [];
   const pedigree = data.pedigree;
@@ -85,6 +89,11 @@ export default function DogProfileScreen() {
     if (years > 0) return `${years}y ${months >= 0 ? months : 12 + months}m`;
     return `${months >= 0 ? months : 12 + months}m`;
   })();
+
+  const tabs: { key: TabKey; label: string; count?: number }[] = [
+    { key: "pedigree", label: "Pedigree" },
+    { key: "siblings", label: "Siblings", count: siblings.length },
+  ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -122,33 +131,61 @@ export default function DogProfileScreen() {
         {dog.microchip ? <InfoRow label="Microchip" value={dog.microchip} /> : null}
       </View>
 
-      {hasPedigree && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>4-Generation Pedigree</Text>
-          <PedigreeTree pedigree={pedigree} />
-        </View>
+      <View style={styles.tabBar}>
+        {tabs.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            onPress={() => setActiveTab(tab.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+              {tab.label}
+              {tab.count != null ? ` (${tab.count})` : ""}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {activeTab === "pedigree" && (
+        hasPedigree ? (
+          <View style={styles.card}>
+            <PedigreeTree pedigree={pedigree} />
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="git-branch-outline" size={36} color={COLORS.textMuted} />
+            <Text style={styles.emptyText}>No pedigree data available</Text>
+          </View>
+        )
       )}
 
-      {siblings.length > 0 && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Siblings ({siblings.length})</Text>
-          {siblings.map((sibling: Dog) => (
-            <DogListItem
-              key={sibling.id}
-              dog={sibling}
-              onPress={() =>
-                navigation.push("DogProfile", {
-                  id: sibling.id,
-                  name: sibling.dog_name,
-                })
-              }
-            />
-          ))}
-        </View>
+      {activeTab === "siblings" && (
+        siblings.length > 0 ? (
+          <View style={styles.tabContent}>
+            {siblings.map((sibling: Dog) => (
+              <DogListItem
+                key={sibling.id}
+                dog={sibling}
+                onPress={() =>
+                  navigation.push("DogProfile", {
+                    id: sibling.id,
+                    name: sibling.dog_name,
+                  })
+                }
+              />
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={36} color={COLORS.textMuted} />
+            <Text style={styles.emptyText}>No siblings found</Text>
+          </View>
+        )
       )}
 
       {showResults.length > 0 && (
-        <View style={styles.card}>
+        <View style={[styles.card, { marginTop: SPACING.lg }]}>
           <Text style={styles.cardTitle}>Show Results</Text>
           {showResults.map((result) => (
             <View key={result.id} style={styles.resultRow}>
@@ -278,6 +315,45 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "500",
     color: COLORS.text,
+  },
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 3,
+    marginBottom: SPACING.md,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  tabActive: {
+    backgroundColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  tabTextActive: {
+    color: "#fff",
+  },
+  tabContent: {
+    marginBottom: SPACING.lg,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: SPACING.xxl,
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  emptyText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textMuted,
   },
   resultRow: {
     flexDirection: "row",
