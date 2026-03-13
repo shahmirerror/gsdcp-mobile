@@ -1,52 +1,45 @@
 # GSDCP Mobile - German Shepherd Dog Club of Pakistan
 
 ## Overview
-A mobile-first web application for the German Shepherd Dog Club of Pakistan. Built with React + TypeScript frontend and Express backend, imported from Figma design.
+A mobile app for the German Shepherd Dog Club of Pakistan built with Expo (React Native). Runs as a web preview in Replit and can be built for iOS/Android using Expo's build service.
 
 ## Tech Stack
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui (Radix UI)
-- **Backend**: Express 5 (Node.js), TypeScript
-- **Routing**: wouter (client-side), Express (server API)
-- **State**: TanStack React Query
-- **Database**: Drizzle ORM + PostgreSQL (schema defined, using MemStorage currently)
-- **Styling**: Tailwind CSS with GSDCP brand colors as CSS variables
+- **Mobile Framework**: Expo SDK 52, React Native 0.76
+- **Navigation**: React Navigation 7 (bottom tabs + native stack)
+- **State**: TanStack React Query v5
+- **Icons**: @expo/vector-icons (Ionicons)
+- **API**: Direct calls to `https://gsdcp.org/api/mobile`
 
 ## Project Structure
 ```
-client/src/
-  components/          # Reusable app widgets
-    ui/                # shadcn/ui base components
-    AppCard.tsx         # Branded card component
-    AppLayout.tsx       # Layout wrapper with BottomNavBar
-    BottomNavBar.tsx    # 5-tab bottom navigation
-    DogListTile.tsx     # Dog card for lists
-    EmptyState.tsx      # Empty state placeholder
-    PrimaryButton.tsx   # Branded green button
-    SearchInput.tsx     # Styled search input
-    SectionHeader.tsx   # Section title with action
-  pages/               # Screen components
-    DashboardScreen.tsx
-    DogSearchScreen.tsx
-    DogProfileScreen.tsx
-    BreederDirectoryScreen.tsx
-    BreederProfileScreen.tsx
-    ShowsScreen.tsx
-    ShowResultsScreen.tsx
-    ProfileScreen.tsx
-    LoginRegistration.tsx
-  lib/
-    constants.ts       # Brand colors, spacing, nav items, app config
-    mock-data.ts       # Dummy data for all entities
-    queryClient.ts     # React Query client config
-    utils.ts           # cn() helper
-server/
-  index.ts             # Express server entry point
-  routes.ts            # API placeholder endpoints
-  storage.ts           # Storage interface (MemStorage)
-  vite.ts              # Vite dev middleware
-  static.ts            # Production static serving
+mobile/
+  App.tsx                  # Root app component with providers
+  index.js                 # Expo entry point
+  app.json                 # Expo configuration
+  metro.config.js          # Metro bundler config
+  babel.config.js          # Babel config with reanimated plugin
+  assets/                  # App icons and splash
+  src/
+    navigation/
+      AppNavigator.tsx     # Bottom tabs + Dogs stack navigator
+    screens/
+      DashboardScreen.tsx  # Home with quick actions, featured dogs
+      DogSearchScreen.tsx  # Searchable/filterable dog list
+      DogProfileScreen.tsx # Dog details, pedigree tree, show results
+      BreederDirectoryScreen.tsx  # Placeholder
+      ShowsScreen.tsx      # Placeholder
+      ProfileScreen.tsx    # User profile/settings
+    components/
+      DogListItem.tsx      # Dog card for FlatList
+      PedigreeTree.tsx     # 4-generation pedigree with clickable ancestors
+    lib/
+      api.ts               # API functions and TypeScript types
+      theme.ts             # GSDCP brand colors, spacing, typography
+
+client/                    # Legacy web app (React + Vite)
+server/                    # Legacy Express backend (API proxy)
 shared/
-  schema.ts            # TypeScript types: Dog, Breeder, ShowEvent, ShowResult, UserProfile
+  schema.ts                # Shared TypeScript types
 ```
 
 ## Design System
@@ -54,43 +47,34 @@ shared/
 - **Dark Green**: #083A24
 - **Accent Gold**: #C7A45C
 - **Background**: #F5F5F2
-- **Rounded Corners**: 10-14px on cards
-- **Spacing Scale**: 4, 8, 12, 16, 24, 32px
+- **Sire (male)**: Blue tint
+- **Dam (female)**: Pink tint
 
 ## Navigation
-Bottom navigation with 5 tabs: Home, Dogs, Breeders, Shows, Profile
+Bottom tab navigation with 5 tabs: Home, Dogs, Breeders, Shows, Profile
+Dogs tab has a nested stack navigator for Dog Search → Dog Profile
 
-## Routes
-- `/` - Dashboard
-- `/login` - Login/Registration
-- `/dogs` - Dog Search
-- `/dogs/:id` - Dog Profile
-- `/breeders` - Breeder Directory
-- `/breeders/:id` - Breeder Profile
-- `/shows` - Shows listing
-- `/shows/:id` - Show Results
-- `/profile` - User Profile
+## API (Direct from gsdcp.org)
+- `GET /api/mobile/dogs` — Dog list
+- `GET /api/mobile/dogs/{id}` — Dog detail with pedigree and show results
 
-## API Endpoints
-### Live (proxied from gsdcp.org)
-- `GET /api/dogs` → proxies to `https://gsdcp.org/api/mobile/dogs` (dog list)
-- `GET /api/dogs/:id` → proxies to `https://gsdcp.org/api/mobile/dogs/:id` (dog detail + show results)
+## Pedigree
+- 4-generation tree displayed in a horizontal scrollable layout
+- Each ancestor cell is clickable — navigates to dog search with that name
+- Sire cells are blue-tinted, dam cells are pink-tinted
+- API returns `pedigree` as either `[]` (no data) or object with `gen1`-`gen4` keys
 
-### Placeholder (returning empty data)
-- `GET /api/breeders`, `GET /api/breeders/:id`
-- `GET /api/shows`, `GET /api/shows/:id`
-- `GET /api/show-results`, `GET /api/show-results/:showId`
-- `GET /api/profile`
-
-## Backend API Contract
-- See `API_RESPONSE_TEMPLATES.md` for full response format documentation
-- Dog fields are nullable: `KP`, `dob`, `color`, `imageUrl`, `owner`, `breeder`, `sire`, `dam`, `microchip`
-- Dog detail API includes `pedigree` object with gen1-gen4 (4-generation pedigree tree)
-- Pedigree may be empty array `[]` when no data exists, or object with `gen1`-`gen4` keys
+## Dog Fields (nullable)
+`KP`, `dob`, `color`, `imageUrl`, `owner`, `breeder`, `sire`, `dam`, `microchip`
 
 ## Development
-- Server runs on port 5000
-- `npm run dev` starts development server
-- `npm run build` creates production build
-- Dog search and dog profile screens fetch live data from gsdcp.org via server proxy
-- Other screens still use mock data until backend endpoints are available
+- Workflow runs `cd mobile && npx expo start --web --port 5000`
+- Preview available in Replit webview
+- To build for devices: use `expo build` or EAS Build
+- QR code in terminal can be scanned with Expo Go app on physical device
+
+## Building for Production
+1. Install EAS CLI: `npm install -g eas-cli`
+2. Configure: `eas build:configure`
+3. Build Android: `eas build --platform android`
+4. Build iOS: `eas build --platform ios`
