@@ -1,6 +1,12 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import type { Dog } from "../lib/api";
+
+const PLACEHOLDER = "dog_not_found";
+
+function hasRealImage(url: string | null): url is string {
+  return !!url && url.length > 0 && !url.includes(PLACEHOLDER);
+}
 
 interface DogListItemProps {
   dog: Dog;
@@ -9,17 +15,25 @@ interface DogListItemProps {
 
 export function DogListItem({ dog, onPress }: DogListItemProps) {
   const initials = dog.dog_name
+    .trim()
     .split(" ")
+    .filter((w) => w.length > 0)
     .map((w) => w[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
 
+  const showImage = hasRealImage(dog.imageUrl);
+
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
+      {showImage ? (
+        <Image source={{ uri: dog.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
+      )}
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{dog.dog_name}</Text>
         <Text style={styles.kp}>
@@ -78,6 +92,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: SPACING.md,
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.full,
+    marginRight: SPACING.md,
+    backgroundColor: "#E8F5E9",
   },
   avatarText: {
     color: COLORS.primary,

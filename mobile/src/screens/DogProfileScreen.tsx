@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -119,9 +120,13 @@ export default function DogProfileScreen() {
 
       <View style={styles.profileSection}>
         <View style={styles.avatarOuter}>
-          <View style={styles.avatarInner}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          {dog.imageUrl && dog.imageUrl.length > 0 && !dog.imageUrl.includes("dog_not_found") ? (
+            <Image source={{ uri: dog.imageUrl }} style={styles.avatarPhoto} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatarInner}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+          )}
         </View>
 
         {(dog.titles.length > 0 || dog.KP) && (
@@ -361,6 +366,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 25,
     elevation: 8,
+  },
+  avatarPhoto: {
+    flex: 1,
+    borderRadius: 9999,
   },
   avatarInner: {
     flex: 1,
