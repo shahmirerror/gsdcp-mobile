@@ -19,11 +19,11 @@ export type User = typeof users.$inferSelect;
 
 export type Dog = {
   id: string;
-  name: string;
-  registrationNumber: string;
+  dog_name: string;
+  KP: string;
   breed: string;
-  gender: "Male" | "Female";
-  dateOfBirth: string;
+  sex: string;
+  dob: string;
   color: string;
   imageUrl: string;
   owner: string;
@@ -31,7 +31,7 @@ export type Dog = {
   sire: string;
   dam: string;
   titles: string[];
-  microchipNumber?: string;
+  microchip?: string;
 };
 
 export type Breeder = {

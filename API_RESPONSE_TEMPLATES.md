@@ -38,10 +38,10 @@ Returns a list of all registered dogs. Supports optional query parameters for fi
 
 **Query Parameters:**
 
-| Parameter | Type   | Description                          |
-|-----------|--------|--------------------------------------|
-| q         | string | Search by name, registration number, owner, breeder, color, or titles |
-| gender    | string | Filter by gender: `Male` or `Female` |
+| Parameter | Type   | Description                                          |
+|-----------|--------|------------------------------------------------------|
+| q         | string | Search by dog_name, KP, owner, breeder, color, or titles |
+| sex       | string | Filter by sex: `Male` or `Female`                    |
 
 **Response:**
 
@@ -51,19 +51,19 @@ Returns a list of all registered dogs. Supports optional query parameters for fi
   "data": [
     {
       "id": "dog-1",
-      "name": "Ares vom Adlerhorst",
-      "registrationNumber": "GSDCP-2021-0451",
+      "dog_name": "Ares vom Adlerhorst",
+      "KP": "GSDCP-2021-0451",
       "breed": "German Shepherd Dog",
-      "gender": "Male",
-      "dateOfBirth": "2021-03-15",
+      "sex": "Male",
+      "dob": "2021-03-15",
       "color": "Black and Tan",
       "imageUrl": "",
-      "owner": "Ahmed Khan",
+      "owner": "",
       "breeder": "Rashid Mehmood",
-      "sire": "Rex vom Haus Iris",
-      "dam": "Bella vom Adlerhorst",
-      "titles": ["V1", "SG", "BIS Puppy"],
-      "microchipNumber": "900118000123456"
+      "sire": "",
+      "dam": "",
+      "titles": [],
+      "microchip": "900118000123456"
     }
   ]
 }
@@ -85,19 +85,19 @@ Returns a single dog by ID, including full pedigree and related show results.
   "data": {
     "dog": {
       "id": "dog-1",
-      "name": "Ares vom Adlerhorst",
-      "registrationNumber": "GSDCP-2021-0451",
+      "dog_name": "Ares vom Adlerhorst",
+      "KP": "GSDCP-2021-0451",
       "breed": "German Shepherd Dog",
-      "gender": "Male",
-      "dateOfBirth": "2021-03-15",
+      "sex": "Male",
+      "dob": "2021-03-15",
       "color": "Black and Tan",
       "imageUrl": "",
-      "owner": "Ahmed Khan",
+      "owner": "",
       "breeder": "Rashid Mehmood",
-      "sire": "Rex vom Haus Iris",
-      "dam": "Bella vom Adlerhorst",
-      "titles": ["V1", "SG", "BIS Puppy"],
-      "microchipNumber": "900118000123456"
+      "sire": "",
+      "dam": "",
+      "titles": [],
+      "microchip": "900118000123456"
     },
     "showResults": [
       {
@@ -184,19 +184,19 @@ Returns a single breeder by ID, including dogs bred by them.
     "dogs": [
       {
         "id": "dog-1",
-        "name": "Ares vom Adlerhorst",
-        "registrationNumber": "GSDCP-2021-0451",
+        "dog_name": "Ares vom Adlerhorst",
+        "KP": "GSDCP-2021-0451",
         "breed": "German Shepherd Dog",
-        "gender": "Male",
-        "dateOfBirth": "2021-03-15",
+        "sex": "Male",
+        "dob": "2021-03-15",
         "color": "Black and Tan",
         "imageUrl": "",
-        "owner": "Ahmed Khan",
+        "owner": "",
         "breeder": "Rashid Mehmood",
-        "sire": "Rex vom Haus Iris",
-        "dam": "Bella vom Adlerhorst",
-        "titles": ["V1", "SG", "BIS Puppy"],
-        "microchipNumber": "900118000123456"
+        "sire": "",
+        "dam": "",
+        "titles": [],
+        "microchip": "900118000123456"
       }
     ]
   }
@@ -420,19 +420,19 @@ Returns the authenticated user's profile along with their registered dogs.
     "dogs": [
       {
         "id": "dog-1",
-        "name": "Ares vom Adlerhorst",
-        "registrationNumber": "GSDCP-2021-0451",
+        "dog_name": "Ares vom Adlerhorst",
+        "KP": "GSDCP-2021-0451",
         "breed": "German Shepherd Dog",
-        "gender": "Male",
-        "dateOfBirth": "2021-03-15",
+        "sex": "Male",
+        "dob": "2021-03-15",
         "color": "Black and Tan",
         "imageUrl": "",
-        "owner": "Ahmed Khan",
+        "owner": "",
         "breeder": "Rashid Mehmood",
-        "sire": "Rex vom Haus Iris",
-        "dam": "Bella vom Adlerhorst",
-        "titles": ["V1", "SG", "BIS Puppy"],
-        "microchipNumber": "900118000123456"
+        "sire": "",
+        "dam": "",
+        "titles": [],
+        "microchip": "900118000123456"
       }
     ]
   }
@@ -476,16 +476,30 @@ Optional composite endpoint that returns all data the Dashboard screen needs in 
 
 | Type        | Fields                                                                                                     |
 |-------------|-------------------------------------------------------------------------------------------------------------|
-| Dog         | id, name, registrationNumber, breed, gender, dateOfBirth, color, imageUrl, owner, breeder, sire, dam, titles, microchipNumber? |
+| Dog         | id, dog_name, KP, breed, sex, dob, color, imageUrl, owner, breeder, sire, dam, titles, microchip?          |
 | Breeder     | id, name, kennelName, location, phone, email, imageUrl, activeSince, totalDogs, description                 |
 | ShowEvent   | id, name, date, location, judge, status, entryCount, description                                            |
 | ShowResult  | id, showEventId, showName, dogId, dogName, handler, award, placement, className, date                       |
 | UserProfile | id, name, email, phone, membershipId, membershipStatus, memberSince, imageUrl, city, dogIds                 |
 
+## Dog Field Mapping (Laravel Backend → Frontend)
+
+| Laravel Backend     | Frontend TypeScript | Description              |
+|---------------------|---------------------|--------------------------|
+| `$dog->id`          | `id`                | Prefixed with "dog-"     |
+| `$dog->dog_name`    | `dog_name`          | Dog's registered name    |
+| `$dog->KP`          | `KP`                | Registration/KP number   |
+| `$dog->sex`         | `sex`               | Male or Female           |
+| `$dog->dob`         | `dob`               | Date of birth (Y-m-d)    |
+| `$dog->color`       | `color`             | Coat color               |
+| `$dog->breeder_name`| `breeder`           | Breeder name (list API)  |
+| `$dog->breeder`     | `breeder`           | Breeder name (detail API)|
+| `$dog->microchip_number` | `microchip`    | Microchip number         |
+
 ## Status Enums
 
 | Field            | Values                              |
 |------------------|--------------------------------------|
-| gender           | `Male`, `Female`                     |
+| sex              | `Male`, `Female`                     |
 | status (show)    | `upcoming`, `ongoing`, `completed`   |
 | membershipStatus | `active`, `expired`, `pending`       |

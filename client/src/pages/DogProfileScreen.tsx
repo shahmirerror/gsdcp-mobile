@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { AppLayout } from "@/components/AppLayout";
 import { AppCard } from "@/components/AppCard";
@@ -6,9 +5,9 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, MapPin, User, Dna, Award, ChevronRight } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, User, Dna, Award } from "lucide-react";
 import { mockDogs, mockShowResults } from "@/lib/mock-data";
-import type { Dog, ShowResult } from "@shared/schema";
+import type { ShowResult } from "@shared/schema";
 
 function PedigreeCard({ label, name }: { label: string; name: string }) {
   return (
@@ -55,7 +54,7 @@ export default function DogProfileScreen() {
 
   const dogResults = mockShowResults.filter((r) => r.dogId === dog.id);
 
-  const initials = dog.name
+  const initials = dog.dog_name
     .split(" ")
     .map((w) => w[0])
     .slice(0, 2)
@@ -63,7 +62,7 @@ export default function DogProfileScreen() {
     .toUpperCase();
 
   const age = (() => {
-    const birth = new Date(dog.dateOfBirth);
+    const birth = new Date(dog.dob);
     const now = new Date();
     const years = now.getFullYear() - birth.getFullYear();
     const months = now.getMonth() - birth.getMonth();
@@ -80,18 +79,18 @@ export default function DogProfileScreen() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-lg font-semibold truncate" data-testid="text-dog-profile-name">{dog.name}</h1>
+          <h1 className="text-lg font-semibold truncate" data-testid="text-dog-profile-name">{dog.dog_name}</h1>
         </div>
 
         <div className="flex flex-col items-center gap-3">
           <Avatar className="h-28 w-28">
-            <AvatarImage src={dog.imageUrl} alt={dog.name} />
+            <AvatarImage src={dog.imageUrl} alt={dog.dog_name} />
             <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground" data-testid="text-dog-reg">{dog.registrationNumber}</p>
+            <p className="text-sm text-muted-foreground" data-testid="text-dog-reg">{dog.KP}</p>
             <div className="flex items-center justify-center gap-1.5 mt-1.5 flex-wrap">
               {dog.titles.map((title) => (
                 <Badge key={title} variant="default" className="text-xs">{title}</Badge>
@@ -113,15 +112,15 @@ export default function DogProfileScreen() {
             <div className="flex items-start gap-2">
               <User className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
-                <p className="text-xs text-muted-foreground">Gender</p>
-                <p className="text-sm font-medium">{dog.gender}</p>
+                <p className="text-xs text-muted-foreground">Sex</p>
+                <p className="text-sm font-medium">{dog.sex}</p>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Date of Birth</p>
-                <p className="text-sm font-medium">{dog.dateOfBirth}</p>
+                <p className="text-sm font-medium">{dog.dob}</p>
                 <p className="text-xs text-muted-foreground">({age})</p>
               </div>
             </div>
@@ -142,10 +141,10 @@ export default function DogProfileScreen() {
               <span className="text-sm text-muted-foreground">Breeder</span>
               <span className="text-sm font-medium" data-testid="text-dog-breeder">{dog.breeder}</span>
             </div>
-            {dog.microchipNumber && (
+            {dog.microchip && (
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm text-muted-foreground">Microchip</span>
-                <span className="text-sm font-medium font-mono" data-testid="text-dog-microchip">{dog.microchipNumber}</span>
+                <span className="text-sm font-medium font-mono" data-testid="text-dog-microchip">{dog.microchip}</span>
               </div>
             )}
           </div>

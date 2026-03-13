@@ -28,8 +28,8 @@ export default function DogSearchScreen() {
       const q = searchQuery.toLowerCase();
       results = results.filter(
         (dog) =>
-          dog.name.toLowerCase().includes(q) ||
-          dog.registrationNumber.toLowerCase().includes(q) ||
+          dog.dog_name.toLowerCase().includes(q) ||
+          dog.KP.toLowerCase().includes(q) ||
           dog.owner.toLowerCase().includes(q) ||
           dog.breeder.toLowerCase().includes(q) ||
           dog.color.toLowerCase().includes(q) ||
@@ -38,7 +38,7 @@ export default function DogSearchScreen() {
     }
 
     if (genderFilter !== "All") {
-      results = results.filter((dog) => dog.gender === genderFilter);
+      results = results.filter((dog) => dog.sex === genderFilter);
     }
 
     return results;
@@ -54,7 +54,7 @@ export default function DogSearchScreen() {
         <SearchInput
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by name, registration, owner..."
+          placeholder="Search by name, KP, owner..."
         />
 
         <div className="flex items-center gap-2 flex-wrap">

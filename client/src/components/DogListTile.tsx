@@ -11,7 +11,7 @@ interface DogListTileProps {
 }
 
 export function DogListTile({ dog, onClick, className }: DogListTileProps) {
-  const initials = dog.name
+  const initials = dog.dog_name
     .split(" ")
     .map((w) => w[0])
     .slice(0, 2)
@@ -27,21 +27,21 @@ export function DogListTile({ dog, onClick, className }: DogListTileProps) {
     >
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={dog.imageUrl} alt={dog.name} />
+          <AvatarImage src={dog.imageUrl} alt={dog.dog_name} />
           <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
             {initials}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <p className="font-semibold truncate" data-testid={`text-dog-name-${dog.id}`}>
-            {dog.name}
+            {dog.dog_name}
           </p>
           <p className="text-sm text-muted-foreground truncate">
-            {dog.registrationNumber}
+            {dog.KP}
           </p>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <Badge variant="secondary" className="text-xs">
-              {dog.gender}
+              {dog.sex}
             </Badge>
             <Badge variant="secondary" className="text-xs">
               {dog.color}

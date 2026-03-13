@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "MvXsO8Y9CHXlGfPiL3Z1W"
+uri = "file://API_RESPONSE_TEMPLATES.md"
+type = "text"
+title = "GSDCP Mobile — API Response Templates"
