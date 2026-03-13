@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Search, Users, Trophy, Calendar, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { AppCard } from "@/components/AppCard";
@@ -7,8 +8,10 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { SearchInput } from "@/components/SearchInput";
 import { DogListTile } from "@/components/DogListTile";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { APP_CONFIG } from "@/lib/constants";
-import { mockDogs, mockShowResults, mockShowEvents } from "@/lib/mock-data";
+import { mockShowResults, mockShowEvents } from "@/lib/mock-data";
+import type { Dog } from "@shared/schema";
 
 const quickActions = [
   { label: "Search Dogs", icon: Search, path: "/dogs" },
@@ -21,9 +24,13 @@ export default function DashboardScreen() {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: dogsResponse, isLoading: dogsLoading, isError: dogsError } = useQuery<{ success: boolean; data: Dog[] }>({
+    queryKey: ["/api/dogs"],
+  });
+
+  const featuredDogs = (dogsResponse?.data ?? []).slice(0, 3);
   const recentResults = mockShowResults.slice(0, 4);
   const upcomingShows = mockShowEvents.filter((s) => s.status === "upcoming").slice(0, 2);
-  const featuredDogs = mockDogs.slice(0, 3);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -119,15 +126,27 @@ export default function DashboardScreen() {
             action={{ label: "See All", onClick: () => navigate("/dogs") }}
             className="mb-3"
           />
-          <div className="space-y-2">
-            {featuredDogs.map((dog) => (
-              <DogListTile
-                key={dog.id}
-                dog={dog}
-                onClick={() => navigate(`/dogs/${dog.id}`)}
-              />
-            ))}
-          </div>
+          {dogsLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20 w-full rounded-xl" />
+              ))}
+            </div>
+          ) : dogsError ? (
+            <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-dogs-error">
+              Could not load featured dogs.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {featuredDogs.map((dog) => (
+                <DogListTile
+                  key={dog.id}
+                  dog={dog}
+                  onClick={() => navigate(`/dogs/${dog.id}`)}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div>

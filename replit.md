@@ -71,15 +71,24 @@ Bottom navigation with 5 tabs: Home, Dogs, Breeders, Shows, Profile
 - `/shows/:id` - Show Results
 - `/profile` - User Profile
 
-## API Endpoints (Placeholders)
-- `GET /api/dogs`, `GET /api/dogs/:id`
+## API Endpoints
+### Live (proxied from gsdcp.org)
+- `GET /api/dogs` → proxies to `https://gsdcp.org/api/mobile/dogs` (dog list)
+- `GET /api/dogs/:id` → proxies to `https://gsdcp.org/api/mobile/dogs/:id` (dog detail + show results)
+
+### Placeholder (returning empty data)
 - `GET /api/breeders`, `GET /api/breeders/:id`
 - `GET /api/shows`, `GET /api/shows/:id`
 - `GET /api/show-results`, `GET /api/show-results/:showId`
 - `GET /api/profile`
 
+## Backend API Contract
+- See `API_RESPONSE_TEMPLATES.md` for full response format documentation
+- Dog fields are nullable: `KP`, `dob`, `color`, `imageUrl`, `owner`, `breeder`, `sire`, `dam`, `microchip`
+
 ## Development
 - Server runs on port 5000
 - `npm run dev` starts development server
 - `npm run build` creates production build
-- Currently using mock data; ready to connect to real API
+- Dog search and dog profile screens fetch live data from gsdcp.org via server proxy
+- Other screens still use mock data until backend endpoints are available

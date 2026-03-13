@@ -27,7 +27,7 @@ export function DogListTile({ dog, onClick, className }: DogListTileProps) {
     >
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={dog.imageUrl} alt={dog.dog_name} />
+          <AvatarImage src={dog.imageUrl || undefined} alt={dog.dog_name} />
           <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
             {initials}
           </AvatarFallback>
@@ -36,16 +36,20 @@ export function DogListTile({ dog, onClick, className }: DogListTileProps) {
           <p className="font-semibold truncate" data-testid={`text-dog-name-${dog.id}`}>
             {dog.dog_name}
           </p>
-          <p className="text-sm text-muted-foreground truncate">
-            {dog.KP}
-          </p>
+          {dog.KP && (
+            <p className="text-sm text-muted-foreground truncate">
+              KP: {dog.KP}
+            </p>
+          )}
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <Badge variant="secondary" className="text-xs">
               {dog.sex}
             </Badge>
-            <Badge variant="secondary" className="text-xs">
-              {dog.color}
-            </Badge>
+            {dog.color ? (
+              <Badge variant="secondary" className="text-xs">
+                {dog.color}
+              </Badge>
+            ) : null}
           </div>
         </div>
         {dog.titles.length > 0 && (

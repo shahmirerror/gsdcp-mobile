@@ -1,20 +1,21 @@
 import { useRoute, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { AppCard } from "@/components/AppCard";
 import { SectionHeader } from "@/components/SectionHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, MapPin, User, Dna, Award } from "lucide-react";
-import { mockDogs, mockShowResults } from "@/lib/mock-data";
-import type { ShowResult } from "@shared/schema";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, Calendar, MapPin, User, Dna } from "lucide-react";
+import type { Dog, ShowResult } from "@shared/schema";
 
-function PedigreeCard({ label, name }: { label: string; name: string }) {
+function PedigreeCard({ label, name }: { label: string; name: string | null }) {
   return (
     <div className="flex-1 min-w-0">
       <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
       <p className="text-sm font-medium truncate" data-testid={`text-pedigree-${label.toLowerCase()}`}>
-        {name}
+        {name || "Unknown"}
       </p>
     </div>
   );
@@ -35,9 +36,37 @@ function ResultRow({ result }: { result: ShowResult }) {
 export default function DogProfileScreen() {
   const [, params] = useRoute("/dogs/:id");
   const dogId = params?.id;
-  const dog = mockDogs.find((d) => d.id === dogId);
 
-  if (!dog) {
+  const { data: response, isLoading, isError } = useQuery<{ success: boolean; data: { dog: Dog; showResults: ShowResult[] } }>({
+    queryKey: ["/api/dogs", dogId],
+    enabled: !!dogId,
+  });
+
+  const dog = response?.data?.dog;
+  const dogResults = response?.data?.showResults ?? [];
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <Link href="/dogs">
+              <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
+            </Link>
+            <Skeleton className="h-6 w-48" />
+          </div>
+          <div className="flex flex-col items-center gap-3">
+            <Skeleton className="h-28 w-28 rounded-full" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isError || !dog) {
     return (
       <AppLayout>
         <div className="p-4">
@@ -46,13 +75,13 @@ export default function DogProfileScreen() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <p className="text-center text-muted-foreground mt-8" data-testid="text-dog-not-found">Dog not found.</p>
+          <p className="text-center text-muted-foreground mt-8" data-testid="text-dog-not-found">
+            {isError ? "Failed to load dog details. Please try again." : "Dog not found."}
+          </p>
         </div>
       </AppLayout>
     );
   }
-
-  const dogResults = mockShowResults.filter((r) => r.dogId === dog.id);
 
   const initials = dog.dog_name
     .split(" ")
@@ -62,6 +91,7 @@ export default function DogProfileScreen() {
     .toUpperCase();
 
   const age = (() => {
+    if (!dog.dob) return "Unknown";
     const birth = new Date(dog.dob);
     const now = new Date();
     const years = now.getFullYear() - birth.getFullYear();
@@ -84,18 +114,22 @@ export default function DogProfileScreen() {
 
         <div className="flex flex-col items-center gap-3">
           <Avatar className="h-28 w-28">
-            <AvatarImage src={dog.imageUrl} alt={dog.dog_name} />
+            <AvatarImage src={dog.imageUrl || undefined} alt={dog.dog_name} />
             <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="text-center">
-            <p className="text-sm text-muted-foreground" data-testid="text-dog-reg">{dog.KP}</p>
-            <div className="flex items-center justify-center gap-1.5 mt-1.5 flex-wrap">
-              {dog.titles.map((title) => (
-                <Badge key={title} variant="default" className="text-xs">{title}</Badge>
-              ))}
-            </div>
+            {dog.KP && (
+              <p className="text-sm text-muted-foreground" data-testid="text-dog-reg">KP: {dog.KP}</p>
+            )}
+            {dog.titles.length > 0 && (
+              <div className="flex items-center justify-center gap-1.5 mt-1.5 flex-wrap">
+                {dog.titles.map((title) => (
+                  <Badge key={title} variant="default" className="text-xs">{title}</Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -120,27 +154,31 @@ export default function DogProfileScreen() {
               <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Date of Birth</p>
-                <p className="text-sm font-medium">{dog.dob}</p>
-                <p className="text-xs text-muted-foreground">({age})</p>
+                <p className="text-sm font-medium">{dog.dob || "Unknown"}</p>
+                {dog.dob && <p className="text-xs text-muted-foreground">({age})</p>}
               </div>
             </div>
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Color</p>
-                <p className="text-sm font-medium">{dog.color}</p>
+                <p className="text-sm font-medium">{dog.color || "Unknown"}</p>
               </div>
             </div>
           </div>
           <div className="border-t pt-3 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm text-muted-foreground">Owner</span>
-              <span className="text-sm font-medium" data-testid="text-dog-owner">{dog.owner}</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm text-muted-foreground">Breeder</span>
-              <span className="text-sm font-medium" data-testid="text-dog-breeder">{dog.breeder}</span>
-            </div>
+            {dog.owner ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">Owner</span>
+                <span className="text-sm font-medium" data-testid="text-dog-owner">{dog.owner}</span>
+              </div>
+            ) : null}
+            {dog.breeder && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">Breeder</span>
+                <span className="text-sm font-medium" data-testid="text-dog-breeder">{dog.breeder}</span>
+              </div>
+            )}
             {dog.microchip && (
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm text-muted-foreground">Microchip</span>
@@ -150,13 +188,15 @@ export default function DogProfileScreen() {
           </div>
         </AppCard>
 
-        <AppCard className="p-4 space-y-3" data-testid="card-dog-pedigree">
-          <SectionHeader title="Pedigree" />
-          <div className="flex gap-4">
-            <PedigreeCard label="Sire" name={dog.sire} />
-            <PedigreeCard label="Dam" name={dog.dam} />
-          </div>
-        </AppCard>
+        {(dog.sire ?? dog.dam) && (
+          <AppCard className="p-4 space-y-3" data-testid="card-dog-pedigree">
+            <SectionHeader title="Pedigree" />
+            <div className="flex gap-4">
+              <PedigreeCard label="Sire" name={dog.sire} />
+              <PedigreeCard label="Dam" name={dog.dam} />
+            </div>
+          </AppCard>
+        )}
 
         {dogResults.length > 0 && (
           <AppCard className="p-4 space-y-2" data-testid="card-dog-results">
