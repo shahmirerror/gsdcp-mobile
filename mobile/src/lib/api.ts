@@ -64,6 +64,7 @@ export type DogDetail = {
   dog: Dog;
   showResults: ShowResult[];
   pedigree: Pedigree | any[];
+  siblings: Dog[];
 };
 
 export function getAncestorName(ancestor: PedigreeAncestor): string {

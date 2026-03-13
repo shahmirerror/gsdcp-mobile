@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchDog, DogDetail, Pedigree } from "../lib/api";
+import { fetchDog, DogDetail, Pedigree, Dog } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
+import { DogListItem } from "../components/DogListItem";
 
 function DetailRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return (
@@ -61,10 +62,12 @@ export default function DogProfileScreen() {
     );
   }
 
+  const navigation = useNavigation<any>();
   const dog = data.dog;
   const showResults = data.showResults ?? [];
   const pedigree = data.pedigree;
   const hasPedigree = isPedigreePopulated(pedigree);
+  const siblings = (data.siblings ?? []).filter((s: Dog) => s.id !== dogId);
 
   const initials = dog.dog_name
     .split(" ")
@@ -123,6 +126,24 @@ export default function DogProfileScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>4-Generation Pedigree</Text>
           <PedigreeTree pedigree={pedigree} />
+        </View>
+      )}
+
+      {siblings.length > 0 && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Siblings ({siblings.length})</Text>
+          {siblings.map((sibling: Dog) => (
+            <DogListItem
+              key={sibling.id}
+              dog={sibling}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: sibling.id,
+                  name: sibling.dog_name,
+                })
+              }
+            />
+          ))}
         </View>
       )}
 
