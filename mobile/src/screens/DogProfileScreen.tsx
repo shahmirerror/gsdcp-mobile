@@ -210,99 +210,44 @@ export default function DogProfileScreen() {
           <>
             <View style={styles.card}>
               <Text style={styles.cardHeading}>General</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Breed</Text>
-                <Text style={styles.infoValue}>{dog.breed}</Text>
+              <View style={styles.detailsGrid}>
+                <DetailItem icon="paw" label="Breed" value={dog.breed} />
+                <DetailItem icon="male-female" label="Gender" value={dog.sex} />
+                <DetailItem
+                  icon="calendar"
+                  label="Date of Birth"
+                  value={dog.dob ? `${formatDob(dog.dob)}${age ? ` (${age})` : ""}` : "Unknown"}
+                />
+                <DetailItem icon="color-palette" label="Color" value={dog.color || "Unknown"} />
+                <DetailItem icon="cut" label="Coat Type" value={dog.hair || "Unknown"} />
+                <DetailItem
+                  icon="document-text"
+                  label="Stud Book Number"
+                  value={dog.KP && dog.KP !== "0" ? `KP ${dog.KP}` : dog.foreign_reg_no ? dog.foreign_reg_no : "-"}
+                />
+                <DetailItem icon="hardware-chip" label="Microchip" value={dog.microchip || "-"} />
+                <DetailItem icon="person" label="Owner" value={dog.owner || "-"} />
+                <DetailItem icon="build" label="Breeder" value={dog.breeder || "-"} />
+                <DetailItem icon="arrow-up-circle" label="Sire" value={dog.sire || "-"} />
+                <DetailItem icon="arrow-down-circle" label="Dam" value={dog.dam || "-"} />
               </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Gender</Text>
-                <Text style={styles.infoValue}>{dog.sex}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Date of Birth</Text>
-                <Text style={styles.infoValue}>
-                  {dog.dob ? `${formatDob(dog.dob)}${age ? ` (${age})` : ""}` : "Unknown"}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Color</Text>
-                <Text style={styles.infoValue}>{dog.color || "Unknown"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Coat Type</Text>
-                <Text style={styles.infoValue}>{dog.hair || "Unknown"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Stud Book Number</Text>
-                <Text style={styles.infoValue}>
-                  {dog.KP && dog.KP !== "0"
-                    ? `KP ${dog.KP}`
-                    : dog.foreign_reg_no
-                      ? dog.foreign_reg_no
-                      : "-"}
-                </Text>
-              </View>
-              {dog.microchip && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Microchip</Text>
-                  <Text style={styles.infoValue}>{dog.microchip}</Text>
-                </View>
-              )}
-              {dog.owner && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Owner</Text>
-                  <Text style={styles.infoValue}>{dog.owner}</Text>
-                </View>
-              )}
-              {dog.breeder && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Breeder</Text>
-                  <Text style={styles.infoValue}>{dog.breeder}</Text>
-                </View>
-              )}
-              {dog.sire && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Sire</Text>
-                  <Text style={styles.infoValue}>{dog.sire}</Text>
-                </View>
-              )}
-              {dog.dam && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Dam</Text>
-                  <Text style={styles.infoValue}>{dog.dam}</Text>
-                </View>
-              )}
             </View>
 
             <View style={styles.card}>
               <Text style={styles.cardHeading}>Ratings</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Breed Survey Period</Text>
-                <Text style={styles.infoValue}>{dog.breed_survey_period || "-"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Show Rating</Text>
-                <Text style={styles.infoValue}>{dog.show_rating || "-"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Working Title</Text>
-                <Text style={styles.infoValue}>{(dog.working_title && dog.working_title.trim()) || "-"}</Text>
+              <View style={styles.detailsGrid}>
+                <DetailItem icon="calendar-number" label="Breed Survey Period" value={dog.breed_survey_period || "-"} />
+                <DetailItem icon="star" label="Show Rating" value={dog.show_rating || "-"} />
+                <DetailItem icon="ribbon" label="Working Title" value={(dog.working_title && dog.working_title.trim()) || "-"} />
               </View>
             </View>
 
             <View style={styles.card}>
               <Text style={styles.cardHeading}>Examinations</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>HD Rating</Text>
-                <Text style={styles.infoValue}>{dog.hd || "-"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>ED Rating</Text>
-                <Text style={styles.infoValue}>{dog.ed || "-"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>DNA Status</Text>
-                <Text style={styles.infoValue}>{dog.dna_status || "-"}</Text>
+              <View style={styles.detailsGrid}>
+                <DetailItem icon="fitness" label="HD Rating" value={dog.hd || "-"} />
+                <DetailItem icon="body" label="ED Rating" value={dog.ed || "-"} />
+                <DetailItem icon="flask" label="DNA Status" value={dog.dna_status || "-"} />
               </View>
             </View>
 
