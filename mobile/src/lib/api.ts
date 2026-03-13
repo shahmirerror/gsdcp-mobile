@@ -43,6 +43,7 @@ export type Dog = {
   titles: string[];
   microchip: string | null;
   foreign_reg_no: string | null;
+  hair: string | null;
 };
 
 export type ShowResult = {
