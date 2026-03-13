@@ -1,3 +1,4 @@
+import { Image, View, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -10,6 +11,9 @@ import DogProfileScreen from "../screens/DogProfileScreen";
 import BreederDirectoryScreen from "../screens/BreederDirectoryScreen";
 import ShowsScreen from "../screens/ShowsScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+
+const logoLandscape = require("../../assets/logo-landscape.png");
+const logoSquare = require("../../assets/logo-square.png");
 
 export type DogsStackParamList = {
   DogSearch: undefined;
@@ -27,6 +31,41 @@ export type RootTabParamList = {
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const DogsStack = createNativeStackNavigator<DogsStackParamList>();
 
+function HeaderLogo() {
+  return (
+    <View style={headerStyles.container}>
+      <Image source={logoLandscape} style={headerStyles.logo} resizeMode="contain" />
+    </View>
+  );
+}
+
+function HeaderLogoSmall() {
+  return (
+    <View style={headerStyles.smallContainer}>
+      <Image source={logoSquare} style={headerStyles.smallLogo} resizeMode="contain" />
+    </View>
+  );
+}
+
+const headerStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logo: {
+    height: 36,
+    width: 160,
+  },
+  smallContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  smallLogo: {
+    height: 32,
+    width: 32,
+  },
+});
+
 function DogsStackNavigator() {
   return (
     <DogsStack.Navigator
@@ -39,7 +78,10 @@ function DogsStackNavigator() {
       <DogsStack.Screen
         name="DogSearch"
         component={DogSearchScreen}
-        options={{ title: "Dog Search" }}
+        options={{
+          title: "Dog Search",
+          headerLeft: () => <HeaderLogoSmall />,
+        }}
       />
       <DogsStack.Screen
         name="DogProfile"
@@ -83,7 +125,10 @@ export default function AppNavigator() {
         <Tab.Screen
           name="HomeTab"
           component={DashboardScreen}
-          options={{ title: "Home", headerTitle: "GSDCP" }}
+          options={{
+            title: "Home",
+            headerTitle: () => <HeaderLogo />,
+          }}
         />
         <Tab.Screen
           name="DogsTab"
@@ -93,17 +138,26 @@ export default function AppNavigator() {
         <Tab.Screen
           name="BreedersTab"
           component={BreederDirectoryScreen}
-          options={{ title: "Breeders", headerTitle: "Breeder Directory" }}
+          options={{
+            title: "Breeders",
+            headerTitle: () => <HeaderLogo />,
+          }}
         />
         <Tab.Screen
           name="ShowsTab"
           component={ShowsScreen}
-          options={{ title: "Shows", headerTitle: "Shows" }}
+          options={{
+            title: "Shows",
+            headerTitle: () => <HeaderLogo />,
+          }}
         />
         <Tab.Screen
           name="ProfileTab"
           component={ProfileScreen}
-          options={{ title: "Profile", headerTitle: "My Profile" }}
+          options={{
+            title: "Profile",
+            headerTitle: () => <HeaderLogo />,
+          }}
         />
       </Tab.Navigator>
     </NavigationContainer>
