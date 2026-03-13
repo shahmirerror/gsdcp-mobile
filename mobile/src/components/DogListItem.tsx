@@ -22,11 +22,13 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{dog.dog_name}</Text>
-        {dog.KP && dog.KP !== "0" ? (
-          <Text style={styles.kp}>KP: {dog.KP}</Text>
-        ) : dog.foreign_reg_no ? (
-          <Text style={styles.kp}>Reg: {dog.foreign_reg_no}</Text>
-        ) : null}
+        <Text style={styles.kp}>
+          {dog.KP && dog.KP !== "0"
+            ? `KP ${dog.KP}`
+            : dog.foreign_reg_no
+              ? dog.foreign_reg_no
+              : "-"}
+        </Text>
         {dog.microchip ? <Text style={styles.kp}>Microchip: {dog.microchip}</Text> : null}
         <View style={styles.badges}>
           <View style={styles.badge}>

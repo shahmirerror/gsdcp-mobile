@@ -152,11 +152,13 @@ export default function DogProfileScreen() {
         )}
 
         <Text style={styles.dogName}>{dog.dog_name}</Text>
-        {dog.KP && dog.KP !== "0" ? (
-          <Text style={styles.kpText}>KP: {dog.KP}</Text>
-        ) : dog.foreign_reg_no ? (
-          <Text style={styles.kpText}>Reg: {dog.foreign_reg_no}</Text>
-        ) : null}
+        <Text style={styles.kpText}>
+          {dog.KP && dog.KP !== "0"
+            ? `KP ${dog.KP}`
+            : dog.foreign_reg_no
+              ? dog.foreign_reg_no
+              : "-"}
+        </Text>
       </View>
 
       <View style={styles.tabBar}>
@@ -195,17 +197,16 @@ export default function DogProfileScreen() {
 
             <View style={styles.card}>
               <Text style={styles.cardHeading}>Registration</Text>
-              {dog.KP && dog.KP !== "0" ? (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>KP Number</Text>
-                  <Text style={styles.infoValue}>{dog.KP}</Text>
-                </View>
-              ) : dog.foreign_reg_no ? (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Foreign Reg. No</Text>
-                  <Text style={styles.infoValue}>{dog.foreign_reg_no}</Text>
-                </View>
-              ) : null}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Stud Book Number</Text>
+                <Text style={styles.infoValue}>
+                  {dog.KP && dog.KP !== "0"
+                    ? `KP ${dog.KP}`
+                    : dog.foreign_reg_no
+                      ? dog.foreign_reg_no
+                      : "-"}
+                </Text>
+              </View>
               {dog.microchip && (
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Microchip</Text>
