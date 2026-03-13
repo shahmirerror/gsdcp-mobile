@@ -12,6 +12,7 @@ import type { DogsStackParamList } from "../navigation/AppNavigator";
 type Nav = NativeStackNavigationProp<DogsStackParamList, "DogSearch">;
 
 const genderFilters = ["All", "Male", "Female"] as const;
+const hairFilters = ["All", "Stock Hair", "Long Stock Hair"] as const;
 
 export default function DogSearchScreen() {
   const navigation = useNavigation<Nav>();
@@ -20,6 +21,7 @@ export default function DogSearchScreen() {
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [genderFilter, setGenderFilter] = useState<string>("All");
+  const [hairFilter, setHairFilter] = useState<string>("All");
 
   const {
     data,
@@ -60,8 +62,11 @@ export default function DogSearchScreen() {
     if (genderFilter !== "All") {
       results = results.filter((dog) => dog.sex === genderFilter);
     }
+    if (hairFilter !== "All") {
+      results = results.filter((dog) => dog.hair === hairFilter);
+    }
     return results;
-  }, [allDogs, searchQuery, genderFilter]);
+  }, [allDogs, searchQuery, genderFilter, hairFilter]);
 
   const handleEndReached = () => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -103,6 +108,20 @@ export default function DogSearchScreen() {
         <Text style={styles.count}>
           {filteredDogs.length} {filteredDogs.length === 1 ? "dog" : "dogs"}
         </Text>
+      </View>
+
+      <View style={styles.filterRow}>
+        {hairFilters.map((filter) => (
+          <TouchableOpacity
+            key={filter}
+            style={[styles.filterBadge, hairFilter === filter && styles.filterBadgeActive]}
+            onPress={() => setHairFilter(filter)}
+          >
+            <Text style={[styles.filterText, hairFilter === filter && styles.filterTextActive]}>
+              {filter}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {isLoading ? (
