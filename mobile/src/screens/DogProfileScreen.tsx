@@ -210,18 +210,28 @@ export default function DogProfileScreen() {
           <>
             <View style={styles.card}>
               <Text style={styles.cardHeading}>General</Text>
-              <View style={styles.detailsGrid}>
-                <DetailItem icon="paw" label="Breed" value={dog.breed} />
-                <DetailItem icon="male-female" label="Sex" value={dog.sex} />
-                <DetailItem
-                  icon="calendar"
-                  label="Date of Birth"
-                  value={dog.dob ? `${formatDob(dog.dob)}${age ? ` (${age})` : ""}` : "Unknown"}
-                />
-                <DetailItem icon="color-palette" label="Color" value={dog.color || "Unknown"} />
-                <DetailItem icon="cut" label="Coat Type" value={dog.hair || "Unknown"} />
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Breed</Text>
+                <Text style={styles.infoValue}>{dog.breed}</Text>
               </View>
-              <View style={styles.cardDivider} />
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Gender</Text>
+                <Text style={styles.infoValue}>{dog.sex}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Date of Birth</Text>
+                <Text style={styles.infoValue}>
+                  {dog.dob ? `${formatDob(dog.dob)}${age ? ` (${age})` : ""}` : "Unknown"}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Color</Text>
+                <Text style={styles.infoValue}>{dog.color || "Unknown"}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Coat Type</Text>
+                <Text style={styles.infoValue}>{dog.hair || "Unknown"}</Text>
+              </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Stud Book Number</Text>
                 <Text style={styles.infoValue}>
