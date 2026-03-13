@@ -44,6 +44,12 @@ export type Dog = {
   microchip: string | null;
   foreign_reg_no: string | null;
   hair: string | null;
+  hd: string | null;
+  ed: string | null;
+  working_title: string | null;
+  dna_status: string | null;
+  breed_survey_period: string | null;
+  show_rating: string | null;
 };
 
 export type ShowResult = {

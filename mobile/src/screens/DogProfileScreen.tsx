@@ -20,6 +20,21 @@ import { DogListItem } from "../components/DogListItem";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function formatDob(dob: string): string {
+  const parts = dob.split("-");
+  if (parts.length !== 3) return dob;
+  const day = parseInt(parts[2], 10);
+  const monthIndex = parseInt(parts[1], 10) - 1;
+  const year = parts[0];
+  if (monthIndex < 0 || monthIndex > 11) return dob;
+  return `${day} ${MONTHS[monthIndex]} ${year}`;
+}
+
 function DetailItem({
   icon,
   label,
@@ -194,22 +209,19 @@ export default function DogProfileScreen() {
         {activeTab === "details" && (
           <>
             <View style={styles.card}>
-              <Text style={styles.cardHeading}>Dog Information</Text>
+              <Text style={styles.cardHeading}>General</Text>
               <View style={styles.detailsGrid}>
                 <DetailItem icon="paw" label="Breed" value={dog.breed} />
                 <DetailItem icon="male-female" label="Sex" value={dog.sex} />
                 <DetailItem
                   icon="calendar"
                   label="Date of Birth"
-                  value={dog.dob ? `${dog.dob}${age ? ` (${age})` : ""}` : "Unknown"}
+                  value={dog.dob ? `${formatDob(dog.dob)}${age ? ` (${age})` : ""}` : "Unknown"}
                 />
                 <DetailItem icon="color-palette" label="Color" value={dog.color || "Unknown"} />
                 <DetailItem icon="cut" label="Coat Type" value={dog.hair || "Unknown"} />
               </View>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.cardHeading}>Registration</Text>
+              <View style={styles.cardDivider} />
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Stud Book Number</Text>
                 <Text style={styles.infoValue}>
@@ -250,6 +262,38 @@ export default function DogProfileScreen() {
                   <Text style={styles.infoValue}>{dog.dam}</Text>
                 </View>
               )}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Ratings</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Breed Survey Period</Text>
+                <Text style={styles.infoValue}>{dog.breed_survey_period || "-"}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Show Rating</Text>
+                <Text style={styles.infoValue}>{dog.show_rating || "-"}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Working Title</Text>
+                <Text style={styles.infoValue}>{(dog.working_title && dog.working_title.trim()) || "-"}</Text>
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Examinations</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>HD Rating</Text>
+                <Text style={styles.infoValue}>{dog.hd || "-"}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>ED Rating</Text>
+                <Text style={styles.infoValue}>{dog.ed || "-"}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>DNA Status</Text>
+                <Text style={styles.infoValue}>{dog.dna_status || "-"}</Text>
+              </View>
             </View>
 
             {showResults.length > 0 && (
@@ -501,6 +545,11 @@ const styles = StyleSheet.create({
   },
   detailsGrid: {
     gap: 20,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    marginVertical: 20,
   },
   detailItem: {
     flexDirection: "row",
