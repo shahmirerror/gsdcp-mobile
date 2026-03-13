@@ -124,6 +124,7 @@ export default function AppNavigator() {
     <View style={{ flex: 1 }}>
       <NavigationContainer onStateChange={handleStateChange}>
         <Tab.Navigator
+          initialRouteName="HomeTab"
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
               if (route.name === "HomeTab") {
@@ -161,14 +162,6 @@ export default function AppNavigator() {
           })}
         >
           <Tab.Screen
-            name="HomeTab"
-            component={DashboardScreen}
-            options={{
-              title: "Home",
-              headerTitle: () => <HeaderLogo />,
-            }}
-          />
-          <Tab.Screen
             name="DogsTab"
             component={DogsStackNavigator}
             options={{ title: "Dogs", headerShown: false }}
@@ -178,6 +171,14 @@ export default function AppNavigator() {
             component={BreederDirectoryScreen}
             options={{
               title: "Breeders",
+              headerTitle: () => <HeaderLogo />,
+            }}
+          />
+          <Tab.Screen
+            name="HomeTab"
+            component={DashboardScreen}
+            options={{
+              title: "Home",
               headerTitle: () => <HeaderLogo />,
             }}
           />
