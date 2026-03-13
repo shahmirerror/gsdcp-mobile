@@ -192,7 +192,7 @@ export default function DogProfileScreen() {
                   value={dog.dob ? `${dog.dob}${age ? ` (${age})` : ""}` : "Unknown"}
                 />
                 <DetailItem icon="color-palette" label="Color" value={dog.color || "Unknown"} />
-                <DetailItem icon="cut" label="Hair" value={dog.hair || "Unknown"} />
+                <DetailItem icon="cut" label="Coat Type" value={dog.hair || "Unknown"} />
               </View>
             </View>
 
