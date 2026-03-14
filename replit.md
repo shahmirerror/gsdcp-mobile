@@ -4,12 +4,13 @@
 A mobile app for the German Shepherd Dog Club of Pakistan built with Expo (React Native). Runs as a web preview in Replit and can be built for iOS/Android using Expo's build service.
 
 ## Tech Stack
-- **Mobile Framework**: Expo SDK 52, React Native 0.76
+- **Mobile Framework**: Expo SDK 54, React Native 0.81, React 19.1
 - **Navigation**: React Navigation 7 (bottom tabs + native stack)
 - **State**: TanStack React Query v5
-- **Icons**: @expo/vector-icons (Ionicons)
+- **Icons**: @expo/vector-icons 15.x (Ionicons)
+- **Animations**: react-native-reanimated 3.17.x (v3 for web compatibility)
 - **API**: Direct calls to `https://gsdcp.org/api/mobile`
-- **Safe Area**: react-native-safe-area-context (all screens use useSafeAreaInsets)
+- **Safe Area**: react-native-safe-area-context 5.6.x (all screens use useSafeAreaInsets)
 
 ## Project Structure
 ```
