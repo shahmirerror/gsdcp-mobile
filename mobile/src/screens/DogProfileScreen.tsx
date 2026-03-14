@@ -280,7 +280,7 @@ export default function DogProfileScreen() {
                       key={`${entry.id}-${idx}`}
                       style={styles.lineBreedRow}
                       activeOpacity={0.7}
-                      onPress={() => navigation.push("DogProfile", { id: String(entry.id) })}
+                      onPress={() => navigation.push("DogProfile", { id: entry.id })}
                     >
                       <View style={styles.lineBreedInfo}>
                         <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>

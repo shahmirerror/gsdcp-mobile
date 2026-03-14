@@ -63,7 +63,7 @@ export type Dog = {
 
 export type LineBreedingEntry = {
   type: string;
-  id: number;
+  id: string;
   dog_name: string;
   positions: string[];
   sides: string[];
