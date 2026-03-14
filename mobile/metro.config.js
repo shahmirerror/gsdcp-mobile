@@ -2,23 +2,21 @@ const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
 const projectRoot = __dirname;
-const monorepoRoot = path.resolve(projectRoot, '..');
+const workspaceRoot = path.resolve(projectRoot, '..');
 
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [monorepoRoot];
+config.watchFolders = [workspaceRoot];
 
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
-  path.resolve(monorepoRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
 ];
 
 config.resolver.blockList = [
-  new RegExp(path.resolve(monorepoRoot, '.local', '.*').replace(/\\/g, '\\\\')),
+  new RegExp(path.resolve(workspaceRoot, '.local', '.*').replace(/\\/g, '\\\\')),
+  new RegExp(path.resolve(workspaceRoot, 'client', '.*').replace(/\\/g, '\\\\')),
+  new RegExp(path.resolve(workspaceRoot, 'server', '.*').replace(/\\/g, '\\\\')),
 ];
-
-config.resolver.extraNodeModules = {
-  'react-native-web': path.resolve(monorepoRoot, 'node_modules/react-native-web'),
-};
 
 module.exports = config;

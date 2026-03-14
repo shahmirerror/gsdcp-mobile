@@ -93,7 +93,6 @@ export default function DashboardScreen() {
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
         <View style={styles.headerTop}>
-          <Image source={logoSquare} style={styles.headerLogo} resizeMode="contain" />
           <View style={styles.headerTextWrap}>
             <Text style={styles.headerGreeting}>Welcome to</Text>
             <Text style={styles.headerTitle}>GSDCP</Text>
@@ -104,7 +103,11 @@ export default function DashboardScreen() {
             activeOpacity={0.7}
             data-testid="button-profile-header"
           >
-            <Ionicons name="person-circle-outline" size={28} color="rgba(255,255,255,0.8)" />
+            <Ionicons
+              name="person-circle-outline"
+              size={28}
+              color="rgba(255,255,255,0.8)"
+            />
           </TouchableOpacity>
         </View>
         <Text style={styles.headerSubtitle}>
@@ -118,7 +121,9 @@ export default function DashboardScreen() {
           data-testid="button-search-bar"
         >
           <Ionicons name="search" size={18} color={COLORS.textMuted} />
-          <Text style={styles.searchPlaceholder}>Search dogs by name, KP, owner...</Text>
+          <Text style={styles.searchPlaceholder}>
+            Search dogs by name, KP, owner...
+          </Text>
         </TouchableOpacity>
       </LinearGradient>
 
@@ -132,7 +137,9 @@ export default function DashboardScreen() {
               onPress={() => navigation.navigate(action.tab)}
               data-testid={`button-quick-${action.label.toLowerCase().replace(/\s/g, "-")}`}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: action.bg }]}>
+              <View
+                style={[styles.quickActionIcon, { backgroundColor: action.bg }]}
+              >
                 <Ionicons name={action.icon} size={22} color={action.color} />
               </View>
               <Text style={styles.quickActionLabel}>{action.label}</Text>
@@ -229,11 +236,19 @@ export default function DashboardScreen() {
               </View>
               <Text style={styles.eventTitle}>{event.title}</Text>
               <View style={styles.eventLocationRow}>
-                <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+                <Ionicons
+                  name="location-outline"
+                  size={12}
+                  color={COLORS.textMuted}
+                />
                 <Text style={styles.eventLocation}>{event.location}</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={COLORS.textMuted}
+            />
           </TouchableOpacity>
         ))}
       </View>
@@ -250,14 +265,23 @@ export default function DashboardScreen() {
             style={styles.ctaGradient}
           >
             <View style={styles.ctaContent}>
-              <Ionicons name="shield-checkmark" size={32} color={COLORS.accent} />
+              <Ionicons
+                name="shield-checkmark"
+                size={32}
+                color={COLORS.accent}
+              />
               <Text style={styles.ctaTitle}>Join GSDCP</Text>
               <Text style={styles.ctaDesc}>
-                Register your litter, enter shows, and access full ancestry tools.
+                Register your litter, enter shows, and access full ancestry
+                tools.
               </Text>
               <View style={styles.ctaButton}>
                 <Text style={styles.ctaButtonText}>Get Started</Text>
-                <Ionicons name="arrow-forward" size={16} color={COLORS.primaryDark} />
+                <Ionicons
+                  name="arrow-forward"
+                  size={16}
+                  color={COLORS.primaryDark}
+                />
               </View>
             </View>
           </LinearGradient>
@@ -312,7 +336,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "rgba(255,255,255,0.6)",
     marginBottom: 16,
-    marginLeft: 52,
   },
   searchBar: {
     flexDirection: "row",
@@ -367,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     padding: 16,
     width: (SCREEN_WIDTH - 40 - 24) / 3,
-    marginRight: 12,
+    marginRight: 2,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: "center",
