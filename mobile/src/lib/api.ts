@@ -18,7 +18,7 @@ export async function fetchDogsPage(
   filters?: { search?: string; gender?: string },
 ): Promise<DogsPage> {
   const params = new URLSearchParams({ page: String(page) });
-  if (filters?.search) params.set("search", filters.search);
+  if (filters?.search) params.set("q", filters.search);
   if (filters?.gender && filters.gender !== "All") params.set("gender", filters.gender);
   const res = await fetch(`${BASE_URL}/dogs?${params.toString()}`);
   const json = await res.json();
