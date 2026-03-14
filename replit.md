@@ -9,6 +9,7 @@ A mobile app for the German Shepherd Dog Club of Pakistan built with Expo (React
 - **State**: TanStack React Query v5
 - **Icons**: @expo/vector-icons (Ionicons)
 - **API**: Direct calls to `https://gsdcp.org/api/mobile`
+- **Safe Area**: react-native-safe-area-context (all screens use useSafeAreaInsets)
 
 ## Project Structure
 ```
@@ -23,12 +24,12 @@ mobile/
     navigation/
       AppNavigator.tsx     # Bottom tabs + Dogs stack navigator
     screens/
-      DashboardScreen.tsx  # Home with quick actions, featured dogs
-      DogSearchScreen.tsx  # Searchable/filterable dog list
+      DashboardScreen.tsx  # Mobile home: quick actions, stats, activity, events
+      DogSearchScreen.tsx  # Searchable/filterable dog list with infinite scroll
       DogProfileScreen.tsx # Dog details, pedigree tree, show results
-      BreederDirectoryScreen.tsx  # Placeholder
-      ShowsScreen.tsx      # Placeholder
-      ProfileScreen.tsx    # User profile/settings
+      BreederDirectoryScreen.tsx  # Placeholder with header
+      ShowsScreen.tsx      # Placeholder with header
+      ProfileScreen.tsx    # User profile/settings with menu items
     components/
       DogListItem.tsx      # Dog card for FlatList
       PedigreeTree.tsx     # 4-generation pedigree with clickable ancestors
@@ -36,8 +37,8 @@ mobile/
       api.ts               # API functions and TypeScript types
       theme.ts             # GSDCP brand colors, spacing, typography
 
-client/                    # Legacy web app (React + Vite)
-server/                    # Legacy Express backend (API proxy)
+client/                    # Legacy web app (React + Vite) - not actively used
+server/                    # Legacy Express backend (API proxy) - not actively used
 shared/
   schema.ts                # Shared TypeScript types
 ```
@@ -51,17 +52,26 @@ shared/
 - **Dam (female)**: Pink tint
 
 ## Navigation
-Bottom tab navigation with 5 tabs: Home, Dogs, Breeders, Shows, Profile
+Bottom tab navigation with 5 tabs: Dogs, Breeders, Home (center with logo), Shows, Profile
 Dogs tab has a nested stack navigator for Dog Search → Dog Profile
+Home tab is the initial route (center position)
+
+## Dashboard (Home Screen)
+- Gradient header with logo, greeting, and search bar
+- 4 quick action buttons: Search Dogs, Breeders, Shows, Profile
+- Horizontal scrollable stats cards
+- Latest Activity feed with timestamps
+- Upcoming Events compact cards
+- Join GSDCP CTA card
 
 ## API (Direct from gsdcp.org)
-- `GET /api/mobile/dogs` — Dog list
+- `GET /api/mobile/dogs` — Dog list with pagination
 - `GET /api/mobile/dogs/{id}` — Dog detail with pedigree and show results
 
 ## Pedigree
 - 4-generation tree displayed in a horizontal scrollable layout
-- Each ancestor cell is clickable — navigates to dog search with that name
-- Sire cells are blue-tinted, dam cells are pink-tinted
+- Each ancestor cell is clickable — navigates to dog profile or search
+- Male ancestors use green accent, female ancestors use gold accent
 - API returns `pedigree` as either `[]` (no data) or object with `gen1`-`gen4` keys
 
 ## Dog Fields (nullable)

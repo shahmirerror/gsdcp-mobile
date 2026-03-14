@@ -1,39 +1,52 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <Text style={styles.header}>Profile</Text>
+
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={40} color={COLORS.primary} />
+          <Ionicons name="person" size={36} color={COLORS.primary} />
         </View>
         <Text style={styles.name}>Guest User</Text>
         <Text style={styles.email}>Sign in to access your profile</Text>
       </View>
 
       <View style={styles.card}>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="log-in-outline" size={22} color={COLORS.primary} />
+        <TouchableOpacity style={styles.menuItem} data-testid="button-sign-in">
+          <View style={[styles.menuIconWrap, { backgroundColor: "rgba(15,92,58,0.08)" }]}>
+            <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
+          </View>
           <Text style={styles.menuLabel}>Sign In / Register</Text>
           <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
         </TouchableOpacity>
         <View style={styles.menuDivider} />
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="paw-outline" size={22} color={COLORS.primary} />
+        <TouchableOpacity style={styles.menuItem} data-testid="button-my-dogs">
+          <View style={[styles.menuIconWrap, { backgroundColor: "rgba(59,130,246,0.08)" }]}>
+            <Ionicons name="paw-outline" size={20} color="#3B82F6" />
+          </View>
           <Text style={styles.menuLabel}>My Dogs</Text>
           <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
         </TouchableOpacity>
         <View style={styles.menuDivider} />
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="settings-outline" size={22} color={COLORS.primary} />
+        <TouchableOpacity style={styles.menuItem} data-testid="button-settings">
+          <View style={[styles.menuIconWrap, { backgroundColor: "rgba(139,92,246,0.08)" }]}>
+            <Ionicons name="settings-outline" size={20} color="#8B5CF6" />
+          </View>
           <Text style={styles.menuLabel}>Settings</Text>
           <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
         </TouchableOpacity>
         <View style={styles.menuDivider} />
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="information-circle-outline" size={22} color={COLORS.primary} />
+        <TouchableOpacity style={styles.menuItem} data-testid="button-about">
+          <View style={[styles.menuIconWrap, { backgroundColor: "rgba(199,164,92,0.08)" }]}>
+            <Ionicons name="information-circle-outline" size={20} color={COLORS.accent} />
+          </View>
           <Text style={styles.menuLabel}>About GSDCP</Text>
           <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
         </TouchableOpacity>
@@ -50,22 +63,29 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     padding: SPACING.lg,
   },
+  header: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
   avatarSection: {
     alignItems: "center",
     marginVertical: SPACING.xl,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#E8F5E9",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "rgba(15,92,58,0.08)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: SPACING.md,
   },
   name: {
     fontSize: FONT_SIZES.xl,
-    fontWeight: "600",
+    fontWeight: "700",
     color: COLORS.text,
   },
   email: {
@@ -86,15 +106,23 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     gap: SPACING.md,
   },
+  menuIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   menuLabel: {
     flex: 1,
     fontSize: FONT_SIZES.lg,
+    fontWeight: "500",
     color: COLORS.text,
   },
   menuDivider: {
     height: 1,
     backgroundColor: COLORS.border,
-    marginLeft: 54,
+    marginLeft: 68,
   },
   version: {
     textAlign: "center",

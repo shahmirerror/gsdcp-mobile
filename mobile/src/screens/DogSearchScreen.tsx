@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -27,6 +28,7 @@ const hairOptions = ["All", "Stock Hair", "Long Stock Hair"] as const;
 export default function DogSearchScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<any>();
+  const insets = useSafeAreaInsets();
   const initialQuery = route.params?.searchQuery || "";
 
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -99,7 +101,7 @@ export default function DogSearchScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.searchRow}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={18} color={COLORS.textMuted} />
