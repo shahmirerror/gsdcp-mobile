@@ -77,6 +77,7 @@ export default function DogProfileScreen() {
   const navigation = useNavigation<any>();
   const dogId = route.params?.id;
   const [activeTab, setActiveTab] = useState<TabKey>("details");
+  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
 
   const { data, isLoading, isError } = useQuery<DogDetail>({
     queryKey: ["dog", dogId],
@@ -264,25 +265,46 @@ export default function DogProfileScreen() {
                   const sideLabel = [sirePositions.length > 0 ? "Sire side" : "", damPositions.length > 0 ? "Dam side" : ""].filter(Boolean).join(" - ");
 
                   if (entry.type === "litter_pair" && entry.dogs && entry.dogs.length > 0) {
+                    const isExpanded = expandedLitters.has(idx);
+                    const toggleExpand = () => {
+                      setExpandedLitters((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(idx)) next.delete(idx);
+                        else next.add(idx);
+                        return next;
+                      });
+                    };
                     return (
-                      <View key={`litter-${idx}`} style={styles.lineBreedRow}>
-                        <View style={styles.lineBreedInfo}>
-                          <View style={styles.litterPairNames}>
-                            {entry.dogs.map((d, dIdx) => (
+                      <View key={`litter-${idx}`}>
+                        <TouchableOpacity
+                          style={styles.lineBreedRow}
+                          activeOpacity={0.7}
+                          onPress={toggleExpand}
+                        >
+                          <View style={styles.lineBreedInfo}>
+                            <Text style={styles.lineBreedName} numberOfLines={1}>
+                              Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}
+                            </Text>
+                            <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel})</Text>
+                          </View>
+                          <Ionicons name={isExpanded ? "chevron-down" : "chevron-forward"} size={18} color="#94A3B8" />
+                        </TouchableOpacity>
+                        {isExpanded && (
+                          <View style={styles.litterDropdown}>
+                            {entry.dogs.map((d) => (
                               <TouchableOpacity
                                 key={d.id}
+                                style={styles.litterDogRow}
                                 activeOpacity={0.7}
                                 onPress={() => navigation.push("DogProfile", { id: d.id })}
                               >
-                                <Text style={styles.lineBreedName}>
-                                  {d.dog_name}{dIdx < entry.dogs!.length - 1 ? " / " : ""}
-                                </Text>
+                                <Ionicons name="paw" size={14} color={COLORS.primary} />
+                                <Text style={styles.litterDogName} numberOfLines={1}>{d.dog_name}</Text>
+                                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                               </TouchableOpacity>
                             ))}
                           </View>
-                          <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel}) · Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                        )}
                       </View>
                     );
                   }
@@ -642,9 +664,24 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontStyle: "italic",
   },
-  litterPairNames: {
+  litterDropdown: {
+    marginLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: "rgba(15,92,58,0.12)",
+    paddingLeft: 12,
+    marginBottom: 4,
+  },
+  litterDogRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
+    paddingVertical: 10,
+    gap: 8,
+  },
+  litterDogName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
   },
   lineBreedRow: {
     flexDirection: "row",
