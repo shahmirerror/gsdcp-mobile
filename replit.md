@@ -13,34 +13,30 @@ A mobile app for the German Shepherd Dog Club of Pakistan built with Expo (React
 
 ## Project Structure
 ```
-mobile/
-  App.tsx                  # Root app component with providers
-  index.js                 # Expo entry point
-  app.json                 # Expo configuration
-  metro.config.js          # Metro bundler config
-  babel.config.js          # Babel config with reanimated plugin
-  assets/                  # App icons and splash
+mobile/                      # Main app directory
+  App.tsx                    # Root app component with providers
+  index.js                   # Expo entry point
+  app.json                   # Expo configuration
+  package.json               # Mobile app dependencies
+  metro.config.js            # Metro bundler config
+  babel.config.js            # Babel config with reanimated plugin
+  assets/                    # App icons, splash, hero background
   src/
     navigation/
-      AppNavigator.tsx     # Bottom tabs + Dogs stack navigator
+      AppNavigator.tsx       # Bottom tabs + Dogs stack navigator
     screens/
-      DashboardScreen.tsx  # Mobile home: quick actions, stats, activity, events
-      DogSearchScreen.tsx  # Searchable/filterable dog list with infinite scroll
-      DogProfileScreen.tsx # Dog details, pedigree tree, show results
+      DashboardScreen.tsx    # Mobile home: quick actions, stats, activity, events
+      DogSearchScreen.tsx    # Searchable/filterable dog list with infinite scroll
+      DogProfileScreen.tsx   # Dog details, pedigree tree, show results
       BreederDirectoryScreen.tsx  # Placeholder with header
-      ShowsScreen.tsx      # Placeholder with header
-      ProfileScreen.tsx    # User profile/settings with menu items
+      ShowsScreen.tsx        # Placeholder with header
+      ProfileScreen.tsx      # User profile/settings with menu items
     components/
-      DogListItem.tsx      # Dog card for FlatList
-      PedigreeTree.tsx     # 4-generation pedigree with clickable ancestors
+      DogListItem.tsx        # Dog card for FlatList
+      PedigreeTree.tsx       # 4-generation pedigree with clickable ancestors
     lib/
-      api.ts               # API functions and TypeScript types
-      theme.ts             # GSDCP brand colors, spacing, typography
-
-client/                    # Legacy web app (React + Vite) - not actively used
-server/                    # Legacy Express backend (API proxy) - not actively used
-shared/
-  schema.ts                # Shared TypeScript types
+      api.ts                 # API functions and TypeScript types
+      theme.ts               # GSDCP brand colors, spacing, typography
 ```
 
 ## Design System
