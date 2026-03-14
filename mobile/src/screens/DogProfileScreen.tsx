@@ -250,29 +250,29 @@ export default function DogProfileScreen() {
                   onPress={dog.dam_id ? () => navigation.push("DogProfile", { id: dog.dam_id }) : undefined}
                 />
               </View>
-              {lineBreeding.length > 0 && (
-                <>
-                  <View style={styles.cardDivider} />
-                  <Text style={styles.cardSubHeading}>Line Breeding</Text>
-                  {lineBreeding.map((entry: LineBreedingEntry, idx: number) => {
-                    const genLabel = entry.positions.map((p) => `Gen ${p}`).join("-");
-                    const sideLabel = [...new Set(entry.sides.map((s) => s === "father" ? "Sire" : "Dam"))].join(" & ");
-                    return (
-                      <TouchableOpacity
-                        key={`${entry.id}-${idx}`}
-                        style={styles.lineBreedRow}
-                        activeOpacity={0.7}
-                        onPress={() => navigation.push("DogProfile", { id: entry.id })}
-                      >
-                        <View style={styles.lineBreedInfo}>
-                          <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
-                          <Text style={styles.lineBreedMeta}>{genLabel} · {sideLabel} side</Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </>
+              <View style={styles.cardDivider} />
+              <Text style={styles.cardSubHeading}>Line Breeding</Text>
+              {lineBreeding.length > 0 ? (
+                lineBreeding.map((entry: LineBreedingEntry, idx: number) => {
+                  const genLabel = entry.positions.map((p) => `Gen ${p}`).join("-");
+                  const sideLabel = [...new Set(entry.sides.map((s) => s === "father" ? "Sire" : "Dam"))].join(" & ");
+                  return (
+                    <TouchableOpacity
+                      key={`${entry.id}-${idx}`}
+                      style={styles.lineBreedRow}
+                      activeOpacity={0.7}
+                      onPress={() => navigation.push("DogProfile", { id: entry.id })}
+                    >
+                      <View style={styles.lineBreedInfo}>
+                        <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
+                        <Text style={styles.lineBreedMeta}>{genLabel} · {sideLabel} side</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  );
+                })
+              ) : (
+                <Text style={styles.lineBreedEmpty}>No common ancestory was found in 5 generations</Text>
               )}
             </View>
 
@@ -605,6 +605,11 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     maxWidth: "60%",
     textAlign: "right",
+  },
+  lineBreedEmpty: {
+    fontSize: 14,
+    color: "#94A3B8",
+    fontStyle: "italic",
   },
   lineBreedRow: {
     flexDirection: "row",
