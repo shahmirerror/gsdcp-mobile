@@ -108,6 +108,7 @@ export default function DogProfileScreen() {
   const pedigree = data.pedigree;
   const hasPedigree = isPedigreePopulated(pedigree);
   const siblings = (data.siblings ?? []).filter((s: Dog) => s.id !== dogId);
+  const lineBreeding = data.line_breeding ?? [];
 
   const initials = dog.dog_name
     .split(" ")
@@ -249,6 +250,30 @@ export default function DogProfileScreen() {
                   onPress={dog.dam_id ? () => navigation.push("DogProfile", { id: dog.dam_id }) : undefined}
                 />
               </View>
+              {lineBreeding.length > 0 && (
+                <>
+                  <View style={styles.cardDivider} />
+                  <Text style={styles.cardSubHeading}>Line Breeding</Text>
+                  {lineBreeding.map((entry: LineBreedingEntry, idx: number) => {
+                    const genLabel = entry.positions.map((p) => `Gen ${p}`).join("-");
+                    const sideLabel = [...new Set(entry.sides.map((s) => s === "father" ? "Sire" : "Dam"))].join(" & ");
+                    return (
+                      <TouchableOpacity
+                        key={`${entry.id}-${idx}`}
+                        style={styles.lineBreedRow}
+                        activeOpacity={0.7}
+                        onPress={() => navigation.push("DogProfile", { id: entry.id })}
+                      >
+                        <View style={styles.lineBreedInfo}>
+                          <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
+                          <Text style={styles.lineBreedMeta}>{genLabel} · {sideLabel} side</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              )}
             </View>
 
             <View style={styles.card}>
@@ -268,30 +293,6 @@ export default function DogProfileScreen() {
                 <DetailItem icon="flask" label="DNA Status" value={dog.dna_status || "-"} />
               </View>
             </View>
-
-            {dog.line_breeding && dog.line_breeding.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.cardHeading}>Line Breeding</Text>
-                {dog.line_breeding.map((entry: LineBreedingEntry, idx: number) => {
-                  const genLabel = entry.positions.map((p) => `Gen ${p}`).join("-");
-                  const sideLabel = [...new Set(entry.sides.map((s) => s === "father" ? "Sire" : "Dam"))].join(" & ");
-                  return (
-                    <TouchableOpacity
-                      key={`${entry.id}-${idx}`}
-                      style={styles.lineBreedRow}
-                      activeOpacity={0.7}
-                      onPress={() => navigation.push("DogProfile", { id: entry.id })}
-                    >
-                      <View style={styles.lineBreedInfo}>
-                        <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
-                        <Text style={styles.lineBreedMeta}>{genLabel} · {sideLabel} side</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
 
             {showResults.length > 0 && (
               <View style={styles.card}>
@@ -547,6 +548,12 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "rgba(15,92,58,0.08)",
     marginVertical: 20,
+  },
+  cardSubHeading: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 12,
   },
   detailItem: {
     flexDirection: "row",

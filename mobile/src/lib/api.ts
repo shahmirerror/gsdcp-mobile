@@ -58,7 +58,6 @@ export type Dog = {
   dna_status: string | null;
   breed_survey_period: string | null;
   show_rating: string | null;
-  line_breeding: LineBreedingEntry[];
 };
 
 export type LineBreedingEntry = {
@@ -104,6 +103,7 @@ export type DogDetail = {
   showResults: ShowResult[];
   pedigree: Pedigree | any[];
   siblings: Dog[];
+  line_breeding: LineBreedingEntry[];
 };
 
 export function getAncestorName(ancestor: PedigreeAncestor): string {
