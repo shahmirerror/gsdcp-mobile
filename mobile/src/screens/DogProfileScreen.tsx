@@ -262,12 +262,37 @@ export default function DogProfileScreen() {
                   });
                   const genLabel = [sirePositions.join(","), damPositions.join(",")].filter(Boolean).join(" - ");
                   const sideLabel = [sirePositions.length > 0 ? "Sire side" : "", damPositions.length > 0 ? "Dam side" : ""].filter(Boolean).join(" - ");
+
+                  if (entry.type === "litter_pair" && entry.dogs && entry.dogs.length > 0) {
+                    return (
+                      <View key={`litter-${idx}`} style={styles.lineBreedRow}>
+                        <View style={styles.lineBreedInfo}>
+                          <View style={styles.litterPairNames}>
+                            {entry.dogs.map((d, dIdx) => (
+                              <TouchableOpacity
+                                key={d.id}
+                                activeOpacity={0.7}
+                                onPress={() => navigation.push("DogProfile", { id: d.id })}
+                              >
+                                <Text style={styles.lineBreedName}>
+                                  {d.dog_name}{dIdx < entry.dogs!.length - 1 ? " / " : ""}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                          <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel}) · Litter {entry.litter_letter}</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                      </View>
+                    );
+                  }
+
                   return (
                     <TouchableOpacity
                       key={`${entry.id}-${idx}`}
                       style={styles.lineBreedRow}
                       activeOpacity={0.7}
-                      onPress={() => navigation.push("DogProfile", { id: entry.id })}
+                      onPress={() => entry.id ? navigation.push("DogProfile", { id: entry.id }) : undefined}
                     >
                       <View style={styles.lineBreedInfo}>
                         <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
@@ -616,6 +641,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#94A3B8",
     fontStyle: "italic",
+  },
+  litterPairNames: {
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   lineBreedRow: {
     flexDirection: "row",

@@ -60,13 +60,22 @@ export type Dog = {
   show_rating: string | null;
 };
 
-export type LineBreedingEntry = {
-  type: string;
+export type LineBreedingDog = {
   id: string;
   dog_name: string;
   positions: string[];
   sides: string[];
   litter_letter: string | null;
+};
+
+export type LineBreedingEntry = {
+  type: string;
+  id?: string;
+  dog_name: string;
+  positions: string[];
+  sides: string[];
+  litter_letter: string | null;
+  dogs?: LineBreedingDog[];
 };
 
 export type ShowResult = {
