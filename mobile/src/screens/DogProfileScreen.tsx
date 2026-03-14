@@ -254,8 +254,14 @@ export default function DogProfileScreen() {
               <Text style={styles.cardSubHeading}>Line Breeding</Text>
               {lineBreeding.length > 0 ? (
                 lineBreeding.map((entry: LineBreedingEntry, idx: number) => {
-                  const genLabel = entry.positions.map((p) => `Gen ${p}`).join("-");
-                  const sideLabel = [...new Set(entry.sides.map((s) => s === "father" ? "Sire" : "Dam"))].join(" & ");
+                  const sirePositions: string[] = [];
+                  const damPositions: string[] = [];
+                  entry.positions.forEach((p, i) => {
+                    if (entry.sides[i] === "father") sirePositions.push(p);
+                    else damPositions.push(p);
+                  });
+                  const genLabel = [sirePositions.join(","), damPositions.join(",")].filter(Boolean).join(" - ");
+                  const sideLabel = [sirePositions.length > 0 ? "Sire side" : "", damPositions.length > 0 ? "Dam side" : ""].filter(Boolean).join(" - ");
                   return (
                     <TouchableOpacity
                       key={`${entry.id}-${idx}`}
@@ -265,7 +271,7 @@ export default function DogProfileScreen() {
                     >
                       <View style={styles.lineBreedInfo}>
                         <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
-                        <Text style={styles.lineBreedMeta}>{genLabel} · {sideLabel} side</Text>
+                        <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel})</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
                     </TouchableOpacity>
