@@ -264,7 +264,7 @@ export default function DogProfileScreen() {
                   const genLabel = [sirePositions.join(","), damPositions.join(",")].filter(Boolean).join(" - ");
                   const sideLabel = [sirePositions.length > 0 ? "Sire side" : "", damPositions.length > 0 ? "Dam side" : ""].filter(Boolean).join(" - ");
 
-                  if (entry.type === "litter_pair" && entry.dogs && entry.dogs.length > 0) {
+                  if ((entry.type === "litter_pair" || entry.type === "litter_group") && entry.dogs && entry.dogs.length > 0) {
                     const isExpanded = expandedLitters.has(idx);
                     const toggleExpand = () => {
                       setExpandedLitters((prev) => {
