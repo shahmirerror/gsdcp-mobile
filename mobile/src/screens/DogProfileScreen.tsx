@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { fetchDog, DogDetail, Pedigree, Dog } from "../lib/api";
+import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 
@@ -268,6 +268,30 @@ export default function DogProfileScreen() {
                 <DetailItem icon="flask" label="DNA Status" value={dog.dna_status || "-"} />
               </View>
             </View>
+
+            {dog.line_breeding && dog.line_breeding.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardHeading}>Line Breeding</Text>
+                {dog.line_breeding.map((entry: LineBreedingEntry, idx: number) => {
+                  const genLabel = entry.positions.map((p) => `Gen ${p}`).join("-");
+                  const sideLabel = [...new Set(entry.sides.map((s) => s === "father" ? "Sire" : "Dam"))].join(" & ");
+                  return (
+                    <TouchableOpacity
+                      key={`${entry.id}-${idx}`}
+                      style={styles.lineBreedRow}
+                      activeOpacity={0.7}
+                      onPress={() => navigation.push("DogProfile", { id: String(entry.id) })}
+                    >
+                      <View style={styles.lineBreedInfo}>
+                        <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
+                        <Text style={styles.lineBreedMeta}>{genLabel} · {sideLabel} side</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {showResults.length > 0 && (
               <View style={styles.card}>
@@ -574,6 +598,28 @@ const styles = StyleSheet.create({
     color: "#0F172A",
     maxWidth: "60%",
     textAlign: "right",
+  },
+  lineBreedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.05)",
+  },
+  lineBreedInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  lineBreedName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginBottom: 2,
+  },
+  lineBreedMeta: {
+    fontSize: 13,
+    color: "#94A3B8",
   },
   resultRow: {
     flexDirection: "row",

@@ -52,6 +52,16 @@ export type Dog = {
   dna_status: string | null;
   breed_survey_period: string | null;
   show_rating: string | null;
+  line_breeding: LineBreedingEntry[];
+};
+
+export type LineBreedingEntry = {
+  type: string;
+  id: number;
+  dog_name: string;
+  positions: string[];
+  sides: string[];
+  litter_letter: string | null;
 };
 
 export type ShowResult = {
