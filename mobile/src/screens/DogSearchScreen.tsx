@@ -56,8 +56,6 @@ export default function DogSearchScreen() {
     setTempHair("All");
   };
 
-  const debouncedSearch = useMemo(() => searchQuery.trim(), [searchQuery]);
-
   const {
     data,
     isLoading,
@@ -66,12 +64,8 @@ export default function DogSearchScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<DogsPage>({
-    queryKey: ["dogs", debouncedSearch, genderFilter],
-    queryFn: ({ pageParam }) =>
-      fetchDogsPage(pageParam as number, {
-        search: debouncedSearch || undefined,
-        gender: genderFilter,
-      }),
+    queryKey: ["dogs"],
+    queryFn: ({ pageParam }) => fetchDogsPage(pageParam as number),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.pagination.hasMorePages
@@ -86,11 +80,26 @@ export default function DogSearchScreen() {
 
   const filteredDogs = useMemo(() => {
     let results = allDogs;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      results = results.filter(
+        (dog) =>
+          dog.dog_name.toLowerCase().includes(q) ||
+          (dog.KP && dog.KP.toLowerCase().includes(q)) ||
+          (dog.owner && dog.owner.toLowerCase().includes(q)) ||
+          (dog.breeder && dog.breeder.toLowerCase().includes(q)) ||
+          (dog.color && dog.color.toLowerCase().includes(q)) ||
+          dog.titles.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    if (genderFilter !== "All") {
+      results = results.filter((dog) => dog.sex === genderFilter);
+    }
     if (hairFilter !== "All") {
       results = results.filter((dog) => dog.hair === hairFilter);
     }
     return results;
-  }, [allDogs, hairFilter]);
+  }, [allDogs, searchQuery, genderFilter, hairFilter]);
 
   const handleEndReached = () => {
     if (hasNextPage && !isFetchingNextPage) {
