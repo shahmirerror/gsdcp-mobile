@@ -65,6 +65,7 @@ export type LineBreedingDog = {
   dog_name: string;
   positions: string[];
   sides: string[];
+  kennel?: string | null;
   litter_letter: string | null;
 };
 
@@ -75,6 +76,7 @@ export type LineBreedingEntry = {
   positions: string[];
   sides: string[];
   litter_letter: string | null;
+  kennel?: string | null;
   dogs?: LineBreedingDog[];
 };
 

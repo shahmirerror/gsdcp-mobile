@@ -280,7 +280,7 @@ export default function DogProfileScreen() {
                               </TouchableOpacity>
                             ))}
                           </View>
-                          <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel}) · Litter {entry.litter_letter}</Text>
+                          <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel}) · Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}</Text>
                         </View>
                         <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
                       </View>
