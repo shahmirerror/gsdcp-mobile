@@ -333,7 +333,7 @@ export default function DogProfileScreen() {
               <Text style={styles.cardHeading}>Ratings</Text>
               <View style={styles.detailsGrid}>
                 <DetailItem icon="calendar-number" label="Breed Survey Period" value={dog.breed_survey_period || "-"} />
-                <DetailItem icon="star" label="Show Rating" value={dog.show_rating || "-"} />
+                <DetailItem icon="star" label="Show Rating" value={dog.show_rating || (dog.titles.length > 0 ? dog.titles.join(", ") : "-")} />
                 <DetailItem icon="ribbon" label="Working Title" value={(dog.working_title && dog.working_title.trim()) || "-"} />
               </View>
             </View>
