@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Linking,
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,8 +26,7 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function BreederCard({ breeder, onPress }: { breeder: Breeder; onPress: () => void }) {
-  const year = formatYear(breeder.activeSince);
+function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () => void }) {
   const hasImage =
     breeder.imageUrl &&
     !breeder.imageUrl.includes("user-not-found");
@@ -38,77 +36,37 @@ function BreederCard({ breeder, onPress }: { breeder: Breeder; onPress: () => vo
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const year = formatYear(breeder.activeSince);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} data-testid={`card-breeder-${breeder.id}`}>
-      <View style={styles.cardTop}>
-        {hasImage ? (
-          <Image
-            source={{ uri: breeder.imageUrl }}
-            style={styles.avatarImage}
-          />
-        ) : (
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+    <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-breeder-${breeder.id}`}>
+      {hasImage ? (
+        <Image source={{ uri: breeder.imageUrl }} style={styles.avatarImage} resizeMode="cover" />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
+      )}
+      <View style={styles.itemInfo}>
+        <Text style={styles.itemName} numberOfLines={1}>{breeder.name}</Text>
+        <Text style={styles.itemSub} numberOfLines={1}>{breeder.kennelName}</Text>
+        <View style={styles.badges}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{breeder.totalDogs} dogs</Text>
           </View>
-        )}
-        <View style={styles.cardInfo}>
-          <Text style={styles.breederName} numberOfLines={1}>
-            {breeder.name}
-          </Text>
-          <Text style={styles.kennelName} numberOfLines={1}>
-            {breeder.kennelName}
-          </Text>
+          {breeder.location ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{breeder.location}</Text>
+            </View>
+          ) : null}
+          {year ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Since {year}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
-
-      <View style={styles.metaRow}>
-        {breeder.location ? (
-          <View style={styles.metaItem}>
-            <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
-            <Text style={styles.metaText} numberOfLines={1}>
-              {breeder.location}
-            </Text>
-          </View>
-        ) : null}
-        <View style={styles.metaItem}>
-          <Ionicons name="paw-outline" size={13} color={COLORS.textMuted} />
-          <Text style={styles.metaText}>
-            {breeder.totalDogs} {breeder.totalDogs === 1 ? "dog" : "dogs"}
-          </Text>
-        </View>
-        {year ? (
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={13} color={COLORS.textMuted} />
-            <Text style={styles.metaText}>Since {year}</Text>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.actions}>
-        {breeder.phone && breeder.phone !== "+00-000-000-0000" ? (
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => Linking.openURL(`tel:${breeder.phone}`)}
-            activeOpacity={0.7}
-            data-testid={`btn-call-${breeder.id}`}
-          >
-            <Ionicons name="call-outline" size={16} color={COLORS.primary} />
-            <Text style={styles.actionText}>Call</Text>
-          </TouchableOpacity>
-        ) : null}
-        {breeder.email ? (
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => Linking.openURL(`mailto:${breeder.email}`)}
-            activeOpacity={0.7}
-            data-testid={`btn-email-${breeder.id}`}
-          >
-            <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
-            <Text style={styles.actionText}>Email</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
     </TouchableOpacity>
   );
 }
@@ -137,15 +95,6 @@ export default function BreederDirectoryScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.headerRow}>
-        <Text style={styles.header}>Breeders</Text>
-        {breeders ? (
-          <Text style={styles.countBadge} data-testid="text-breeder-count">
-            {filtered.length}
-          </Text>
-        ) : null}
-      </View>
-
       <View style={styles.searchRow}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={18} color={COLORS.textMuted} />
@@ -166,18 +115,19 @@ export default function BreederDirectoryScreen() {
         </View>
       </View>
 
+      <View style={styles.countRow}>
+        <Text style={styles.count} data-testid="text-breeder-count">
+          {filtered.length} {filtered.length === 1 ? "breeder" : "breeders"}
+        </Text>
+      </View>
+
       {isLoading ? (
-        <ActivityIndicator
-          size="large"
-          color={COLORS.primary}
-          style={{ marginTop: SPACING.xxl }}
-          data-testid="loading-breeders"
-        />
+        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.xxl }} data-testid="loading-breeders" />
       ) : isError ? (
         <View style={styles.emptyState}>
           <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
           <Text style={styles.emptyTitle}>Failed to load breeders</Text>
-          <Text style={styles.emptyDesc}>Could not connect to the server.</Text>
+          <Text style={styles.emptyDesc}>Could not connect to the server. Please try again.</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
@@ -188,7 +138,7 @@ export default function BreederDirectoryScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <BreederCard
+            <BreederListItem
               breeder={item}
               onPress={() =>
                 navigation.navigate("BreederProfile", { id: item.id, name: item.name })
@@ -213,34 +163,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  headerRow: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
     gap: SPACING.sm,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-  countBadge: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: "700",
-    color: COLORS.primary,
-    backgroundColor: "rgba(15,92,58,0.08)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.full,
-    overflow: "hidden",
-  },
-  searchRow: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
   searchContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.surface,
@@ -256,90 +188,77 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     color: COLORS.text,
   },
+  countRow: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
+  },
+  count: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+  },
   list: {
     padding: SPACING.lg,
-    paddingTop: SPACING.xs,
-    gap: SPACING.md,
+    paddingTop: SPACING.sm,
   },
-  card: {
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  cardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
-  },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "rgba(15,92,58,0.08)",
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",
+    marginRight: SPACING.md,
   },
   avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.full,
+    marginRight: SPACING.md,
+    backgroundColor: "#E8F5E9",
   },
   avatarText: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "700",
     color: COLORS.primary,
+    fontWeight: "600",
+    fontSize: FONT_SIZES.sm,
   },
-  cardInfo: {
+  itemInfo: {
     flex: 1,
   },
-  breederName: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "700",
+  itemName: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
     color: COLORS.text,
   },
-  kennelName: {
+  itemSub: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginTop: 2,
   },
-  metaRow: {
+  badges: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  metaText: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: SPACING.md,
-  },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: "rgba(15,92,58,0.06)",
+    marginTop: 4,
+    flexWrap: "wrap",
   },
-  actionText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
-    color: COLORS.primary,
+  badge: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  badgeText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
   },
   emptyState: {
     alignItems: "center",

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -7,19 +8,43 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
-  FlatList,
+  ImageBackground,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeder, BreederDetail, BreederDog } from "../lib/api";
+
+const heroBg = require("../../assets/hero-bg.jpg");
 
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const year = new Date(dateStr).getFullYear();
   return isNaN(year) ? null : String(year);
+}
+
+function DetailItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.detailItem}>
+      <View style={styles.detailIconWrap}>
+        <Ionicons name={icon} size={18} color={COLORS.primary} />
+      </View>
+      <View style={styles.detailTextWrap}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailValue}>{value}</Text>
+      </View>
+    </View>
+  );
 }
 
 function BreederDogItem({
@@ -47,7 +72,7 @@ function BreederDogItem({
       data-testid={`card-dog-${dog.id}`}
     >
       {hasImg ? (
-        <Image source={{ uri: dog.imageUrl }} style={styles.dogAvatar} />
+        <Image source={{ uri: dog.imageUrl }} style={styles.dogAvatar} resizeMode="cover" />
       ) : (
         <View style={styles.dogAvatarFallback}>
           <Text style={styles.dogAvatarText}>{initials}</Text>
@@ -74,7 +99,15 @@ function BreederDogItem({
       {dog.titles.length > 0 && (
         <View style={styles.titleCol}>
           {dog.titles.slice(0, 2).map((t) => (
-            <View key={t} style={styles.titleBadge}>
+            <View
+              key={t}
+              style={[
+                styles.titleBadge,
+                t.startsWith("VA") || t.startsWith("V ")
+                  ? styles.titleBadgeGold
+                  : styles.titleBadgeGreen,
+              ]}
+            >
               <Text style={styles.titleBadgeText}>{t}</Text>
             </View>
           ))}
@@ -84,11 +117,13 @@ function BreederDogItem({
   );
 }
 
+type TabKey = "info" | "dogs";
+
 export default function BreederProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { id, name } = route.params as { id: string; name?: string };
+  const [activeTab, setActiveTab] = useState<TabKey>("info");
 
   const { data, isLoading, isError, refetch } = useQuery<BreederDetail>({
     queryKey: ["breeders", id],
@@ -97,21 +132,6 @@ export default function BreederProfileScreen() {
 
   const breeder = data?.breeder;
   const dogs = data?.dogs || [];
-
-  const hasImage =
-    breeder?.imageUrl &&
-    !breeder.imageUrl.includes("user-not-found");
-  const year = formatYear(breeder?.activeSince ?? null);
-
-  const handleDogPress = (dog: BreederDog) => {
-    const dogsNav = navigation.getParent?.();
-    if (dogsNav) {
-      dogsNav.navigate("DogsTab", {
-        screen: "DogProfile",
-        params: { id: dog.id, name: dog.name.trim() },
-      });
-    }
-  };
 
   if (isLoading) {
     return (
@@ -125,7 +145,9 @@ export default function BreederProfileScreen() {
     return (
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
-        <Text style={styles.errorTitle}>Failed to load breeder</Text>
+        <Text style={styles.errorText}>
+          {isError ? "Failed to load breeder details." : "Breeder not found."}
+        </Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
           <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
@@ -133,122 +155,191 @@ export default function BreederProfileScreen() {
     );
   }
 
+  const hasImage =
+    breeder.imageUrl &&
+    !breeder.imageUrl.includes("user-not-found");
+  const year = formatYear(breeder.activeSince ?? null);
+
+  const initials = breeder.name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const handleDogPress = (dog: BreederDog) => {
+    const dogsNav = navigation.getParent?.();
+    if (dogsNav) {
+      dogsNav.navigate("DogsTab", {
+        screen: "DogProfile",
+        params: { id: dog.id, name: dog.name.trim() },
+      });
+    }
+  };
+
+  const tabs: { key: TabKey; label: string; count?: number }[] = [
+    { key: "info", label: "Info" },
+    { key: "dogs", label: "Dogs", count: dogs.length },
+  ];
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.topBar}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
+        <LinearGradient
+          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
+          style={styles.heroGradient}
+          pointerEvents="none"
+        />
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
+          style={styles.backButton}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate("BreederDirectory");
+            }
+          }}
+          activeOpacity={0.7}
           data-testid="btn-back"
         >
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle} numberOfLines={1}>
-          {name || breeder.kennelName}
-        </Text>
-        <View style={{ width: 36 }} />
+      </ImageBackground>
+
+      <View style={styles.profileSection}>
+        <View style={styles.avatarOuter}>
+          {hasImage ? (
+            <Image source={{ uri: breeder.imageUrl }} style={styles.avatarPhoto} resizeMode="cover" />
+          ) : (
+            <View style={styles.avatarInner}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.breederName}>{breeder.name}</Text>
+        <Text style={styles.kennelText}>{breeder.kennelName}</Text>
       </View>
 
-      <FlatList
-        data={dogs}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
+      <View style={styles.tabBar}>
+        {tabs.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            onPress={() => setActiveTab(tab.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+              {tab.label}
+              {tab.count != null ? ` (${tab.count})` : ""}
+            </Text>
+            {activeTab === tab.key && <View style={styles.tabIndicator} />}
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.contentArea}>
+        {activeTab === "info" && (
           <>
-            <View style={styles.profileHeader}>
-              {hasImage ? (
-                <Image source={{ uri: breeder.imageUrl }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.profileImageFallback}>
-                  <Ionicons name="people" size={36} color={COLORS.primary} />
-                </View>
-              )}
-              <Text style={styles.breederName}>{breeder.name}</Text>
-              <Text style={styles.kennelName}>{breeder.kennelName}</Text>
-            </View>
-
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{breeder.totalDogs}</Text>
-                <Text style={styles.statLabel}>Dogs</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Details</Text>
+              <View style={styles.detailsGrid}>
+                <DetailItem icon="person" label="Name" value={breeder.name} />
+                <DetailItem icon="home" label="Kennel" value={breeder.kennelName} />
+                {breeder.location ? (
+                  <DetailItem icon="location" label="Location" value={breeder.location} />
+                ) : null}
+                {year ? (
+                  <DetailItem icon="calendar" label="Active Since" value={year} />
+                ) : null}
+                <DetailItem icon="paw" label="Total Dogs" value={String(breeder.totalDogs)} />
               </View>
-              {year ? (
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{year}</Text>
-                  <Text style={styles.statLabel}>Since</Text>
-                </View>
-              ) : null}
-              {breeder.location ? (
-                <View style={styles.statItem}>
-                  <Ionicons name="location" size={16} color={COLORS.primary} />
-                  <Text style={styles.statLabel}>{breeder.location}</Text>
-                </View>
-              ) : null}
             </View>
 
-            <View style={styles.contactRow}>
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>Contact</Text>
+              <View style={styles.contactRow}>
+                {breeder.phone && breeder.phone !== "+00-000-000-0000" ? (
+                  <TouchableOpacity
+                    style={styles.contactBtn}
+                    onPress={() => Linking.openURL(`tel:${breeder.phone}`)}
+                    activeOpacity={0.7}
+                    data-testid="btn-call"
+                  >
+                    <Ionicons name="call" size={18} color="#fff" />
+                    <Text style={styles.contactBtnText}>Call</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {breeder.email ? (
+                  <TouchableOpacity
+                    style={[styles.contactBtn, styles.contactBtnSecondary]}
+                    onPress={() => Linking.openURL(`mailto:${breeder.email}`)}
+                    activeOpacity={0.7}
+                    data-testid="btn-email"
+                  >
+                    <Ionicons name="mail" size={18} color={COLORS.primary} />
+                    <Text style={[styles.contactBtnText, styles.contactBtnTextSecondary]}>Email</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
               {breeder.phone && breeder.phone !== "+00-000-000-0000" ? (
-                <TouchableOpacity
-                  style={styles.contactBtn}
-                  onPress={() => Linking.openURL(`tel:${breeder.phone}`)}
-                  activeOpacity={0.7}
-                  data-testid="btn-call"
-                >
-                  <Ionicons name="call" size={18} color="#fff" />
-                  <Text style={styles.contactBtnText}>Call</Text>
-                </TouchableOpacity>
+                <View style={styles.detailsGrid}>
+                  <DetailItem icon="call" label="Phone" value={breeder.phone} />
+                </View>
               ) : null}
               {breeder.email ? (
-                <TouchableOpacity
-                  style={[styles.contactBtn, styles.contactBtnSecondary]}
-                  onPress={() => Linking.openURL(`mailto:${breeder.email}`)}
-                  activeOpacity={0.7}
-                  data-testid="btn-email"
-                >
-                  <Ionicons name="mail" size={18} color={COLORS.primary} />
-                  <Text style={[styles.contactBtnText, styles.contactBtnTextSecondary]}>
-                    Email
-                  </Text>
-                </TouchableOpacity>
+                <View style={[styles.detailsGrid, { marginTop: breeder.phone && breeder.phone !== "+00-000-000-0000" ? 20 : 0 }]}>
+                  <DetailItem icon="mail" label="Email" value={breeder.email} />
+                </View>
               ) : null}
             </View>
-
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Registered Dogs</Text>
-              <Text style={styles.sectionCount}>{dogs.length}</Text>
-            </View>
           </>
-        }
-        renderItem={({ item }) => (
-          <BreederDogItem dog={item} onPress={() => handleDogPress(item)} />
         )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="paw-outline" size={40} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>No dogs registered</Text>
-          </View>
-        }
-      />
-    </View>
+
+        {activeTab === "dogs" &&
+          (dogs.length > 0 ? (
+            <View>
+              {dogs.map((dog) => (
+                <BreederDogItem
+                  key={dog.id}
+                  dog={dog}
+                  onPress={() => handleDogPress(dog)}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Dogs Registered</Text>
+              <Text style={styles.emptyDesc}>
+                No dogs are currently registered under this breeder.
+              </Text>
+            </View>
+          ))}
+      </View>
+
+      <View style={{ height: 32 }} />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: "#f6f8f7",
   },
   centered: {
     flex: 1,
-    backgroundColor: COLORS.background,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#f6f8f7",
     gap: SPACING.md,
   },
-  errorTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.text,
+  errorText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
   },
   retryBtn: {
     paddingHorizontal: 20,
@@ -261,93 +352,166 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "600",
   },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  heroBanner: {
+    width: "100%",
+    height: 256,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: COLORS.background,
+  heroGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 256,
+  },
+  backButton: {
+    position: "absolute",
+    top: 48,
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 10,
   },
-  topBarTitle: {
+  profileSection: {
+    alignItems: "center",
+    marginTop: -80,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  avatarOuter: {
+    width: 144,
+    height: 144,
+    borderRadius: 72,
+    borderWidth: 4,
+    borderColor: COLORS.accent,
+    backgroundColor: "#fff",
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.1,
+    shadowRadius: 25,
+    elevation: 8,
+  },
+  avatarPhoto: {
     flex: 1,
-    textAlign: "center",
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "700",
-    color: COLORS.text,
+    borderRadius: 9999,
   },
-  listContent: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxl,
-  },
-  profileHeader: {
-    alignItems: "center",
-    marginBottom: SPACING.lg,
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    marginBottom: SPACING.md,
-  },
-  profileImageFallback: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: "rgba(15,92,58,0.08)",
+  avatarInner: {
+    flex: 1,
+    borderRadius: 9999,
+    backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: SPACING.md,
+  },
+  avatarInitials: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: COLORS.primary,
   },
   breederName: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
-    color: COLORS.text,
+    color: "#0F172A",
     textAlign: "center",
+    marginTop: 12,
+    lineHeight: 32,
   },
-  kennelName: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
+  kennelText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#64748B",
     marginTop: 4,
   },
-  statsRow: {
+  tabBar: {
     flexDirection: "row",
-    justifyContent: "center",
-    gap: SPACING.xl,
-    marginBottom: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.1)",
+    marginHorizontal: 16,
+    marginBottom: 24,
   },
-  statItem: {
+  tab: {
+    flex: 1,
     alignItems: "center",
-    gap: 4,
+    paddingVertical: 12,
+    position: "relative",
   },
-  statValue: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-  statLabel: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.textMuted,
+  tabActive: {},
+  tabText: {
+    fontSize: 14,
     fontWeight: "600",
+    color: "#94A3B8",
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+  },
+  tabIndicator: {
+    position: "absolute",
+    bottom: -1,
+    left: 16,
+    right: 16,
+    height: 3,
+    borderRadius: 9999,
+    backgroundColor: COLORS.accent,
+  },
+  contentArea: {
+    paddingHorizontal: 16,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,59,0.05)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  cardHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 20,
+  },
+  detailsGrid: {
+    gap: 20,
+  },
+  detailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  detailIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "rgba(15,92,59,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  detailTextWrap: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#94A3B8",
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0F172A",
   },
   contactRow: {
     flexDirection: "row",
     gap: SPACING.sm,
-    marginBottom: SPACING.xl,
+    marginBottom: 20,
   },
   contactBtn: {
     flex: 1,
@@ -369,27 +533,6 @@ const styles = StyleSheet.create({
   },
   contactBtnTextSecondary: {
     color: COLORS.primary,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "700",
-    color: COLORS.text,
-  },
-  sectionCount: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: "700",
-    color: COLORS.primary,
-    backgroundColor: "rgba(15,92,58,0.08)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.full,
-    overflow: "hidden",
   },
   dogCard: {
     flexDirection: "row",
@@ -456,10 +599,15 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   titleBadge: {
-    backgroundColor: COLORS.primary,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.sm,
+  },
+  titleBadgeGold: {
+    backgroundColor: COLORS.accent,
+  },
+  titleBadgeGreen: {
+    backgroundColor: COLORS.primary,
   },
   titleBadgeText: {
     fontSize: FONT_SIZES.xs,
@@ -471,8 +619,24 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     gap: SPACING.sm,
   },
-  emptyText: {
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(15,92,59,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  emptyDesc: {
     fontSize: FONT_SIZES.md,
     color: COLORS.textMuted,
+    textAlign: "center",
+    paddingHorizontal: SPACING.xxl,
   },
 });
