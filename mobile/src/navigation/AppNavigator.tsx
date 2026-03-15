@@ -99,8 +99,6 @@ export default function AppNavigator() {
           tabBarStyle: {
             backgroundColor: COLORS.surface,
             borderTopColor: COLORS.border,
-            paddingBottom: Platform.OS === "ios" ? 0 : 4,
-            height: Platform.OS === "ios" ? 85 : 60,
           },
           tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
           headerShown: false,
