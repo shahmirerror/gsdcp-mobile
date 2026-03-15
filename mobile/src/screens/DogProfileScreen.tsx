@@ -378,8 +378,13 @@ export default function DogProfileScreen() {
                         {result.className} · {result.date}
                       </Text>
                     </View>
-                    <View style={styles.awardBadge}>
-                      <Text style={styles.awardBadgeText}>{result.award}</Text>
+                    <View style={styles.resultRight}>
+                      <View style={styles.gradingBadge}>
+                        <Text style={styles.gradingBadgeText}>{result.grading}</Text>
+                      </View>
+                      {result.placement && (
+                        <Text style={styles.placementText}>#{result.placement}</Text>
+                      )}
                     </View>
                   </View>
                 ))}
@@ -747,16 +752,25 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     marginTop: 2,
   },
-  awardBadge: {
+  resultRight: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  gradingBadge: {
     backgroundColor: COLORS.accent,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 9999,
   },
-  awardBadgeText: {
+  gradingBadgeText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "700",
+  },
+  placementText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.primary,
   },
   emptyState: {
     alignItems: "center",

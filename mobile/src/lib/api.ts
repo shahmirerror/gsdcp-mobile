@@ -86,9 +86,8 @@ export type ShowResult = {
   showName: string;
   dogId: string;
   dogName: string;
-  handler: string;
-  award: string;
-  placement: number;
+  grading: string;
+  placement: string;
   className: string;
   date: string;
 };
