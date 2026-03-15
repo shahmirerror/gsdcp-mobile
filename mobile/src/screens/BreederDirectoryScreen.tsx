@@ -8,6 +8,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  Modal,
+  Pressable,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -24,6 +27,17 @@ function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const year = new Date(dateStr).getFullYear();
   return isNaN(year) ? null : String(year);
+}
+
+function parseLocation(location: string | null): { city: string | null; country: string | null } {
+  if (!location) return { city: null, country: null };
+  const parts = location.split(",").map((p) => p.trim());
+  if (parts.length >= 2) {
+    const country = parts[parts.length - 1];
+    const city = parts.slice(0, parts.length - 1).join(", ");
+    return { city, country };
+  }
+  return { city: location, country: null };
 }
 
 function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () => void }) {
@@ -75,23 +89,93 @@ export default function BreederDirectoryScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
+  const [cityFilter, setCityFilter] = useState<string>("All");
+  const [countryFilter, setCountryFilter] = useState<string>("All");
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [tempCity, setTempCity] = useState<string>("All");
+  const [tempCountry, setTempCountry] = useState<string>("All");
+
+  const activeFilterCount =
+    (cityFilter !== "All" ? 1 : 0) + (countryFilter !== "All" ? 1 : 0);
+
+  const openFilters = () => {
+    setTempCity(cityFilter);
+    setTempCountry(countryFilter);
+    setShowFilterModal(true);
+  };
+
+  const applyFilters = () => {
+    setCityFilter(tempCity);
+    setCountryFilter(tempCountry);
+    setShowFilterModal(false);
+  };
+
+  const resetFilters = () => {
+    setTempCity("All");
+    setTempCountry("All");
+  };
 
   const { data: breeders, isLoading, isError, refetch } = useQuery<Breeder[]>({
     queryKey: ["breeders"],
     queryFn: fetchBreeders,
   });
 
+  const { countries, cities } = useMemo(() => {
+    if (!breeders) return { countries: [] as string[], cities: [] as string[] };
+    const countrySet = new Set<string>();
+    const citySet = new Set<string>();
+    breeders.forEach((b) => {
+      const { city, country } = parseLocation(b.location);
+      if (country) countrySet.add(country);
+      if (city) citySet.add(city);
+    });
+    return {
+      countries: [...countrySet].sort(),
+      cities: [...citySet].sort(),
+    };
+  }, [breeders]);
+
+  const filteredCities = useMemo(() => {
+    if (tempCountry === "All") return cities;
+    if (!breeders) return [];
+    const citySet = new Set<string>();
+    breeders.forEach((b) => {
+      const { city, country } = parseLocation(b.location);
+      if (country === tempCountry && city) citySet.add(city);
+    });
+    return [...citySet].sort();
+  }, [breeders, cities, tempCountry]);
+
   const filtered = useMemo(() => {
     if (!breeders) return [];
+    let results = breeders;
+
     const q = search.trim().toLowerCase();
-    if (!q) return breeders;
-    return breeders.filter(
-      (b) =>
-        b.name.toLowerCase().includes(q) ||
-        b.kennelName.toLowerCase().includes(q) ||
-        (b.location && b.location.toLowerCase().includes(q)),
-    );
-  }, [breeders, search]);
+    if (q) {
+      results = results.filter(
+        (b) =>
+          b.name.toLowerCase().includes(q) ||
+          b.kennelName.toLowerCase().includes(q) ||
+          (b.location && b.location.toLowerCase().includes(q)),
+      );
+    }
+
+    if (countryFilter !== "All") {
+      results = results.filter((b) => {
+        const { country } = parseLocation(b.location);
+        return country === countryFilter;
+      });
+    }
+
+    if (cityFilter !== "All") {
+      results = results.filter((b) => {
+        const { city } = parseLocation(b.location);
+        return city === cityFilter;
+      });
+    }
+
+    return results;
+  }, [breeders, search, countryFilter, cityFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -113,7 +197,51 @@ export default function BreederDirectoryScreen() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
+          onPress={openFilters}
+          activeOpacity={0.7}
+          data-testid="btn-open-filters"
+        >
+          <Ionicons
+            name="options-outline"
+            size={20}
+            color={activeFilterCount > 0 ? "#fff" : COLORS.textSecondary}
+          />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadgeCount}>
+              <Text style={styles.filterBadgeCountText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
+
+      {activeFilterCount > 0 && (
+        <View style={styles.activeFiltersRow}>
+          {countryFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{countryFilter}</Text>
+              <TouchableOpacity onPress={() => setCountryFilter("All")} data-testid="btn-remove-country-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {cityFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{cityFilter}</Text>
+              <TouchableOpacity onPress={() => setCityFilter("All")} data-testid="btn-remove-city-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => { setCityFilter("All"); setCountryFilter("All"); }}
+            data-testid="btn-clear-all-filters"
+          >
+            <Text style={styles.clearAllText}>Clear all</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.countRow}>
         <Text style={styles.count} data-testid="text-breeder-count">
@@ -149,11 +277,79 @@ export default function BreederDirectoryScreen() {
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
               <Text style={styles.emptyTitle}>No breeders found</Text>
-              <Text style={styles.emptyDesc}>Try adjusting your search.</Text>
+              <Text style={styles.emptyDesc}>Try adjusting your search or filters.</Text>
             </View>
           }
         />
       )}
+
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filters</Text>
+              <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterSectionTitle}>Country</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
+              <TouchableOpacity
+                style={[styles.filterOption, tempCountry === "All" && styles.filterOptionActive]}
+                onPress={() => { setTempCountry("All"); setTempCity("All"); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterOptionText, tempCountry === "All" && styles.filterOptionTextActive]}>All</Text>
+              </TouchableOpacity>
+              {countries.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.filterOption, tempCountry === opt && styles.filterOptionActive]}
+                  onPress={() => { setTempCountry(opt); setTempCity("All"); }}
+                  activeOpacity={0.7}
+                  data-testid={`filter-country-${opt}`}
+                >
+                  <Text style={[styles.filterOptionText, tempCountry === opt && styles.filterOptionTextActive]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.filterSectionTitle}>City</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
+              <TouchableOpacity
+                style={[styles.filterOption, tempCity === "All" && styles.filterOptionActive]}
+                onPress={() => setTempCity("All")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterOptionText, tempCity === "All" && styles.filterOptionTextActive]}>All</Text>
+              </TouchableOpacity>
+              {filteredCities.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.filterOption, tempCity === opt && styles.filterOptionActive]}
+                  onPress={() => setTempCity(opt)}
+                  activeOpacity={0.7}
+                  data-testid={`filter-city-${opt}`}
+                >
+                  <Text style={[styles.filterOptionText, tempCity === opt && styles.filterOptionTextActive]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.applyButton} onPress={applyFilters} activeOpacity={0.8} data-testid="btn-apply-filters">
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -187,6 +383,66 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: FONT_SIZES.md,
     color: COLORS.text,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterBadgeCount: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterBadgeCountText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  activeFiltersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
+  },
+  activeChipText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  clearAllText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    marginLeft: 4,
   },
   countRow: {
     paddingHorizontal: SPACING.lg,
@@ -287,5 +543,93 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: FONT_SIZES.md,
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    paddingTop: 12,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  resetText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  filterScroll: {
+    marginBottom: 24,
+  },
+  filterOptionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingRight: 8,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterOptionActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterOptionText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  filterOptionTextActive: {
+    color: "#fff",
+  },
+  applyButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  applyButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
