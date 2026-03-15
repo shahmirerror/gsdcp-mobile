@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -23,6 +24,9 @@ function formatYear(dateStr: string | null): string | null {
 
 function BreederCard({ breeder }: { breeder: Breeder }) {
   const year = formatYear(breeder.activeSince);
+  const hasImage =
+    breeder.imageUrl &&
+    !breeder.imageUrl.includes("user-not-found");
   const initials = breeder.name
     .split(" ")
     .map((w) => w[0])
@@ -33,9 +37,16 @@ function BreederCard({ breeder }: { breeder: Breeder }) {
   return (
     <View style={styles.card} data-testid={`card-breeder-${breeder.id}`}>
       <View style={styles.cardTop}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        {hasImage ? (
+          <Image
+            source={{ uri: breeder.imageUrl }}
+            style={styles.avatarImage}
+          />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+        )}
         <View style={styles.cardInfo}>
           <Text style={styles.breederName} numberOfLines={1}>
             {breeder.name}
@@ -257,6 +268,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15,92,58,0.08)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  avatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
   },
   avatarText: {
     fontSize: FONT_SIZES.md,
