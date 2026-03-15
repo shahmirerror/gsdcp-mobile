@@ -11,6 +11,7 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -104,7 +105,7 @@ export default function BreederDirectoryScreen() {
     setTempCountry("All");
   };
 
-  const { data: breeders, isLoading, isError, refetch } = useQuery<Breeder[]>({
+  const { data: breeders, isLoading, isError, refetch, isRefetching } = useQuery<Breeder[]>({
     queryKey: ["breeders"],
     queryFn: fetchBreeders,
   });
@@ -246,6 +247,9 @@ export default function BreederDirectoryScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+          }
           renderItem={({ item }) => (
             <BreederListItem
               breeder={item}

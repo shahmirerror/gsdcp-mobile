@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Linking,
   ImageBackground,
+  RefreshControl,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -125,7 +126,7 @@ export default function BreederProfileScreen() {
   const { id, name } = route.params as { id: string; name?: string };
   const [activeTab, setActiveTab] = useState<TabKey>("info");
 
-  const { data, isLoading, isError, refetch } = useQuery<BreederDetail>({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery<BreederDetail>({
     queryKey: ["breeders", id],
     queryFn: () => fetchBreeder(id),
   });
@@ -185,7 +186,13 @@ export default function BreederProfileScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
+    >
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}

@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   ImageBackground,
+  RefreshControl,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -79,7 +80,7 @@ export default function DogProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>("details");
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
 
-  const { data, isLoading, isError } = useQuery<DogDetail>({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery<DogDetail>({
     queryKey: ["dog", dogId],
     queryFn: () => fetchDog(dogId),
     enabled: !!dogId,
@@ -135,7 +136,13 @@ export default function DogProfileScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
+    >
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}

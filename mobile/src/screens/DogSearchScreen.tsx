@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -64,6 +65,8 @@ export default function DogSearchScreen() {
     data,
     isLoading,
     isError,
+    refetch,
+    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -184,6 +187,9 @@ export default function DogSearchScreen() {
           contentContainerStyle={styles.list}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+          }
           renderItem={({ item }) => (
             <DogListItem
               dog={item}
