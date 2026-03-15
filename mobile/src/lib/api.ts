@@ -117,6 +117,26 @@ export type DogDetail = {
   line_breeding: LineBreedingEntry[];
 };
 
+export type Breeder = {
+  id: string;
+  name: string;
+  kennelName: string;
+  location: string | null;
+  phone: string | null;
+  email: string | null;
+  imageUrl: string;
+  activeSince: string | null;
+  totalDogs: number;
+  description: string | null;
+};
+
+export async function fetchBreeders(): Promise<Breeder[]> {
+  const res = await fetch(`${BASE_URL}/breeders`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch breeders");
+  return json.data;
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";
