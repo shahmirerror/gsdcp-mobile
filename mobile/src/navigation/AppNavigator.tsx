@@ -18,11 +18,13 @@ const logoSquare = require("../../assets/logo-square.png");
 export type DogsStackParamList = {
   DogSearch: undefined;
   DogProfile: { id: string; name?: string };
+  BreederProfile: { id: string; name?: string };
 };
 
 export type BreedersStackParamList = {
   BreederDirectory: undefined;
   BreederProfile: { id: string; name?: string };
+  DogProfile: { id: string; name?: string };
 };
 
 export type RootTabParamList = {
@@ -45,11 +47,8 @@ function DogsStackNavigator() {
       }}
     >
       <DogsStack.Screen name="DogSearch" component={DogSearchScreen} />
-      <DogsStack.Screen
-        name="DogProfile"
-        component={DogProfileScreen}
-        options={{ headerShown: false }}
-      />
+      <DogsStack.Screen name="DogProfile" component={DogProfileScreen} />
+      <DogsStack.Screen name="BreederProfile" component={BreederProfileScreen} />
     </DogsStack.Navigator>
   );
 }
@@ -63,6 +62,7 @@ function BreedersStackNavigator() {
     >
       <BreedersStack.Screen name="BreederDirectory" component={BreederDirectoryScreen} />
       <BreedersStack.Screen name="BreederProfile" component={BreederProfileScreen} />
+      <BreedersStack.Screen name="DogProfile" component={DogProfileScreen} />
     </BreedersStack.Navigator>
   );
 }

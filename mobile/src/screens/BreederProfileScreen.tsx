@@ -170,13 +170,7 @@ export default function BreederProfileScreen() {
     .toUpperCase();
 
   const handleDogPress = (dog: BreederDog) => {
-    const dogsNav = navigation.getParent?.();
-    if (dogsNav) {
-      dogsNav.navigate("DogsTab", {
-        screen: "DogProfile",
-        params: { id: dog.id, name: dog.name.trim() },
-      });
-    }
+    navigation.navigate("DogProfile", { id: dog.id, name: dog.name.trim() });
   };
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
