@@ -138,7 +138,10 @@ export default function DogProfileScreen() {
   return (
     <ScrollView
       style={styles.container}
+      contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      bounces={true}
+      overScrollMode="always"
       refreshControl={
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
       }
@@ -441,6 +444,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f6f8f7",
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   centered: {
     flex: 1,
