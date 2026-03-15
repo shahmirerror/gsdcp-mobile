@@ -148,12 +148,7 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.statsScroll}
-        style={styles.statsSection}
-      >
+      <View style={styles.statsSection}>
         {statCards.map((stat) => (
           <View key={stat.label} style={styles.statCard}>
             <View style={styles.statIconWrap}>
@@ -163,7 +158,7 @@ export default function DashboardScreen() {
             <Text style={styles.statLabel}>{stat.label}</Text>
           </View>
         ))}
-      </ScrollView>
+      </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -380,20 +375,18 @@ const styles = StyleSheet.create({
   },
   statsSection: {
     marginTop: 20,
-  },
-  statsScroll: {
+    flexDirection: "row" as const,
     paddingHorizontal: 20,
     gap: 12,
   },
   statCard: {
+    flex: 1,
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
-    padding: 16,
-    width: (SCREEN_WIDTH - 40 - 24) / 3,
-    marginRight: 2,
+    padding: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
-    alignItems: "center",
+    alignItems: "center" as const,
   },
   statIconWrap: {
     width: 36,
