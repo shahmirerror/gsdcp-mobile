@@ -29,17 +29,6 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function parseLocation(location: string | null): { city: string | null; country: string | null } {
-  if (!location) return { city: null, country: null };
-  const parts = location.split(",").map((p) => p.trim());
-  if (parts.length >= 2) {
-    const country = parts[parts.length - 1];
-    const city = parts.slice(0, parts.length - 1).join(", ");
-    return { city, country };
-  }
-  return { city: location, country: null };
-}
-
 function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () => void }) {
   const hasImage =
     breeder.imageUrl &&
@@ -125,9 +114,8 @@ export default function BreederDirectoryScreen() {
     const countrySet = new Set<string>();
     const citySet = new Set<string>();
     breeders.forEach((b) => {
-      const { city, country } = parseLocation(b.location);
-      if (country) countrySet.add(country);
-      if (city) citySet.add(city);
+      if (b.country) countrySet.add(b.country);
+      if (b.city) citySet.add(b.city);
     });
     return {
       countries: [...countrySet].sort(),
@@ -140,8 +128,7 @@ export default function BreederDirectoryScreen() {
     if (!breeders) return [];
     const citySet = new Set<string>();
     breeders.forEach((b) => {
-      const { city, country } = parseLocation(b.location);
-      if (country === tempCountry && city) citySet.add(city);
+      if (b.country === tempCountry && b.city) citySet.add(b.city);
     });
     return [...citySet].sort();
   }, [breeders, cities, tempCountry]);
@@ -161,17 +148,11 @@ export default function BreederDirectoryScreen() {
     }
 
     if (countryFilter !== "All") {
-      results = results.filter((b) => {
-        const { country } = parseLocation(b.location);
-        return country === countryFilter;
-      });
+      results = results.filter((b) => b.country === countryFilter);
     }
 
     if (cityFilter !== "All") {
-      results = results.filter((b) => {
-        const { city } = parseLocation(b.location);
-        return city === cityFilter;
-      });
+      results = results.filter((b) => b.city === cityFilter);
     }
 
     return results;

@@ -122,8 +122,11 @@ export type Breeder = {
   name: string;
   kennelName: string;
   location: string | null;
+  city: string | null;
+  country: string | null;
   phone: string | null;
   email: string | null;
+  membership_no: string | null;
   imageUrl: string;
   activeSince: string | null;
   totalDogs: number;
@@ -157,7 +160,8 @@ export type BreederDog = {
 
 export type BreederDetail = {
   breeder: Breeder;
-  dogs: BreederDog[];
+  dogsBred: BreederDog[];
+  dogsOwned: BreederDog[];
 };
 
 export async function fetchBreeder(id: string): Promise<BreederDetail> {

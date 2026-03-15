@@ -117,7 +117,7 @@ function BreederDogItem({
   );
 }
 
-type TabKey = "info" | "dogs";
+type TabKey = "info" | "bred" | "owned";
 
 export default function BreederProfileScreen() {
   const route = useRoute<any>();
@@ -131,7 +131,8 @@ export default function BreederProfileScreen() {
   });
 
   const breeder = data?.breeder;
-  const dogs = data?.dogs || [];
+  const dogsBred = data?.dogsBred || [];
+  const dogsOwned = data?.dogsOwned || [];
 
   if (isLoading) {
     return (
@@ -179,7 +180,8 @@ export default function BreederProfileScreen() {
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
-    { key: "dogs", label: "Dogs", count: dogs.length },
+    { key: "bred", label: "Bred", count: dogsBred.length },
+    { key: "owned", label: "Owned", count: dogsOwned.length },
   ];
 
   return (
@@ -246,7 +248,16 @@ export default function BreederProfileScreen() {
               <View style={styles.detailsGrid}>
                 <DetailItem icon="person" label="Name" value={breeder.name} />
                 <DetailItem icon="home" label="Kennel" value={breeder.kennelName} />
-                {breeder.location ? (
+                {breeder.membership_no ? (
+                  <DetailItem icon="card" label="Membership No." value={breeder.membership_no} />
+                ) : null}
+                {breeder.city ? (
+                  <DetailItem icon="business" label="City" value={breeder.city} />
+                ) : null}
+                {breeder.country ? (
+                  <DetailItem icon="globe" label="Country" value={breeder.country} />
+                ) : null}
+                {!breeder.city && !breeder.country && breeder.location ? (
                   <DetailItem icon="location" label="Location" value={breeder.location} />
                 ) : null}
                 {year ? (
@@ -296,10 +307,10 @@ export default function BreederProfileScreen() {
           </>
         )}
 
-        {activeTab === "dogs" &&
-          (dogs.length > 0 ? (
+        {activeTab === "bred" &&
+          (dogsBred.length > 0 ? (
             <View>
-              {dogs.map((dog) => (
+              {dogsBred.map((dog) => (
                 <BreederDogItem
                   key={dog.id}
                   dog={dog}
@@ -312,9 +323,32 @@ export default function BreederProfileScreen() {
               <View style={styles.emptyIconWrap}>
                 <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
               </View>
-              <Text style={styles.emptyTitle}>No Dogs Registered</Text>
+              <Text style={styles.emptyTitle}>No Dogs Bred</Text>
               <Text style={styles.emptyDesc}>
-                No dogs are currently registered under this breeder.
+                No dogs have been bred by this breeder yet.
+              </Text>
+            </View>
+          ))}
+
+        {activeTab === "owned" &&
+          (dogsOwned.length > 0 ? (
+            <View>
+              {dogsOwned.map((dog) => (
+                <BreederDogItem
+                  key={dog.id}
+                  dog={dog}
+                  onPress={() => handleDogPress(dog)}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Dogs Owned</Text>
+              <Text style={styles.emptyDesc}>
+                No dogs are currently owned by this breeder.
               </Text>
             </View>
           ))}
