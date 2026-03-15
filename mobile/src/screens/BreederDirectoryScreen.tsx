@@ -11,10 +11,15 @@ import {
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeders, Breeder } from "../lib/api";
+import type { BreedersStackParamList } from "../navigation/AppNavigator";
+
+type Nav = NativeStackNavigationProp<BreedersStackParamList, "BreederDirectory">;
 
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
@@ -22,7 +27,7 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function BreederCard({ breeder }: { breeder: Breeder }) {
+function BreederCard({ breeder, onPress }: { breeder: Breeder; onPress: () => void }) {
   const year = formatYear(breeder.activeSince);
   const hasImage =
     breeder.imageUrl &&
@@ -35,7 +40,7 @@ function BreederCard({ breeder }: { breeder: Breeder }) {
     .toUpperCase();
 
   return (
-    <View style={styles.card} data-testid={`card-breeder-${breeder.id}`}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} data-testid={`card-breeder-${breeder.id}`}>
       <View style={styles.cardTop}>
         {hasImage ? (
           <Image
@@ -104,11 +109,12 @@ function BreederCard({ breeder }: { breeder: Breeder }) {
           </TouchableOpacity>
         ) : null}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export default function BreederDirectoryScreen() {
+  const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
 
@@ -181,7 +187,14 @@ export default function BreederDirectoryScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => <BreederCard breeder={item} />}
+          renderItem={({ item }) => (
+            <BreederCard
+              breeder={item}
+              onPress={() =>
+                navigation.navigate("BreederProfile", { id: item.id, name: item.name })
+              }
+            />
+          )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />

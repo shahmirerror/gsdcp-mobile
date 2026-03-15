@@ -137,6 +137,36 @@ export async function fetchBreeders(): Promise<Breeder[]> {
   return json.data;
 }
 
+export type BreederDog = {
+  id: string;
+  name: string;
+  KP: string | null;
+  foreign_reg_no: string | null;
+  breed: string;
+  sex: string;
+  dateOfBirth: string | null;
+  color: string | null;
+  imageUrl: string;
+  owner: string | null;
+  breeder: string | null;
+  sire: string | null;
+  dam: string | null;
+  titles: string[];
+  microchipNumber: string | null;
+};
+
+export type BreederDetail = {
+  breeder: Breeder;
+  dogs: BreederDog[];
+};
+
+export async function fetchBreeder(id: string): Promise<BreederDetail> {
+  const res = await fetch(`${BASE_URL}/breeders/${id}`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch breeder");
+  return json.data;
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";
