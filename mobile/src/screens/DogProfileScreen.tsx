@@ -140,11 +140,19 @@ export default function DogProfileScreen() {
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
           style={styles.heroGradient}
+          pointerEvents="none"
         />
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate("DogSearch");
+            }
+          }}
           activeOpacity={0.7}
+          data-testid="btn-back"
         >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
