@@ -246,6 +246,26 @@ export async function fetchDashboard(): Promise<DashboardData> {
   return json.data;
 }
 
+export type Kennel = {
+  id: string;
+  kennelName: string;
+  location: string;
+  phone: string | null;
+  email: string | null;
+  city: string;
+  country: string;
+  imageUrl: string;
+  activeSince: string;
+  description: string | null;
+};
+
+export async function fetchKennels(): Promise<Kennel[]> {
+  const res = await fetch(`${BASE_URL}/kennels`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch kennels");
+  return json.data;
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";
