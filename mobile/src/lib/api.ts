@@ -218,6 +218,34 @@ export async function fetchBreeder(id: string): Promise<BreederDetail> {
   return json.data;
 }
 
+export type RecentMating = {
+  kennel_name: string;
+  sire_name: string;
+  dam_name: string;
+  mating_date: string;
+  city: string | null;
+  status: string;
+  friendly_URl: string;
+  sire_dog_id: string;
+  dam_dog_id: string;
+  kennel_image: string | null;
+};
+
+export type DashboardData = {
+  totalDogs: number;
+  totalBreeders: number;
+  totalShows: number;
+  upcomingShows: Show[];
+  recentMatings: RecentMating[];
+};
+
+export async function fetchDashboard(): Promise<DashboardData> {
+  const res = await fetch(`${BASE_URL}/dashboard`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch dashboard");
+  return json.data;
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";

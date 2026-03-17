@@ -4,16 +4,17 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Image,
+  ActivityIndicator,
   Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { fetchDashboard, RecentMating } from "../lib/api";
 
-const logoSquare = require("../../assets/logo-square.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const quickActions = [
@@ -47,40 +48,41 @@ const quickActions = [
   },
 ];
 
-const statCards = [
-  { label: "Registered Dogs", value: "5,200+", icon: "paw" as const },
-  { label: "Active Breeders", value: "120+", icon: "people" as const },
-  { label: "Shows This Year", value: "8", icon: "trophy" as const },
-];
-
-const latestActivity = [
-  { text: "32 New Puppies Registered (Lahore)", time: "2h ago" },
-  { text: "Stud Service: VA1 'Hero' updated", time: "5h ago" },
-  { text: "HD/ED Results: 14 New clearances", time: "1d ago" },
-];
-
-const upcomingEvents = [
-  {
-    day: "24",
-    month: "NOV",
-    badge: "Championship",
-    badgeType: "gold" as const,
-    location: "Lahore",
-    title: "Sieger Show 2024",
-  },
-  {
-    day: "12",
-    month: "DEC",
-    badge: "Seminar",
-    badgeType: "green" as const,
-    location: "Islamabad",
-    title: "Breeding Ethics Seminar",
-  },
-];
+function formatMatingDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+
+  const { data: dashboard, isLoading } = useQuery({
+    queryKey: ["/api/mobile/dashboard"],
+    queryFn: fetchDashboard,
+  });
+
+  const statCards = [
+    {
+      label: "Registered Dogs",
+      value: dashboard ? `${dashboard.totalDogs.toLocaleString()}` : "—",
+      icon: "paw" as const,
+    },
+    {
+      label: "Active Breeders",
+      value: dashboard ? `${dashboard.totalBreeders}` : "—",
+      icon: "people" as const,
+    },
+    {
+      label: "Shows This Year",
+      value: dashboard ? `${dashboard.totalShows}` : "—",
+      icon: "trophy" as const,
+    },
+  ];
 
   return (
     <ScrollView
@@ -154,7 +156,9 @@ export default function DashboardScreen() {
             <View style={styles.statIconWrap}>
               <Ionicons name={stat.icon} size={18} color={COLORS.primary} />
             </View>
-            <Text style={styles.statValue}>{stat.value}</Text>
+            <Text style={styles.statValue} data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}>
+              {stat.value}
+            </Text>
             <Text style={styles.statLabel}>{stat.label}</Text>
           </View>
         ))}
@@ -162,26 +166,55 @@ export default function DashboardScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Latest Activity</Text>
+          <Text style={styles.sectionTitle}>Upcoming Litters</Text>
           <View style={styles.liveDot} />
         </View>
-        <View style={styles.activityCard}>
-          {latestActivity.map((item, i) => (
-            <View
-              key={i}
-              style={[
-                styles.activityItem,
-                i < latestActivity.length - 1 && styles.activityItemBorder,
-              ]}
-            >
-              <View style={styles.activityDot} />
-              <View style={styles.activityTextWrap}>
-                <Text style={styles.activityText}>{item.text}</Text>
-                <Text style={styles.activityTime}>{item.time}</Text>
+
+        {isLoading ? (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : dashboard?.recentMatings && dashboard.recentMatings.length > 0 ? (
+          <View style={styles.activityCard}>
+            {dashboard.recentMatings.map((mating, i) => (
+              <View
+                key={mating.friendly_URl}
+                style={[
+                  styles.litterItem,
+                  i < dashboard.recentMatings.length - 1 && styles.litterItemBorder,
+                ]}
+                data-testid={`card-litter-${i}`}
+              >
+                <View style={styles.litterIconWrap}>
+                  <Ionicons name="heart" size={14} color={COLORS.accent} />
+                </View>
+                <View style={styles.litterTextWrap}>
+                  <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
+                  <Text style={styles.litterPairing}>
+                    {mating.sire_name.trim()} × {mating.dam_name.trim()}
+                  </Text>
+                  <View style={styles.litterMeta}>
+                    <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} />
+                    <Text style={styles.litterMetaText}>
+                      {formatMatingDate(mating.mating_date)}
+                    </Text>
+                    {mating.city ? (
+                      <>
+                        <Text style={styles.litterMetaDot}>·</Text>
+                        <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
+                        <Text style={styles.litterMetaText}>{mating.city}</Text>
+                      </>
+                    ) : null}
+                  </View>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.activityCard}>
+            <Text style={styles.emptyText}>No recent matings found.</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -195,57 +228,51 @@ export default function DashboardScreen() {
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>
-        {upcomingEvents.map((event) => (
-          <TouchableOpacity
-            key={event.title}
-            style={styles.eventCard}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate("ShowsTab")}
-            data-testid={`card-event-${event.title.toLowerCase().replace(/\s/g, "-")}`}
-          >
-            <View style={styles.eventDateBox}>
-              <Text style={styles.eventDay}>{event.day}</Text>
-              <Text style={styles.eventMonth}>{event.month}</Text>
-            </View>
-            <View style={styles.eventInfo}>
-              <View style={styles.eventMeta}>
-                <View
-                  style={[
-                    styles.eventBadge,
-                    event.badgeType === "gold"
-                      ? styles.eventBadgeGold
-                      : styles.eventBadgeGreen,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.eventBadgeText,
-                      event.badgeType === "gold"
-                        ? styles.eventBadgeTextGold
-                        : styles.eventBadgeTextGreen,
-                    ]}
-                  >
-                    {event.badge}
-                  </Text>
+
+        {isLoading ? (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : dashboard?.upcomingShows && dashboard.upcomingShows.length > 0 ? (
+          dashboard.upcomingShows.map((show) => {
+            const date = new Date(show.dates[0]);
+            const day = date.getDate().toString();
+            const month = date.toLocaleString("en-GB", { month: "short" }).toUpperCase();
+            return (
+              <TouchableOpacity
+                key={show.id}
+                style={styles.eventCard}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("ShowsTab")}
+                data-testid={`card-event-${show.id}`}
+              >
+                <View style={styles.eventDateBox}>
+                  <Text style={styles.eventDay}>{day}</Text>
+                  <Text style={styles.eventMonth}>{month}</Text>
                 </View>
-              </View>
-              <Text style={styles.eventTitle}>{event.title}</Text>
-              <View style={styles.eventLocationRow}>
-                <Ionicons
-                  name="location-outline"
-                  size={12}
-                  color={COLORS.textMuted}
-                />
-                <Text style={styles.eventLocation}>{event.location}</Text>
-              </View>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={COLORS.textMuted}
-            />
-          </TouchableOpacity>
-        ))}
+                <View style={styles.eventInfo}>
+                  <View style={styles.eventMeta}>
+                    <View style={styles.eventBadge}>
+                      <Text style={styles.eventBadgeText}>{show.event_type}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.eventTitle}>{show.name}</Text>
+                  {show.location ? (
+                    <View style={styles.eventLocationRow}>
+                      <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+                      <Text style={styles.eventLocation}>{show.location}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <View style={styles.eventCard}>
+            <Text style={styles.emptyText}>No upcoming events.</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -301,11 +328,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 4,
-  },
-  headerLogo: {
-    width: 40,
-    height: 40,
-    marginRight: 12,
   },
   headerTextWrap: {
     flex: 1,
@@ -442,36 +464,66 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  activityItem: {
+  loadingCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  litterItem: {
     flexDirection: "row",
     alignItems: "flex-start",
-    paddingVertical: 10,
+    paddingVertical: 12,
     gap: 12,
   },
-  activityItemBorder: {
+  litterItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.accent,
-    marginTop: 5,
+  litterIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "rgba(199,164,92,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
   },
-  activityTextWrap: {
+  litterTextWrap: {
     flex: 1,
   },
-  activityText: {
+  litterKennel: {
     fontSize: 13,
-    fontWeight: "500",
+    fontWeight: "700",
     color: COLORS.text,
-    lineHeight: 18,
+    marginBottom: 2,
   },
-  activityTime: {
+  litterPairing: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  litterMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  litterMetaText: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: 2,
+  },
+  litterMetaDot: {
+    fontSize: 11,
+    color: COLORS.textMuted,
   },
   eventCard: {
     flexDirection: "row",
@@ -518,11 +570,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
-  },
-  eventBadgeGold: {
-    backgroundColor: "rgba(199,164,92,0.15)",
-  },
-  eventBadgeGreen: {
     backgroundColor: "rgba(15,92,59,0.08)",
   },
   eventBadgeText: {
@@ -530,11 +577,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
-  },
-  eventBadgeTextGold: {
-    color: COLORS.accent,
-  },
-  eventBadgeTextGreen: {
     color: COLORS.primary,
   },
   eventTitle: {
