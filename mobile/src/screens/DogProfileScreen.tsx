@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry, ProgenyEntry, ProgenyPuppy, HereditaryData, HereditaryResult, HereditaryParent } from "../lib/api";
+import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry, ProgenyEntry, ProgenyPuppy, HereditaryData, HereditaryGrades } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 
@@ -597,89 +597,99 @@ export default function DogProfileScreen() {
             </View>
           ))}
 
-        {activeTab === "health" && (
-          hasHealth ? (
-            <View style={{ gap: 20 }}>
-              {([
-                { key: "hd", label: "HD (Hip Dysplasia)", data: hdHereditary },
-                { key: "ed", label: "ED (Elbow Dysplasia)", data: edHereditary },
-              ] as { key: string; label: string; data: HereditaryData | null }[])
-                .filter((s) => s.data)
-                .map((section) => {
-                  const d = section.data!;
-                  const entries: { role: string; name?: string; id?: string; result: HereditaryResult }[] = [];
-                  if (d.this_dog) entries.push({ role: "This Dog", result: d.this_dog });
-                  if (d.sire) entries.push({ role: "Sire", name: d.sire.name, id: d.sire.id, result: d.sire.result });
-                  if (d.dam) entries.push({ role: "Dam", name: d.dam.name, id: d.dam.id, result: d.dam.result });
-                  return (
-                    <View key={section.key} style={styles.healthSection}>
-                      <View style={styles.healthSectionHeader}>
-                        <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
-                        <Text style={styles.healthSectionTitle}>{section.label}</Text>
-                      </View>
-                      {entries.map((entry, ei) => (
-                        <View key={ei} style={[styles.healthBlock, ei > 0 && { marginTop: 16 }]}>
-                          <View style={styles.healthBlockHeader}>
-                            <Text style={styles.healthBlockRole}>{entry.role}</Text>
-                            {entry.name ? (
-                              <TouchableOpacity
-                                onPress={() => entry.id && navigation.push("DogProfile", { id: entry.id, name: entry.name })}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={styles.healthBlockName}>{entry.name}</Text>
-                              </TouchableOpacity>
-                            ) : null}
-                          </View>
-                          <View style={styles.healthStats}>
-                            <View style={styles.healthStatItem}>
-                              <Text style={styles.healthStatValue}>{entry.result.total_offspring ?? "-"}</Text>
-                              <Text style={styles.healthStatLabel}>Total Offspring</Text>
-                            </View>
-                            <View style={styles.healthStatDivider} />
-                            <View style={styles.healthStatItem}>
-                              <Text style={styles.healthStatValue}>{entry.result.radiographed ?? "-"}</Text>
-                              <Text style={styles.healthStatLabel}>Radiographed</Text>
-                            </View>
-                          </View>
-                          {entry.result.numbers && (
-                            <View style={styles.healthTable}>
-                              <View style={styles.healthTableHeader}>
-                                <Text style={[styles.healthTableCell, styles.healthTableHeaderText, { flex: 1.4 }]}>Results</Text>
-                                {(["Normal","Fast Normal","Just Permitted","Middle","Severe"] as const).map((col) => (
-                                  <Text key={col} style={[styles.healthTableCell, styles.healthTableHeaderText]}>{col}</Text>
-                                ))}
-                              </View>
-                              {([
-                                { label: "Number", vals: entry.result.numbers },
-                                { label: "Percentage", vals: entry.result.percentages },
-                              ] as { label: string; vals: typeof entry.result.numbers }[]).map((row, ri) => (
-                                <View key={ri} style={[styles.healthTableRow, ri % 2 === 0 && styles.healthTableRowAlt]}>
-                                  <Text style={[styles.healthTableCell, styles.healthTableRowLabel, { flex: 1.4 }]}>{row.label}</Text>
-                                  {(["normal","fast_normal","just_permitted","middle","severe"] as const).map((k) => (
-                                    <Text key={k} style={styles.healthTableCell}>
-                                      {row.vals?.[k] != null ? String(row.vals[k]) : "-"}
-                                    </Text>
-                                  ))}
-                                </View>
-                              ))}
-                            </View>
-                          )}
-                        </View>
-                      ))}
-                    </View>
-                  );
-                })}
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="medkit-outline" size={32} color={COLORS.primary} />
+        {activeTab === "health" && (() => {
+          const COLS: { key: keyof HereditaryGrades; label: string }[] = [
+            { key: "norm",  label: "Normal" },
+            { key: "fnorm", label: "Fast Normal" },
+            { key: "jperm", label: "Just Permitted" },
+            { key: "mid",   label: "Middle" },
+            { key: "sev",   label: "Severe" },
+          ];
+          const gradesTotal = (g: HereditaryGrades) =>
+            (g.norm || 0) + (g.fnorm || 0) + (g.jperm || 0) + (g.mid || 0) + (g.sev || 0);
+          const pct = (n: number, total: number) =>
+            total > 0 ? (n / total * 100).toFixed(2) + "%" : "0.00%";
+
+          const renderGradeBlock = (
+            role: string,
+            grades: HereditaryGrades | null | undefined,
+            navId?: string,
+          ) => {
+            if (!grades) return null;
+            const total = gradesTotal(grades);
+            return (
+              <View style={styles.healthBlock}>
+                <View style={styles.healthBlockHeader}>
+                  <Text style={styles.healthBlockRole}>{role}</Text>
+                  {navId ? (
+                    <TouchableOpacity onPress={() => navigation.push("DogProfile", { id: navId })} activeOpacity={0.7}>
+                      <Text style={styles.healthBlockNavLink}>View Profile →</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+                <View style={styles.healthStats}>
+                  <View style={styles.healthStatItem}>
+                    <Text style={styles.healthStatValue}>{total}</Text>
+                    <Text style={styles.healthStatLabel}>Radiographed</Text>
+                  </View>
+                </View>
+                <View style={styles.healthTable}>
+                  <View style={styles.healthTableHeader}>
+                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableLabelCell]}>Results</Text>
+                    {COLS.map((c) => (
+                      <Text key={c.key} style={[styles.healthTableCell, styles.healthTableHeaderText]}>{c.label}</Text>
+                    ))}
+                  </View>
+                  <View style={styles.healthTableRow}>
+                    <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableLabelCell]}>Number</Text>
+                    {COLS.map((c) => (
+                      <Text key={c.key} style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
+                    ))}
+                  </View>
+                  <View style={[styles.healthTableRow, styles.healthTableRowAlt]}>
+                    <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableLabelCell]}>Percentage</Text>
+                    {COLS.map((c) => (
+                      <Text key={c.key} style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, total)}</Text>
+                    ))}
+                  </View>
+                </View>
               </View>
-              <Text style={styles.emptyTitle}>No Health Data</Text>
-              <Text style={styles.emptyDesc}>No hereditary health results are available for this dog.</Text>
+            );
+          };
+
+          const sections = [
+            { key: "hd", label: "HD — Hip Dysplasia",   data: hdHereditary },
+            { key: "ed", label: "ED — Elbow Dysplasia", data: edHereditary },
+          ].filter((s) => s.data);
+
+          if (sections.length === 0) {
+            return (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconWrap}>
+                  <Ionicons name="medkit-outline" size={32} color={COLORS.primary} />
+                </View>
+                <Text style={styles.emptyTitle}>No Health Data</Text>
+                <Text style={styles.emptyDesc}>No hereditary health results are available for this dog.</Text>
+              </View>
+            );
+          }
+
+          return (
+            <View style={{ gap: 20 }}>
+              {sections.map((s) => (
+                <View key={s.key} style={styles.healthSection}>
+                  <View style={styles.healthSectionHeader}>
+                    <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
+                    <Text style={styles.healthSectionTitle}>{s.label}</Text>
+                  </View>
+                  {renderGradeBlock("This Dog's Offspring", s.data!.kids)}
+                  {renderGradeBlock("Sire's Offspring", s.data!.sire, dog.sire_id || undefined)}
+                  {renderGradeBlock("Dam's Offspring", s.data!.dam, dog.dam_id || undefined)}
+                </View>
+              ))}
             </View>
-          )
-        )}
+          );
+        })()}
       </View>
 
       <View style={{ height: 32 }} />
@@ -1123,11 +1133,16 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  healthBlockName: {
-    fontSize: 13,
-    fontWeight: "700",
+  healthBlockNavLink: {
+    fontSize: 12,
+    fontWeight: "600",
     color: COLORS.primary,
     textDecorationLine: "underline",
+  },
+  healthTableLabelCell: {
+    flex: 1.5,
+    textAlign: "left",
+    paddingLeft: 6,
   },
   healthStats: {
     flexDirection: "row",
