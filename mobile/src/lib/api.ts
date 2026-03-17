@@ -140,8 +140,10 @@ export type ShowResultEntry = {
   KP: string | null;
   foreign_reg_no: string | null;
   grading: string;
-  seat: string;
+  placement: string;
   class: string;
+  imageUrl: string | null;
+  hair: string | null;
 };
 
 export type ShowDetail = Show & {

@@ -73,7 +73,7 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
   return (
     <TouchableOpacity style={styles.resultRow} onPress={onPress} activeOpacity={0.7} data-testid={`result-${entry.dog_id}`}>
       <View style={styles.seatBadge}>
-        <Text style={styles.seatText}>#{entry.seat}</Text>
+        <Text style={styles.seatText}>#{entry.placement}</Text>
       </View>
       <View style={styles.resultInfo}>
         <Text style={styles.resultName} numberOfLines={1}>{entry.dog_name.trim()}</Text>
@@ -94,6 +94,7 @@ export default function ShowDetailScreen() {
   const navigation = useNavigation<any>();
   const { id, name } = route.params as { id: string; name?: string };
   const [activeTab, setActiveTab] = useState<TabKey>("info");
+  const [selectedHair, setSelectedHair] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
 
   const { data: show, isLoading, isError, refetch, isRefetching } = useQuery<ShowDetail>({
@@ -113,19 +114,48 @@ export default function ShowDetailScreen() {
     "Minor Puppy Female", "Minor Puppy Male",
   ];
 
-  const normalize = (cls: string) => cls.replace(/[\r\n]+\s*/g, " ").trim();
+  const HAIR_ORDER = ["Stock Hair", "Long-Stock Hair with Undercoat", "Long Stock hair"];
 
-  const classGroups = useMemo(() => {
+  const normalize = (s: string) => s.replace(/[\r\n]+\s*/g, " ").trim();
+  const normalizeHair = (h: string | null | undefined) => {
+    if (!h || !h.trim()) return "Other";
+    return h.trim();
+  };
+
+  const hairGroups = useMemo(() => {
     if (!results.length) return new Map<string, ShowResultEntry[]>();
     const groups = new Map<string, ShowResultEntry[]>();
     results.forEach((entry) => {
+      const hair = normalizeHair(entry.hair);
+      if (!groups.has(hair)) groups.set(hair, []);
+      groups.get(hair)!.push(entry);
+    });
+    return groups;
+  }, [results]);
+
+  const orderedHairTypes = useMemo(() => {
+    const ordered = HAIR_ORDER.filter((h) => hairGroups.has(h));
+    const remaining = [...hairGroups.keys()].filter((h) => !HAIR_ORDER.includes(h));
+    return [...ordered, ...remaining];
+  }, [hairGroups]);
+
+  const activeHair = selectedHair && hairGroups.has(selectedHair)
+    ? selectedHair
+    : orderedHairTypes[0] || null;
+
+  const hairResults = activeHair ? hairGroups.get(activeHair) || [] : [];
+
+  const classGroups = useMemo(() => {
+    if (!hairResults.length) return new Map<string, ShowResultEntry[]>();
+    const groups = new Map<string, ShowResultEntry[]>();
+    hairResults.forEach((entry) => {
       const cls = normalize(entry.class || "Other");
       if (!groups.has(cls)) groups.set(cls, []);
       groups.get(cls)!.push(entry);
     });
-    groups.forEach((arr) => arr.sort((a, b) => parseInt(a.seat) - parseInt(b.seat)));
+    groups.forEach((arr) => arr.sort((a, b) => parseInt(a.placement) - parseInt(b.placement)));
     return groups;
-  }, [results]);
+  }, [hairResults]);
 
   const orderedClassNames = useMemo(() => {
     const ordered = CLASS_ORDER.filter((cls) => classGroups.has(cls));
@@ -138,6 +168,8 @@ export default function ShowDetailScreen() {
     : orderedClassNames[0] || null;
 
   const activeClassResults = activeClass ? classGroups.get(activeClass) || [] : [];
+
+  const hasMultipleHairTypes = orderedHairTypes.length > 1;
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
@@ -298,35 +330,70 @@ export default function ShowDetailScreen() {
         {renderHeader()}
 
         {orderedClassNames.length > 0 && (
-          <View style={styles.classTabsWrapper}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.classTabsContent}
-            >
-              {orderedClassNames.map((cls) => {
-                const count = classGroups.get(cls)?.length || 0;
-                const isSelected = cls === activeClass;
-                return (
-                  <TouchableOpacity
-                    key={cls}
-                    style={[styles.classTab, isSelected && styles.classTabActive]}
-                    onPress={() => setSelectedClass(cls)}
-                    activeOpacity={0.7}
-                    data-testid={`class-tab-${cls.toLowerCase().replace(/\s/g, "-")}`}
-                  >
-                    <Text style={[styles.classTabText, isSelected && styles.classTabTextActive]}>
-                      {cls}
-                    </Text>
-                    <View style={[styles.classTabCount, isSelected && styles.classTabCountActive]}>
-                      <Text style={[styles.classTabCountText, isSelected && styles.classTabCountTextActive]}>
-                        {count}
+          <View style={styles.filterTabsSticky}>
+            {hasMultipleHairTypes && (
+              <View style={styles.hairTabsWrapper}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.hairTabsContent}
+                >
+                  {orderedHairTypes.map((hair) => {
+                    const count = hairGroups.get(hair)?.length || 0;
+                    const isSelected = hair === activeHair;
+                    return (
+                      <TouchableOpacity
+                        key={hair}
+                        style={[styles.hairTab, isSelected && styles.hairTabActive]}
+                        onPress={() => { setSelectedHair(hair); setSelectedClass(null); }}
+                        activeOpacity={0.7}
+                        data-testid={`hair-tab-${hair.toLowerCase().replace(/\s/g, "-")}`}
+                      >
+                        <Text style={[styles.hairTabText, isSelected && styles.hairTabTextActive]}>
+                          {hair}
+                        </Text>
+                        <View style={[styles.hairTabCount, isSelected && styles.hairTabCountActive]}>
+                          <Text style={[styles.hairTabCountText, isSelected && styles.hairTabCountTextActive]}>
+                            {count}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={styles.classTabsWrapper}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.classTabsContent}
+              >
+                {orderedClassNames.map((cls) => {
+                  const count = classGroups.get(cls)?.length || 0;
+                  const isSelected = cls === activeClass;
+                  return (
+                    <TouchableOpacity
+                      key={cls}
+                      style={[styles.classTab, isSelected && styles.classTabActive]}
+                      onPress={() => setSelectedClass(cls)}
+                      activeOpacity={0.7}
+                      data-testid={`class-tab-${cls.toLowerCase().replace(/\s/g, "-")}`}
+                    >
+                      <Text style={[styles.classTabText, isSelected && styles.classTabTextActive]}>
+                        {cls}
                       </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                      <View style={[styles.classTabCount, isSelected && styles.classTabCountActive]}>
+                        <Text style={[styles.classTabCountText, isSelected && styles.classTabCountTextActive]}>
+                          {count}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
           </View>
         )}
 
@@ -563,8 +630,62 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.text,
   },
-  classTabsWrapper: {
+  filterTabsSticky: {
     backgroundColor: "#f6f8f7",
+  },
+  hairTabsWrapper: {
+    paddingVertical: SPACING.sm,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  hairTabsContent: {
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  hairTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  hairTabActive: {
+    backgroundColor: `${COLORS.accent}18`,
+    borderColor: COLORS.accent,
+  },
+  hairTabText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  hairTabTextActive: {
+    color: COLORS.accent,
+  },
+  hairTabCount: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: BORDER_RADIUS.full,
+    minWidth: 20,
+    alignItems: "center",
+  },
+  hairTabCountActive: {
+    backgroundColor: `${COLORS.accent}20`,
+  },
+  hairTabCountText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+  },
+  hairTabCountTextActive: {
+    color: COLORS.accent,
+  },
+  classTabsWrapper: {
     paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
