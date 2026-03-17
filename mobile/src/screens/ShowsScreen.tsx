@@ -50,7 +50,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   Meeting: "#10B981",
 };
 
-const STATUS_TABS = ["All", "Active", "Inactive"] as const;
+const STATUS_TABS = ["All", "Upcoming", "Current", "Past"] as const;
 
 export default function ShowsScreen() {
   const navigation = useNavigation<any>();
@@ -80,7 +80,7 @@ export default function ShowsScreen() {
   const renderItem = ({ item }: { item: Show }) => {
     const color = EVENT_TYPE_COLORS[item.event_type] || COLORS.accent;
     const icon = EVENT_TYPE_ICONS[item.event_type] || "calendar";
-    const isActive = item.status === "Active";
+    const isActive = item.status === "Current" || item.status === "Upcoming";
 
     return (
       <TouchableOpacity

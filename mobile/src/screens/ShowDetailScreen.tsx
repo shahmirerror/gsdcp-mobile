@@ -93,7 +93,7 @@ export default function ShowDetailScreen() {
     );
   }
 
-  const isActive = show.status === "Active";
+  const isActive = show.status === "Current" || show.status === "Upcoming";
   const color = EVENT_TYPE_COLORS[show.event_type] || COLORS.accent;
   const icon = EVENT_TYPE_ICONS[show.event_type] || "calendar";
 
