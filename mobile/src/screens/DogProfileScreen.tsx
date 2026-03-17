@@ -79,6 +79,7 @@ export default function DogProfileScreen() {
   const dogId = route.params?.id;
   const [activeTab, setActiveTab] = useState<TabKey>("details");
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
+  const [expandedProgeny, setExpandedProgeny] = useState<Set<number>>(new Set());
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<DogDetail>({
     queryKey: ["dog", dogId],
@@ -425,7 +426,16 @@ export default function DogProfileScreen() {
                 const isSire = entry.partner_type === "sire";
                 const partnerInitials = (partner.dog_name || "")
                   .trim().split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
-                const puppyCount = (entry.puppies || []).length;
+                const puppies = entry.puppies || [];
+                const puppyCount = puppies.length;
+                const isOpen = expandedProgeny.has(i);
+                const toggleProgeny = () => {
+                  setExpandedProgeny((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(i)) next.delete(i); else next.add(i);
+                    return next;
+                  });
+                };
                 return (
                   <View key={`${partner.id}-${i}`} style={styles.litterCard}>
                     <TouchableOpacity
@@ -452,18 +462,23 @@ export default function DogProfileScreen() {
                       <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
                     </TouchableOpacity>
 
-                    <View style={styles.litterDivider}>
+                    <TouchableOpacity style={styles.litterDivider} onPress={toggleProgeny} activeOpacity={0.7}>
                       <Text style={styles.litterDividerText}>
                         {puppyCount} {puppyCount === 1 ? "Puppy" : "Puppies"}
                       </Text>
-                    </View>
+                      <Ionicons
+                        name={isOpen ? "chevron-up" : "chevron-down"}
+                        size={14}
+                        color={COLORS.textMuted}
+                      />
+                    </TouchableOpacity>
 
-                    {(entry.puppies || []).map((puppy: ProgenyPuppy, j: number) => {
+                    {isOpen && puppies.map((puppy: ProgenyPuppy, j: number) => {
                       const isMale = (puppy.sex || "").toLowerCase() === "male";
                       return (
                         <TouchableOpacity
                           key={puppy.id || j}
-                          style={[styles.puppyRow, j < (entry.puppies.length - 1) && styles.puppyRowBorder]}
+                          style={[styles.puppyRow, j < (puppies.length - 1) && styles.puppyRowBorder]}
                           onPress={() => navigation.push("DogProfile", { id: puppy.id, name: puppy.dog_name })}
                           activeOpacity={0.7}
                         >
@@ -966,8 +981,11 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   litterDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 8,
     backgroundColor: COLORS.background,
     borderTopWidth: 1,
     borderBottomWidth: 1,
