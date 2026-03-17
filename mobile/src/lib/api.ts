@@ -133,7 +133,20 @@ export type Show = {
   last_date_of_entry: string | null;
 };
 
-export type ShowDetail = Show;
+export type ShowResultEntry = {
+  dog_id: string;
+  dog_name: string;
+  sex: string;
+  KP: string | null;
+  foreign_reg_no: string | null;
+  grading: string;
+  seat: string;
+  class: string;
+};
+
+export type ShowDetail = Show & {
+  showResults: ShowResultEntry[] | null;
+};
 
 export async function fetchShows(): Promise<Show[]> {
   const res = await fetch(`${BASE_URL}/shows`);

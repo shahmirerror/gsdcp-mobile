@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,13 +8,14 @@ import {
   ActivityIndicator,
   ImageBackground,
   RefreshControl,
+  SectionList,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { fetchShow, ShowDetail } from "../lib/api";
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
+import { fetchShow, ShowDetail, ShowResultEntry } from "../lib/api";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -46,6 +48,14 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   Meeting: "#10B981",
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  Upcoming: "#3B82F6",
+  Current: "#22C55E",
+  Past: "#9CA3AF",
+};
+
+type TabKey = "info" | "results";
+
 function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return (
     <View style={styles.infoRow}>
@@ -60,15 +70,66 @@ function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
   );
 }
 
+function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => void }) {
+  const isMale = entry.sex === "Male";
+
+  return (
+    <TouchableOpacity style={styles.resultRow} onPress={onPress} activeOpacity={0.7} data-testid={`result-${entry.dog_id}`}>
+      <View style={styles.seatBadge}>
+        <Text style={styles.seatText}>#{entry.seat}</Text>
+      </View>
+      <View style={styles.resultInfo}>
+        <Text style={styles.resultName} numberOfLines={1}>{entry.dog_name.trim()}</Text>
+        <View style={styles.resultMeta}>
+          <View style={[styles.sexBadge, { backgroundColor: isMale ? COLORS.sire : COLORS.dam }]}>
+            <Text style={[styles.sexBadgeText, { color: isMale ? COLORS.sireText : COLORS.damText }]}>
+              {entry.sex}
+            </Text>
+          </View>
+          {entry.KP && (
+            <Text style={styles.resultKp}>KP {entry.KP}</Text>
+          )}
+        </View>
+      </View>
+      <View style={styles.gradingBadge}>
+        <Text style={styles.gradingText}>{entry.grading}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+    </TouchableOpacity>
+  );
+}
+
 export default function ShowDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { id, name } = route.params as { id: string; name?: string };
+  const [activeTab, setActiveTab] = useState<TabKey>("info");
 
   const { data: show, isLoading, isError, refetch, isRefetching } = useQuery<ShowDetail>({
     queryKey: ["shows", id],
     queryFn: () => fetchShow(id),
   });
+
+  const results = show?.showResults || [];
+
+  const groupedResults = useMemo(() => {
+    if (!results.length) return [];
+    const classOrder: Record<string, ShowResultEntry[]> = {};
+    results.forEach((entry) => {
+      const cls = entry.class || "Other";
+      if (!classOrder[cls]) classOrder[cls] = [];
+      classOrder[cls].push(entry);
+    });
+    Object.values(classOrder).forEach((arr) =>
+      arr.sort((a, b) => parseInt(a.seat) - parseInt(b.seat))
+    );
+    return Object.entries(classOrder).map(([title, data]) => ({ title, data }));
+  }, [results]);
+
+  const tabs: { key: TabKey; label: string; count?: number }[] = [
+    { key: "info", label: "Info" },
+    { key: "results", label: "Results", count: results.length },
+  ];
 
   if (isLoading) {
     return (
@@ -84,10 +145,10 @@ export default function ShowDetailScreen() {
       <View style={styles.centered}>
         <Text style={styles.errorText}>Failed to load show details</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryBtnText}>Retry</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.goBack()} data-testid="btn-go-back">
-          <Text style={[styles.retryText, { color: COLORS.primary, marginTop: 8 }]}>Go Back</Text>
+          <Text style={[styles.retryBtnText, { color: COLORS.primary, marginTop: 8 }]}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -96,18 +157,14 @@ export default function ShowDetailScreen() {
   const isActive = show.status === "Current" || show.status === "Upcoming";
   const color = EVENT_TYPE_COLORS[show.event_type] || COLORS.accent;
   const icon = EVENT_TYPE_ICONS[show.event_type] || "calendar";
+  const statusColor = STATUS_COLORS[show.status] || COLORS.textMuted;
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      bounces={true}
-      overScrollMode="always"
-      refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
-      }
-    >
+  const handleDogPress = (entry: ShowResultEntry) => {
+    navigation.push("DogProfile", { id: entry.dog_id, name: entry.dog_name.trim() });
+  };
+
+  const renderHeader = () => (
+    <>
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
@@ -117,9 +174,7 @@ export default function ShowDetailScreen() {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            }
+            if (navigation.canGoBack()) navigation.goBack();
           }}
           activeOpacity={0.7}
           data-testid="btn-back"
@@ -134,11 +189,9 @@ export default function ShowDetailScreen() {
         </View>
         <Text style={styles.showName} data-testid="text-show-name">{show.name}</Text>
         <View style={styles.badgeRow}>
-          <View style={[styles.statusBadge, { backgroundColor: isActive ? "#DCFCE7" : "#F3F4F6" }]}>
-            <View style={[styles.statusDot, { backgroundColor: isActive ? "#22C55E" : "#9CA3AF" }]} />
-            <Text style={[styles.statusText, { color: isActive ? "#16A34A" : "#6B7280" }]}>
-              {show.status}
-            </Text>
+          <View style={[styles.statusBadge, { backgroundColor: `${statusColor}18` }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusText, { color: statusColor }]}>{show.status}</Text>
           </View>
           <View style={[styles.typeBadge, { backgroundColor: `${color}18` }]}>
             <Text style={[styles.typeBadgeText, { color }]}>{show.event_type}</Text>
@@ -146,40 +199,108 @@ export default function ShowDetailScreen() {
         </View>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardHeading}>Event Details</Text>
-        <InfoRow
-          icon="calendar"
-          label="Date"
-          value={show.dates.length > 0 ? show.dates.map(formatDate).join(" — ") : "TBA"}
-        />
-        {show.location && (
-          <InfoRow icon="location" label="Location" value={show.location} />
-        )}
-        {show.last_date_of_entry && (
-          <InfoRow icon="time" label="Last Date of Entry" value={formatDate(show.last_date_of_entry)} />
-        )}
-        <InfoRow icon="paw" label="Entries" value={String(show.entryCount)} />
+      <View style={styles.tabRow}>
+        {tabs.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+            onPress={() => setActiveTab(tab.key)}
+            activeOpacity={0.7}
+            data-testid={`tab-${tab.key}`}
+          >
+            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+              {tab.label}
+              {tab.count != null ? ` (${tab.count})` : ""}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
+    </>
+  );
 
-      {show.judges.length > 0 && (
+  if (activeTab === "info") {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        overScrollMode="always"
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+        }
+      >
+        {renderHeader()}
+
         <View style={styles.card}>
-          <Text style={styles.cardHeading}>
-            {show.judges.length === 1 ? "Judge" : "Judges"}
-          </Text>
-          {show.judges.map((judge) => (
-            <View key={judge.id} style={styles.judgeRow}>
-              <View style={styles.judgeAvatar}>
-                <Ionicons name="person" size={18} color={COLORS.primary} />
+          <Text style={styles.cardHeading}>Event Details</Text>
+          <InfoRow
+            icon="calendar"
+            label="Date"
+            value={show.dates.length > 0 ? show.dates.map(formatDate).join(" — ") : "TBA"}
+          />
+          {show.location && (
+            <InfoRow icon="location" label="Location" value={show.location} />
+          )}
+          {show.last_date_of_entry && (
+            <InfoRow icon="time" label="Last Date of Entry" value={formatDate(show.last_date_of_entry)} />
+          )}
+          <InfoRow icon="paw" label="Entries" value={String(show.entryCount)} />
+        </View>
+
+        {show.judges.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardHeading}>
+              {show.judges.length === 1 ? "Judge" : "Judges"}
+            </Text>
+            {show.judges.map((judge) => (
+              <View key={judge.id} style={styles.judgeRow}>
+                <View style={styles.judgeAvatar}>
+                  <Ionicons name="person" size={18} color={COLORS.primary} />
+                </View>
+                <Text style={styles.judgeName}>{judge.full_name}</Text>
               </View>
-              <Text style={styles.judgeName}>{judge.full_name}</Text>
-            </View>
-          ))}
+            ))}
+          </View>
+        )}
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    );
+  }
+
+  return (
+    <SectionList
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      sections={groupedResults}
+      keyExtractor={(item, index) => `${item.dog_id}-${index}`}
+      ListHeaderComponent={renderHeader}
+      renderSectionHeader={({ section: { title, data } }) => (
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionCount}>{data.length}</Text>
         </View>
       )}
-
-      <View style={{ height: 32 }} />
-    </ScrollView>
+      renderItem={({ item }) => (
+        <ResultRow entry={item} onPress={() => handleDogPress(item)} />
+      )}
+      stickySectionHeadersEnabled={false}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
+      ListEmptyComponent={
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="trophy-outline" size={32} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No Results Yet</Text>
+          <Text style={styles.emptyDesc}>Results will appear here once the show is complete.</Text>
+        </View>
+      }
+      ListFooterComponent={<View style={{ height: 32 }} />}
+    />
   );
 }
 
@@ -213,7 +334,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.primary,
   },
-  retryText: {
+  retryBtnText: {
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
@@ -244,7 +365,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: -40,
     paddingHorizontal: SPACING.lg,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   heroIcon: {
     width: 72,
@@ -296,6 +417,33 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  tabRow: {
+    flexDirection: "row",
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  tabActive: {
+    backgroundColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  tabTextActive: {
+    color: "#fff",
   },
   card: {
     backgroundColor: COLORS.surface,
@@ -366,5 +514,116 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: COLORS.text,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  sectionCount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.xs,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: SPACING.sm,
+  },
+  seatBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: `${COLORS.primary}10`,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  seatText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: COLORS.primary,
+  },
+  resultInfo: {
+    flex: 1,
+  },
+  resultName: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  resultMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 3,
+  },
+  sexBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  sexBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  resultKp: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  gradingBadge: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  gradingText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: `${COLORS.primary}12`,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  emptyDesc: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: "center",
   },
 });

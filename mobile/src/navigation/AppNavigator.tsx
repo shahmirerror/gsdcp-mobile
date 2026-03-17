@@ -31,6 +31,7 @@ export type BreedersStackParamList = {
 export type ShowsStackParamList = {
   ShowsList: undefined;
   ShowDetail: { id: string; name?: string };
+  DogProfile: { id: string; name?: string };
 };
 
 export type RootTabParamList = {
@@ -83,6 +84,7 @@ function ShowsStackNavigator() {
     >
       <ShowsStack.Screen name="ShowsList" component={ShowsScreen} />
       <ShowsStack.Screen name="ShowDetail" component={ShowDetailScreen} />
+      <ShowsStack.Screen name="DogProfile" component={DogProfileScreen} />
     </ShowsStack.Navigator>
   );
 }
