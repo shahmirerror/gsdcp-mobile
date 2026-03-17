@@ -171,9 +171,11 @@ export default function ShowDetailScreen() {
 
   const hasMultipleHairTypes = orderedHairTypes.length > 1;
 
+  const isShowType = show?.event_type === "Show";
+
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
-    { key: "results", label: "Results", count: results.length },
+    ...(isShowType ? [{ key: "results" as TabKey, label: "Results", count: results.length }] : []),
   ];
 
   if (isLoading) {
@@ -263,7 +265,7 @@ export default function ShowDetailScreen() {
     </>
   );
 
-  if (activeTab === "info") {
+  if (activeTab === "info" || !isShowType) {
     return (
       <ScrollView
         style={styles.container}
