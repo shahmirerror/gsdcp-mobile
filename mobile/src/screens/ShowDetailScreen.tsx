@@ -70,19 +70,17 @@ function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
 }
 
 function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => void }) {
+  const gradingPlacement = [entry.grading, entry.placement].filter(Boolean).join(" ");
   return (
     <TouchableOpacity style={styles.resultRow} onPress={onPress} activeOpacity={0.7} data-testid={`result-${entry.dog_id}`}>
-      <View style={styles.seatBadge}>
-        <Text style={styles.seatText}>#{entry.placement}</Text>
+      <View style={styles.gradingBadge}>
+        <Text style={styles.gradingText}>{gradingPlacement}</Text>
       </View>
       <View style={styles.resultInfo}>
         <Text style={styles.resultName} numberOfLines={1}>{entry.dog_name.trim()}</Text>
         {entry.KP && (
           <Text style={styles.resultKp}>KP {entry.KP}</Text>
         )}
-      </View>
-      <View style={styles.gradingBadge}>
-        <Text style={styles.gradingText}>{entry.grading}</Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
     </TouchableOpacity>
@@ -114,12 +112,14 @@ export default function ShowDetailScreen() {
     "Minor Puppy Female", "Minor Puppy Male",
   ];
 
-  const HAIR_ORDER = ["Stock Hair", "Long-Stock Hair with Undercoat", "Long Stock hair"];
+  const HAIR_ORDER = ["Stock Hair", "Long Stock Hair"];
 
   const normalize = (s: string) => s.replace(/[\r\n]+\s*/g, " ").trim();
-  const normalizeHair = (h: string | null | undefined) => {
-    if (!h || !h.trim()) return "Other";
-    return h.trim();
+  const normalizeHair = (h: string | null | undefined): string => {
+    if (!h || !h.trim()) return "Stock Hair";
+    const lower = h.trim().toLowerCase();
+    if (lower.includes("long")) return "Long Stock Hair";
+    return "Stock Hair";
   };
 
   const hairGroups = useMemo(() => {
@@ -750,19 +750,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     gap: SPACING.sm,
-  },
-  seatBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: `${COLORS.primary}10`,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  seatText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: COLORS.primary,
   },
   resultInfo: {
     flex: 1,
