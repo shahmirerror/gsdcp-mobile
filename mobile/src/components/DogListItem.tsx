@@ -12,16 +12,17 @@ interface DogListItemProps {
 }
 
 export function DogListItem({ dog, onPress }: DogListItemProps) {
-  const initials = dog.dog_name
+  const initials = (dog.dog_name || "")
     .trim()
     .split(" ")
     .filter((w) => w.length > 0)
     .map((w) => w[0])
     .slice(0, 2)
     .join("")
-    .toUpperCase();
+    .toUpperCase() || "?";
 
   const showImage = hasImage(dog.imageUrl);
+  const titles = dog.titles || [];
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
@@ -58,9 +59,9 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
           ) : null}
         </View>
       </View>
-      {dog.titles.length > 0 && (
+      {titles.length > 0 && (
         <View style={styles.titles}>
-          {dog.titles.slice(0, 2).map((t) => (
+          {titles.slice(0, 2).map((t) => (
             <View key={t} style={styles.titleBadge}>
               <Text style={styles.titleBadgeText}>{t}</Text>
             </View>
