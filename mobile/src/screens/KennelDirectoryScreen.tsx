@@ -14,10 +14,15 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchKennels, Kennel } from "../lib/api";
+import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
+
+type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelDirectory">;
 
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
@@ -25,7 +30,13 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function KennelListItem({ kennel }: { kennel: Kennel }) {
+function KennelListItem({
+  kennel,
+  onPress,
+}: {
+  kennel: Kennel;
+  onPress: () => void;
+}) {
   const [imgError, setImgError] = useState(false);
   const hasImage =
     kennel.imageUrl &&
@@ -40,7 +51,12 @@ function KennelListItem({ kennel }: { kennel: Kennel }) {
   const year = formatYear(kennel.activeSince);
 
   return (
-    <View style={styles.listItem} data-testid={`card-kennel-${kennel.id}`}>
+    <TouchableOpacity
+      style={styles.listItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+      data-testid={`card-kennel-${kennel.id}`}
+    >
       {hasImage ? (
         <Image
           source={{ uri: kennel.imageUrl }}
@@ -74,11 +90,12 @@ function KennelListItem({ kennel }: { kennel: Kennel }) {
         </View>
       </View>
       <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export default function KennelDirectoryScreen() {
+  const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
@@ -250,7 +267,17 @@ export default function KennelDirectoryScreen() {
               colors={[COLORS.primary]}
             />
           }
-          renderItem={({ item }) => <KennelListItem kennel={item} />}
+          renderItem={({ item }) => (
+            <KennelListItem
+              kennel={item}
+              onPress={() =>
+                navigation.navigate("KennelProfile", {
+                  id: item.id,
+                  name: item.kennelName,
+                })
+              }
+            />
+          )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />

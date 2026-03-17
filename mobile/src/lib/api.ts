@@ -266,6 +266,39 @@ export async function fetchKennels(): Promise<Kennel[]> {
   return json.data;
 }
 
+export type KennelMating = {
+  sire_name: string;
+  dam_name: string;
+  mating_date: string;
+  sire_dog_id: string;
+  dam_dog_id: string;
+};
+
+export type KennelOwner = {
+  name: string;
+  phone: string | null;
+  email: string | null;
+  membership_no: string | null;
+};
+
+export type KennelFull = Kennel & {
+  suffix: string | null;
+  prefix: string | null;
+};
+
+export type KennelDetail = {
+  kennels: KennelFull;
+  matings: KennelMating[];
+  kennelOwners: KennelOwner[];
+};
+
+export async function fetchKennelDetail(id: string): Promise<KennelDetail> {
+  const res = await fetch(`${BASE_URL}/kennels/${id}`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch kennel detail");
+  return json.data;
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";
