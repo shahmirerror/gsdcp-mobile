@@ -140,7 +140,7 @@ export default function DogProfileScreen() {
     { key: "siblings", label: "Siblings", icon: "people-outline"  as const, count: siblings.length },
     { key: "progeny",  label: "Progeny",  icon: "paw-outline"     as const, count: progeny.length },
     { key: "shows",    label: "Shows",    icon: "ribbon-outline"  as const, count: showResults.length },
-    { key: "health",   label: "Health",   icon: "medkit-outline"  as const },
+    { key: "health",   label: "HD/ED",    icon: "medkit-outline"  as const },
   ];
 
   return (
@@ -635,23 +635,17 @@ export default function DogProfileScreen() {
                 </View>
                 <View style={styles.healthTable}>
                   <View style={styles.healthTableHeader}>
-                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableLabelCell]}>Results</Text>
-                    {COLS.map((c) => (
-                      <Text key={c.key} style={[styles.healthTableCell, styles.healthTableHeaderText]}>{c.label}</Text>
-                    ))}
+                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableRatingCell]}>Rating</Text>
+                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Number</Text>
+                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Percentage</Text>
                   </View>
-                  <View style={styles.healthTableRow}>
-                    <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableLabelCell]}>Number</Text>
-                    {COLS.map((c) => (
-                      <Text key={c.key} style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
-                    ))}
-                  </View>
-                  <View style={[styles.healthTableRow, styles.healthTableRowAlt]}>
-                    <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableLabelCell]}>Percentage</Text>
-                    {COLS.map((c) => (
-                      <Text key={c.key} style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, total)}</Text>
-                    ))}
-                  </View>
+                  {COLS.map((c, ri) => (
+                    <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
+                      <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
+                      <Text style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
+                      <Text style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, total)}</Text>
+                    </View>
+                  ))}
                 </View>
               </View>
             );
@@ -1139,8 +1133,8 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     textDecorationLine: "underline",
   },
-  healthTableLabelCell: {
-    flex: 1.5,
+  healthTableRatingCell: {
+    flex: 1.8,
     textAlign: "left",
     paddingLeft: 6,
   },
