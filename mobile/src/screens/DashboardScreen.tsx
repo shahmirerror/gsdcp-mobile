@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -30,7 +31,7 @@ export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-  const { data: dashboard, isLoading } = useQuery({
+  const { data: dashboard, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/dashboard"],
     queryFn: fetchDashboard,
   });
@@ -58,6 +59,9 @@ export default function DashboardScreen() {
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 24 }}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
     >
       <LinearGradient
         colors={[COLORS.primaryDark, COLORS.primary]}
