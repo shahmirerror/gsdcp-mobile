@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry } from "../lib/api";
+import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry, ProgenyEntry, ProgenyPuppy } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 
@@ -419,19 +419,72 @@ export default function DogProfileScreen() {
 
         {activeTab === "progeny" &&
           (progeny.length > 0 ? (
-            <View>
-              {progeny.map((dog: Dog) => (
-                <DogListItem
-                  key={dog.id}
-                  dog={dog}
-                  onPress={() =>
-                    navigation.push("DogProfile", {
-                      id: dog.id,
-                      name: dog.dog_name,
-                    })
-                  }
-                />
-              ))}
+            <View style={{ gap: 14 }}>
+              {progeny.map((entry: ProgenyEntry, i: number) => {
+                const partner = entry.partner;
+                const isSire = entry.partner_type === "sire";
+                const partnerInitials = (partner.dog_name || "")
+                  .trim().split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+                const puppyCount = (entry.puppies || []).length;
+                return (
+                  <View key={`${partner.id}-${i}`} style={styles.litterCard}>
+                    <TouchableOpacity
+                      style={styles.litterPartner}
+                      onPress={() => navigation.push("DogProfile", { id: partner.id, name: partner.dog_name })}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.litterAvatar, isSire ? styles.litterAvatarSire : styles.litterAvatarDam]}>
+                        <Text style={styles.litterAvatarText}>{partnerInitials}</Text>
+                      </View>
+                      <View style={styles.litterPartnerInfo}>
+                        <View style={styles.litterPartnerRow}>
+                          <Text style={styles.litterPartnerName} numberOfLines={1}>{partner.dog_name}</Text>
+                          <View style={[styles.partnerTypeBadge, isSire ? styles.sireBadge : styles.damBadge]}>
+                            <Text style={styles.partnerTypeBadgeText}>{isSire ? "♂ Sire" : "♀ Dam"}</Text>
+                          </View>
+                        </View>
+                        {partner.show_title ? (
+                          <Text style={styles.litterPartnerSub}>{partner.show_title} · KP {partner.KP || "-"}</Text>
+                        ) : (
+                          <Text style={styles.litterPartnerSub}>KP {partner.KP || "-"}</Text>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+                    </TouchableOpacity>
+
+                    <View style={styles.litterDivider}>
+                      <Text style={styles.litterDividerText}>
+                        {puppyCount} {puppyCount === 1 ? "Puppy" : "Puppies"}
+                      </Text>
+                    </View>
+
+                    {(entry.puppies || []).map((puppy: ProgenyPuppy, j: number) => {
+                      const isMale = (puppy.sex || "").toLowerCase() === "male";
+                      return (
+                        <TouchableOpacity
+                          key={puppy.id || j}
+                          style={[styles.puppyRow, j < (entry.puppies.length - 1) && styles.puppyRowBorder]}
+                          onPress={() => navigation.push("DogProfile", { id: puppy.id, name: puppy.dog_name })}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[styles.puppyDot, isMale ? styles.puppyDotMale : styles.puppyDotFemale]}>
+                            <Text style={styles.puppyDotText}>{isMale ? "♂" : "♀"}</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.puppyName} numberOfLines={1}>{puppy.dog_name}</Text>
+                            <Text style={styles.puppyMeta}>
+                              {puppy.show_title ? `${puppy.show_title} · ` : ""}
+                              KP {puppy.KP || "-"}
+                              {puppy.dob ? ` · ${puppy.dob.slice(0, 4)}` : ""}
+                            </Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                );
+              })}
             </View>
           ) : (
             <View style={styles.emptyState}>
@@ -841,5 +894,129 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     maxWidth: 280,
+  },
+  litterCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  litterPartner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  litterAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  litterAvatarSire: {
+    backgroundColor: "#DBEAFE",
+  },
+  litterAvatarDam: {
+    backgroundColor: "#FCE7F3",
+  },
+  litterAvatarText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  litterPartnerInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  litterPartnerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  litterPartnerName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+    flexShrink: 1,
+  },
+  litterPartnerSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  partnerTypeBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  sireBadge: {
+    backgroundColor: "#DBEAFE",
+  },
+  damBadge: {
+    backgroundColor: "#FCE7F3",
+  },
+  partnerTypeBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  litterDivider: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: COLORS.background,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+  },
+  litterDividerText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  puppyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 12,
+  },
+  puppyRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  puppyDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  puppyDotMale: {
+    backgroundColor: "#DBEAFE",
+  },
+  puppyDotFemale: {
+    backgroundColor: "#FCE7F3",
+  },
+  puppyDotText: {
+    fontSize: 13,
+    lineHeight: 16,
+  },
+  puppyName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  puppyMeta: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
 });

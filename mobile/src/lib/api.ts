@@ -108,13 +108,49 @@ export type Pedigree = {
   gen4: PedigreeGen;
 };
 
+export type ProgenyPartner = {
+  id: string;
+  dog_name: string;
+  show_title: string | null;
+  dob: string | null;
+  image: string | null;
+  KP: string | null;
+  regestration_no: string | null;
+};
+
+export type ProgenyPuppy = {
+  id: string;
+  dog_name: string;
+  show_title: string | null;
+  sex: string | null;
+  breed: string | null;
+  dob: string | null;
+  KP: string | null;
+  regestration_no: string | null;
+  partner_id: string | null;
+};
+
+export type ProgenyPuppyImage = {
+  id: string;
+  default: string | null;
+  image: string | null;
+  partner_id: string | null;
+};
+
+export type ProgenyEntry = {
+  partner: ProgenyPartner;
+  partner_type: "dam" | "sire" | string;
+  puppies: ProgenyPuppy[];
+  puppy_images: ProgenyPuppyImage[];
+};
+
 export type DogDetail = {
   dog: Dog;
   showResults: ShowResult[];
   pedigree: Pedigree | any[];
   siblings: Dog[];
   line_breeding: LineBreedingEntry[];
-  progeny: Dog[];
+  progeny: ProgenyEntry[];
 };
 
 export type ShowJudge = {
