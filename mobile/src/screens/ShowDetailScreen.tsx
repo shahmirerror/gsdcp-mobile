@@ -71,8 +71,6 @@ function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
 }
 
 function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => void }) {
-  const isMale = entry.sex === "Male";
-
   return (
     <TouchableOpacity style={styles.resultRow} onPress={onPress} activeOpacity={0.7} data-testid={`result-${entry.dog_id}`}>
       <View style={styles.seatBadge}>
@@ -80,16 +78,9 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
       </View>
       <View style={styles.resultInfo}>
         <Text style={styles.resultName} numberOfLines={1}>{entry.dog_name.trim()}</Text>
-        <View style={styles.resultMeta}>
-          <View style={[styles.sexBadge, { backgroundColor: isMale ? COLORS.sire : COLORS.dam }]}>
-            <Text style={[styles.sexBadgeText, { color: isMale ? COLORS.sireText : COLORS.damText }]}>
-              {entry.sex}
-            </Text>
-          </View>
-          {entry.KP && (
-            <Text style={styles.resultKp}>KP {entry.KP}</Text>
-          )}
-        </View>
+        {entry.KP && (
+          <Text style={styles.resultKp}>KP {entry.KP}</Text>
+        )}
       </View>
       <View style={styles.gradingBadge}>
         <Text style={styles.gradingText}>{entry.grading}</Text>
@@ -114,16 +105,35 @@ export default function ShowDetailScreen() {
 
   const groupedResults = useMemo(() => {
     if (!results.length) return [];
-    const classOrder: Record<string, ShowResultEntry[]> = {};
+
+    const CLASS_ORDER = [
+      "Working Female", "Working Male",
+      "Adult Female", "Adult Male",
+      "Open Female", "Open Male",
+      "Youth Female", "Youth Male",
+      "Junior Female", "Junior Male",
+      "Puppy Female", "Puppy Male",
+      "Minor Puppy Female", "Minor Puppy Male",
+    ];
+
+    const normalize = (cls: string) => cls.replace(/[\r\n]+\s*/g, " ").trim();
+
+    const groups: Record<string, ShowResultEntry[]> = {};
     results.forEach((entry) => {
-      const cls = entry.class || "Other";
-      if (!classOrder[cls]) classOrder[cls] = [];
-      classOrder[cls].push(entry);
+      const cls = normalize(entry.class || "Other");
+      if (!groups[cls]) groups[cls] = [];
+      groups[cls].push(entry);
     });
-    Object.values(classOrder).forEach((arr) =>
+
+    Object.values(groups).forEach((arr) =>
       arr.sort((a, b) => parseInt(a.seat) - parseInt(b.seat))
     );
-    return Object.entries(classOrder).map(([title, data]) => ({ title, data }));
+
+    const ordered = CLASS_ORDER.filter((cls) => groups[cls]);
+    const remaining = Object.keys(groups).filter((cls) => !CLASS_ORDER.includes(cls));
+    const allKeys = [...ordered, ...remaining];
+
+    return allKeys.map((title) => ({ title, data: groups[title] }));
   }, [results]);
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
@@ -572,24 +582,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.text,
   },
-  resultMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 3,
-  },
-  sexBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  sexBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
   resultKp: {
     fontSize: 11,
     color: COLORS.textMuted,
+    marginTop: 2,
   },
   gradingBadge: {
     backgroundColor: COLORS.accent,
