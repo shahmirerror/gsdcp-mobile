@@ -137,9 +137,9 @@ export default function DogProfileScreen() {
   const tabs: { key: TabKey; label: string; icon: string; count?: number }[] = [
     { key: "details",  label: "Details",  icon: "list-outline"    as const },
     { key: "pedigree", label: "Pedigree", icon: "git-branch-outline" as const },
-    { key: "siblings", label: "Siblings", icon: "people-outline"  as const, count: siblings.length },
-    { key: "progeny",  label: "Progeny",  icon: "paw-outline"     as const, count: progeny.length },
-    { key: "shows",    label: "Shows",    icon: "ribbon-outline"  as const, count: showResults.length },
+    { key: "siblings", label: "Siblings", icon: "people-outline"  as const },
+    { key: "progeny",  label: "Progeny",  icon: "paw-outline"     as const },
+    { key: "shows",    label: "Shows",    icon: "ribbon-outline"  as const },
     { key: "health",   label: "HD/ED",    icon: "medkit-outline"  as const },
   ];
 
