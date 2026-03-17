@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry, ProgenyEntry, ProgenyPuppy } from "../lib/api";
+import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry, ProgenyEntry, ProgenyPuppy, HereditaryData, HereditaryResult, HereditaryParent } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 
@@ -71,7 +71,7 @@ function isPedigreePopulated(p: Pedigree | any[] | null | undefined): p is Pedig
   return p.gen1 !== undefined;
 }
 
-type TabKey = "details" | "pedigree" | "siblings" | "progeny" | "shows";
+type TabKey = "details" | "pedigree" | "siblings" | "progeny" | "shows" | "health";
 
 export default function DogProfileScreen() {
   const route = useRoute<any>();
@@ -108,6 +108,9 @@ export default function DogProfileScreen() {
 
   const dog = data.dog;
   const showResults = data.showResults ?? [];
+  const hdHereditary = data.hd_hereditary ?? null;
+  const edHereditary = data.ed_hereditary ?? null;
+  const hasHealth = !!(hdHereditary || edHereditary);
   const pedigree = data.pedigree;
   const hasPedigree = isPedigreePopulated(pedigree);
   const siblings = (data.siblings ?? []).filter((s: Dog) => s.id !== dogId);
@@ -137,6 +140,7 @@ export default function DogProfileScreen() {
     { key: "siblings", label: "Siblings", icon: "people-outline"  as const, count: siblings.length },
     { key: "progeny",  label: "Progeny",  icon: "paw-outline"     as const, count: progeny.length },
     { key: "shows",    label: "Shows",    icon: "ribbon-outline"  as const, count: showResults.length },
+    { key: "health",   label: "Health",   icon: "medkit-outline"  as const },
   ];
 
   return (
@@ -592,6 +596,90 @@ export default function DogProfileScreen() {
               </Text>
             </View>
           ))}
+
+        {activeTab === "health" && (
+          hasHealth ? (
+            <View style={{ gap: 20 }}>
+              {([
+                { key: "hd", label: "HD (Hip Dysplasia)", data: hdHereditary },
+                { key: "ed", label: "ED (Elbow Dysplasia)", data: edHereditary },
+              ] as { key: string; label: string; data: HereditaryData | null }[])
+                .filter((s) => s.data)
+                .map((section) => {
+                  const d = section.data!;
+                  const entries: { role: string; name?: string; id?: string; result: HereditaryResult }[] = [];
+                  if (d.this_dog) entries.push({ role: "This Dog", result: d.this_dog });
+                  if (d.sire) entries.push({ role: "Sire", name: d.sire.name, id: d.sire.id, result: d.sire.result });
+                  if (d.dam) entries.push({ role: "Dam", name: d.dam.name, id: d.dam.id, result: d.dam.result });
+                  return (
+                    <View key={section.key} style={styles.healthSection}>
+                      <View style={styles.healthSectionHeader}>
+                        <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
+                        <Text style={styles.healthSectionTitle}>{section.label}</Text>
+                      </View>
+                      {entries.map((entry, ei) => (
+                        <View key={ei} style={[styles.healthBlock, ei > 0 && { marginTop: 16 }]}>
+                          <View style={styles.healthBlockHeader}>
+                            <Text style={styles.healthBlockRole}>{entry.role}</Text>
+                            {entry.name ? (
+                              <TouchableOpacity
+                                onPress={() => entry.id && navigation.push("DogProfile", { id: entry.id, name: entry.name })}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={styles.healthBlockName}>{entry.name}</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                          <View style={styles.healthStats}>
+                            <View style={styles.healthStatItem}>
+                              <Text style={styles.healthStatValue}>{entry.result.total_offspring ?? "-"}</Text>
+                              <Text style={styles.healthStatLabel}>Total Offspring</Text>
+                            </View>
+                            <View style={styles.healthStatDivider} />
+                            <View style={styles.healthStatItem}>
+                              <Text style={styles.healthStatValue}>{entry.result.radiographed ?? "-"}</Text>
+                              <Text style={styles.healthStatLabel}>Radiographed</Text>
+                            </View>
+                          </View>
+                          {entry.result.numbers && (
+                            <View style={styles.healthTable}>
+                              <View style={styles.healthTableHeader}>
+                                <Text style={[styles.healthTableCell, styles.healthTableHeaderText, { flex: 1.4 }]}>Results</Text>
+                                {(["Normal","Fast Normal","Just Permitted","Middle","Severe"] as const).map((col) => (
+                                  <Text key={col} style={[styles.healthTableCell, styles.healthTableHeaderText]}>{col}</Text>
+                                ))}
+                              </View>
+                              {([
+                                { label: "Number", vals: entry.result.numbers },
+                                { label: "Percentage", vals: entry.result.percentages },
+                              ] as { label: string; vals: typeof entry.result.numbers }[]).map((row, ri) => (
+                                <View key={ri} style={[styles.healthTableRow, ri % 2 === 0 && styles.healthTableRowAlt]}>
+                                  <Text style={[styles.healthTableCell, styles.healthTableRowLabel, { flex: 1.4 }]}>{row.label}</Text>
+                                  {(["normal","fast_normal","just_permitted","middle","severe"] as const).map((k) => (
+                                    <Text key={k} style={styles.healthTableCell}>
+                                      {row.vals?.[k] != null ? String(row.vals[k]) : "-"}
+                                    </Text>
+                                  ))}
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="medkit-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Health Data</Text>
+              <Text style={styles.emptyDesc}>No hereditary health results are available for this dog.</Text>
+            </View>
+          )
+        )}
       </View>
 
       <View style={{ height: 32 }} />
@@ -986,6 +1074,126 @@ const styles = StyleSheet.create({
   showPlacementText: {
     fontSize: 12,
     fontWeight: "700",
+  },
+  healthSection: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,59,0.07)",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  healthSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.08)",
+    backgroundColor: "rgba(15,92,59,0.03)",
+  },
+  healthSectionTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  healthBlock: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  healthBlockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.06)",
+    marginBottom: 12,
+  },
+  healthBlockRole: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  healthBlockName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+    textDecorationLine: "underline",
+  },
+  healthStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(15,92,59,0.04)",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+    gap: 0,
+  },
+  healthStatItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 2,
+  },
+  healthStatDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "rgba(15,92,59,0.12)",
+  },
+  healthStatValue: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: COLORS.primary,
+  },
+  healthStatLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+  },
+  healthTable: {
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(15,92,59,0.1)",
+  },
+  healthTableHeader: {
+    flexDirection: "row",
+    backgroundColor: COLORS.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  healthTableHeaderText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 10,
+    textAlign: "center",
+  },
+  healthTableRow: {
+    flexDirection: "row",
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    backgroundColor: "#fff",
+  },
+  healthTableRowAlt: {
+    backgroundColor: "rgba(15,92,59,0.03)",
+  },
+  healthTableRowLabel: {
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  healthTableCell: {
+    flex: 1,
+    fontSize: 11,
+    color: "#374151",
+    textAlign: "center",
   },
   emptyState: {
     alignItems: "center",

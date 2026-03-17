@@ -144,6 +144,33 @@ export type ProgenyEntry = {
   puppy_images: ProgenyPuppyImage[];
 };
 
+export type HereditaryGrades = {
+  normal: number | string;
+  fast_normal: number | string;
+  just_permitted: number | string;
+  middle: number | string;
+  severe: number | string;
+};
+
+export type HereditaryResult = {
+  total_offspring: number;
+  radiographed: number;
+  numbers: HereditaryGrades;
+  percentages: HereditaryGrades;
+};
+
+export type HereditaryParent = {
+  id: string;
+  name: string;
+  result: HereditaryResult;
+};
+
+export type HereditaryData = {
+  this_dog?: HereditaryResult | null;
+  sire?: HereditaryParent | null;
+  dam?: HereditaryParent | null;
+};
+
 export type DogDetail = {
   dog: Dog;
   showResults: ShowResult[];
@@ -151,6 +178,8 @@ export type DogDetail = {
   siblings: Dog[];
   line_breeding: LineBreedingEntry[];
   progeny: ProgenyEntry[];
+  hd_hereditary?: HereditaryData | null;
+  ed_hereditary?: HereditaryData | null;
 };
 
 export type ShowJudge = {
