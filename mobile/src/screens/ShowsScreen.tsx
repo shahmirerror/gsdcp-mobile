@@ -2,10 +2,14 @@ import { useState, useMemo } from "react";
 import {
   View,
   Text,
+  TextInput,
   FlatList,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,27 +40,85 @@ function formatDateRange(dates: string[]): string {
   return `${formatDate(dates[0])} - ${formatDate(dates[dates.length - 1])}`;
 }
 
-const EVENT_TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  Show: "trophy",
-  "Endurance Test": "fitness",
-  "Breed Survey": "clipboard",
-  Meeting: "people",
+const STATUS_COLORS: Record<string, string> = {
+  Upcoming: "#3B82F6",
+  Current: "#22C55E",
+  Past: "#9CA3AF",
 };
 
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  Show: COLORS.accent,
-  "Endurance Test": "#3B82F6",
-  "Breed Survey": "#8B5CF6",
-  Meeting: "#10B981",
-};
+function ShowListItem({ show, onPress }: { show: Show; onPress: () => void }) {
+  const statusColor = STATUS_COLORS[show.status] || COLORS.textMuted;
 
-const STATUS_TABS = ["All", "Upcoming", "Current", "Past"] as const;
+  return (
+    <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-show-${show.id}`}>
+      <View style={styles.dateBlock}>
+        {show.dates.length > 0 ? (
+          <>
+            <Text style={styles.dateDay}>
+              {parseInt(show.dates[0].split("-")[2], 10)}
+            </Text>
+            <Text style={styles.dateMonth}>
+              {MONTHS[parseInt(show.dates[0].split("-")[1], 10) - 1]}
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.dateMonth}>TBA</Text>
+        )}
+      </View>
+      <View style={styles.itemInfo}>
+        <Text style={styles.itemName} numberOfLines={1} data-testid={`text-show-name-${show.id}`}>
+          {show.name}
+        </Text>
+        <Text style={styles.itemSub} numberOfLines={1}>{show.event_type}</Text>
+        <View style={styles.badges}>
+          <View style={[styles.statusBadge, { backgroundColor: `${statusColor}18` }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusBadgeText, { color: statusColor }]}>{show.status}</Text>
+          </View>
+          {show.location && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText} numberOfLines={1}>{show.location}</Text>
+            </View>
+          )}
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{show.entryCount} entries</Text>
+          </View>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+    </TouchableOpacity>
+  );
+}
 
 export default function ShowsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [typeFilter, setTypeFilter] = useState<string>("All");
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [tempStatus, setTempStatus] = useState<string>("All");
+  const [tempType, setTempType] = useState<string>("All");
+
+  const activeFilterCount =
+    (statusFilter !== "All" ? 1 : 0) + (typeFilter !== "All" ? 1 : 0);
+
+  const openFilters = () => {
+    setTempStatus(statusFilter);
+    setTempType(typeFilter);
+    setShowFilterModal(true);
+  };
+
+  const applyFilters = () => {
+    setStatusFilter(tempStatus);
+    setTypeFilter(tempType);
+    setShowFilterModal(false);
+  };
+
+  const resetFilters = () => {
+    setTempStatus("All");
+    setTempType("All");
+  };
 
   const { data: shows, isLoading, isError, refetch, isRefetching } = useQuery<Show[]>({
     queryKey: ["shows"],
@@ -65,152 +127,215 @@ export default function ShowsScreen() {
 
   const eventTypes = useMemo(() => {
     if (!shows) return [];
-    return ["All", ...new Set(shows.map((s) => s.event_type))];
+    return [...new Set(shows.map((s) => s.event_type))].sort();
+  }, [shows]);
+
+  const statuses = useMemo(() => {
+    if (!shows) return [];
+    return [...new Set(shows.map((s) => s.status))];
   }, [shows]);
 
   const filtered = useMemo(() => {
     if (!shows) return [];
-    return shows.filter((s) => {
-      if (statusFilter !== "All" && s.status !== statusFilter) return false;
-      if (typeFilter !== "All" && s.event_type !== typeFilter) return false;
-      return true;
-    });
-  }, [shows, statusFilter, typeFilter]);
+    let results = shows;
 
-  const renderItem = ({ item }: { item: Show }) => {
-    const color = EVENT_TYPE_COLORS[item.event_type] || COLORS.accent;
-    const icon = EVENT_TYPE_ICONS[item.event_type] || "calendar";
-    const isActive = item.status === "Current" || item.status === "Upcoming";
+    const q = search.trim().toLowerCase();
+    if (q) {
+      results = results.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          (s.location && s.location.toLowerCase().includes(q)) ||
+          s.judges.some((j) => j.full_name.toLowerCase().includes(q)),
+      );
+    }
 
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate("ShowDetail", { id: item.id, name: item.name })}
-        data-testid={`card-show-${item.id}`}
-      >
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconWrap, { backgroundColor: `${color}18` }]}>
-            <Ionicons name={icon} size={20} color={color} />
-          </View>
-          <View style={styles.cardHeaderText}>
-            <Text style={styles.showName} numberOfLines={2} data-testid={`text-show-name-${item.id}`}>
-              {item.name}
-            </Text>
-            <View style={styles.typeBadge}>
-              <Text style={[styles.typeBadgeText, { color }]}>{item.event_type}</Text>
-            </View>
-          </View>
-          <View style={[styles.statusDot, { backgroundColor: isActive ? "#22C55E" : "#9CA3AF" }]} />
-        </View>
+    if (statusFilter !== "All") {
+      results = results.filter((s) => s.status === statusFilter);
+    }
 
-        <View style={styles.cardBody}>
-          <View style={styles.metaRow}>
-            <Ionicons name="calendar-outline" size={14} color={COLORS.textMuted} />
-            <Text style={styles.metaText}>{formatDateRange(item.dates)}</Text>
-          </View>
-          {item.location && (
-            <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
-              <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
-            </View>
-          )}
-          <View style={styles.cardFooter}>
-            {item.judges.length > 0 && (
-              <View style={styles.metaRow}>
-                <Ionicons name="person-outline" size={14} color={COLORS.textMuted} />
-                <Text style={styles.metaText} numberOfLines={1}>
-                  {item.judges.map((j) => j.full_name).join(", ")}
-                </Text>
-              </View>
-            )}
-            <View style={styles.entryBadge}>
-              <Ionicons name="paw" size={12} color={COLORS.primary} />
-              <Text style={styles.entryText}>{item.entryCount}</Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+    if (typeFilter !== "All") {
+      results = results.filter((s) => s.event_type === typeFilter);
+    }
 
-  if (isLoading) {
-    return (
-      <View style={[styles.centered, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  if (isError) {
-    return (
-      <View style={[styles.centered, { paddingTop: insets.top }]}>
-        <Text style={styles.errorText}>Failed to load shows</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+    return results;
+  }, [shows, search, statusFilter, typeFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Text style={styles.header} data-testid="text-shows-header">Shows & Events</Text>
-
-      <View style={styles.filterRow}>
-        {STATUS_TABS.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.filterPill, statusFilter === tab && styles.filterPillActive]}
-            onPress={() => setStatusFilter(tab)}
-            data-testid={`btn-filter-${tab.toLowerCase()}`}
-          >
-            <Text style={[styles.filterPillText, statusFilter === tab && styles.filterPillTextActive]}>
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.typeFilterRow}>
-        <FlatList
-          data={eventTypes}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.typePill, typeFilter === item && styles.typePillActive]}
-              onPress={() => setTypeFilter(item)}
-              data-testid={`btn-type-${item.toLowerCase().replace(/\s/g, "-")}`}
-            >
-              <Text style={[styles.typePillText, typeFilter === item && styles.typePillTextActive]}>
-                {item}
-              </Text>
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={18} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search shows, location, judge..."
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+            data-testid="input-search-shows"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} data-testid="btn-clear-search">
+              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
             </TouchableOpacity>
           )}
-        />
+        </View>
+        <TouchableOpacity
+          style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
+          onPress={openFilters}
+          activeOpacity={0.7}
+          data-testid="btn-open-filters"
+        >
+          <Ionicons
+            name="options-outline"
+            size={20}
+            color={activeFilterCount > 0 ? "#fff" : COLORS.textSecondary}
+          />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadgeCount}>
+              <Text style={styles.filterBadgeCountText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filtered}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconWrap}>
-              <Ionicons name="trophy-outline" size={32} color={COLORS.primary} />
+      {activeFilterCount > 0 && (
+        <View style={styles.activeFiltersRow}>
+          {statusFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{statusFilter}</Text>
+              <TouchableOpacity onPress={() => setStatusFilter("All")} data-testid="btn-remove-status-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.emptyTitle}>No Shows Found</Text>
-            <Text style={styles.emptyDesc}>No shows match your current filters.</Text>
+          )}
+          {typeFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{typeFilter}</Text>
+              <TouchableOpacity onPress={() => setTypeFilter("All")} data-testid="btn-remove-type-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => { setStatusFilter("All"); setTypeFilter("All"); }}
+            data-testid="btn-clear-all-filters"
+          >
+            <Text style={styles.clearAllText}>Clear all</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <View style={styles.countRow}>
+        <Text style={styles.count} data-testid="text-show-count">
+          {filtered.length} {filtered.length === 1 ? "show" : "shows"}
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.xxl }} data-testid="loading-shows" />
+      ) : isError ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
+          <Text style={styles.emptyTitle}>Failed to load shows</Text>
+          <Text style={styles.emptyDesc}>Could not connect to the server. Please try again.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+          }
+          renderItem={({ item }) => (
+            <ShowListItem
+              show={item}
+              onPress={() =>
+                navigation.navigate("ShowDetail", { id: item.id, name: item.name })
+              }
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>No shows found</Text>
+              <Text style={styles.emptyDesc}>Try adjusting your search or filters.</Text>
+            </View>
+          }
+        />
+      )}
+
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filters</Text>
+              <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterSectionTitle}>Status</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
+              <TouchableOpacity
+                style={[styles.filterOption, tempStatus === "All" && styles.filterOptionActive]}
+                onPress={() => setTempStatus("All")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterOptionText, tempStatus === "All" && styles.filterOptionTextActive]}>All</Text>
+              </TouchableOpacity>
+              {statuses.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.filterOption, tempStatus === opt && styles.filterOptionActive]}
+                  onPress={() => setTempStatus(opt)}
+                  activeOpacity={0.7}
+                  data-testid={`filter-status-${opt.toLowerCase()}`}
+                >
+                  <Text style={[styles.filterOptionText, tempStatus === opt && styles.filterOptionTextActive]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.filterSectionTitle}>Event Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
+              <TouchableOpacity
+                style={[styles.filterOption, tempType === "All" && styles.filterOptionActive]}
+                onPress={() => setTempType("All")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterOptionText, tempType === "All" && styles.filterOptionTextActive]}>All</Text>
+              </TouchableOpacity>
+              {eventTypes.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.filterOption, tempType === opt && styles.filterOptionActive]}
+                  onPress={() => setTempType(opt)}
+                  activeOpacity={0.7}
+                  data-testid={`filter-type-${opt.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <Text style={[styles.filterOptionText, tempType === opt && styles.filterOptionTextActive]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.applyButton} onPress={applyFilters} data-testid="btn-apply-filters">
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
           </View>
-        }
-      />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -220,18 +345,199 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  centered: {
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  searchContainer: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    height: 44,
+    gap: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text,
+    height: "100%",
+    outlineStyle: "none",
+  } as any,
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
-    gap: SPACING.md,
   },
-  errorText: {
-    fontSize: 14,
+  filterButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterBadgeCount: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterBadgeCountText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  activeFiltersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
+  },
+  activeChipText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  clearAllText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    marginLeft: 4,
+  },
+  countRow: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
+  },
+  count: {
+    fontSize: FONT_SIZES.sm,
     color: COLORS.textMuted,
   },
+  list: {
+    padding: SPACING.lg,
+    paddingTop: SPACING.sm,
+  },
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  dateBlock: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: `${COLORS.primary}10`,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: SPACING.md,
+  },
+  dateDay: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.primary,
+    lineHeight: 22,
+  },
+  dateMonth: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.primary,
+    textTransform: "uppercase",
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  itemSub: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  badges: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusBadgeText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "700",
+  },
+  badge: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  badgeText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingTop: 60,
+    gap: SPACING.sm,
+  },
+  emptyTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  emptyDesc: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    paddingHorizontal: SPACING.xxl,
+  },
   retryBtn: {
+    marginTop: SPACING.md,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
@@ -239,174 +545,95 @@ const styles = StyleSheet.create({
   },
   retryText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: FONT_SIZES.md,
     fontWeight: "600",
   },
-  header: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
   },
-  filterRow: {
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    paddingTop: 12,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalHeader: {
     flexDirection: "row",
-    paddingHorizontal: SPACING.lg,
-    gap: SPACING.sm,
-    marginBottom: SPACING.sm,
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
   },
-  filterPill: {
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  resetText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  filterScroll: {
+    marginBottom: 24,
+  },
+  filterOptionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingRight: 8,
+  },
+  filterOption: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: BORDER_RADIUS.full,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  filterPillActive: {
+  filterOptionActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  filterPillText: {
-    fontSize: 13,
+  filterOptionText: {
+    fontSize: FONT_SIZES.sm,
     fontWeight: "600",
     color: COLORS.textSecondary,
   },
-  filterPillTextActive: {
+  filterOptionTextActive: {
     color: "#fff",
   },
-  typeFilterRow: {
-    paddingLeft: SPACING.lg,
-    marginBottom: SPACING.md,
-  },
-  typePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: "transparent",
-    marginRight: SPACING.sm,
-  },
-  typePillActive: {
-    backgroundColor: `${COLORS.accent}20`,
-  },
-  typePillText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.textMuted,
-  },
-  typePillTextActive: {
-    color: COLORS.accent,
-  },
-  list: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xl,
-    gap: SPACING.md,
-  },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: "hidden",
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    padding: SPACING.lg,
-    paddingBottom: SPACING.sm,
-    gap: SPACING.md,
-  },
-  iconWrap: {
-    width: 40,
-    height: 40,
+  applyButton: {
+    backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.md,
-    justifyContent: "center",
+    paddingVertical: 14,
     alignItems: "center",
-    marginTop: 2,
+    marginTop: 8,
   },
-  cardHeaderText: {
-    flex: 1,
-    gap: 4,
-  },
-  showName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.text,
-    lineHeight: 20,
-  },
-  typeBadge: {
-    alignSelf: "flex-start",
-  },
-  typeBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
-  },
-  cardBody: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    gap: 6,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  metaText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    flex: 1,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 4,
-  },
-  entryBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: `${COLORS.primary}10`,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.full,
-  },
-  entryText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 64,
-    gap: 8,
-  },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: `${COLORS.primary}12`,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  emptyTitle: {
+  applyButtonText: {
+    color: "#fff",
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.text,
-  },
-  emptyDesc: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    textAlign: "center",
   },
 });
