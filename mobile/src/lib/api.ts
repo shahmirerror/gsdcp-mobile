@@ -116,6 +116,39 @@ export type DogDetail = {
   line_breeding: LineBreedingEntry[];
 };
 
+export type ShowJudge = {
+  id: string;
+  full_name: string;
+};
+
+export type Show = {
+  id: string;
+  name: string;
+  event_type: string;
+  dates: string[];
+  location: string | null;
+  judges: ShowJudge[];
+  status: string;
+  entryCount: number;
+  last_date_of_entry: string | null;
+};
+
+export type ShowDetail = Show;
+
+export async function fetchShows(): Promise<Show[]> {
+  const res = await fetch(`${BASE_URL}/shows`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch shows");
+  return json.data;
+}
+
+export async function fetchShow(id: string): Promise<ShowDetail> {
+  const res = await fetch(`${BASE_URL}/shows/${id}`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch show");
+  return json.data;
+}
+
 export type Breeder = {
   id: string;
   name: string;
