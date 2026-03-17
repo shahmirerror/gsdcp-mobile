@@ -150,6 +150,7 @@ export type HereditaryGrades = {
   jperm: number;
   mid: number;
   sev: number;
+  total?: number;
 };
 
 export type HereditaryData = {

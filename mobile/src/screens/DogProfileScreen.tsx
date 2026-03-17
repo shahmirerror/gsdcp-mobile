@@ -606,6 +606,8 @@ export default function DogProfileScreen() {
             { key: "sev",   label: "Severe" },
           ];
           const gradesTotal = (g: HereditaryGrades) =>
+            g.total ?? ((g.norm || 0) + (g.fnorm || 0) + (g.jperm || 0) + (g.mid || 0) + (g.sev || 0));
+          const gradesRadiographed = (g: HereditaryGrades) =>
             (g.norm || 0) + (g.fnorm || 0) + (g.jperm || 0) + (g.mid || 0) + (g.sev || 0);
           const pct = (n: number, total: number) =>
             total > 0 ? (n / total * 100).toFixed(2) + "%" : "0.00%";
@@ -616,7 +618,8 @@ export default function DogProfileScreen() {
             navId?: string,
           ) => {
             if (!grades) return null;
-            const total = gradesTotal(grades);
+            const totalOffspring = gradesTotal(grades);
+            const radiographed = gradesRadiographed(grades);
             return (
               <View style={styles.healthBlock}>
                 <View style={styles.healthBlockHeader}>
@@ -629,7 +632,12 @@ export default function DogProfileScreen() {
                 </View>
                 <View style={styles.healthStats}>
                   <View style={styles.healthStatItem}>
-                    <Text style={styles.healthStatValue}>{total}</Text>
+                    <Text style={styles.healthStatValue}>{totalOffspring}</Text>
+                    <Text style={styles.healthStatLabel}>Total Offspring</Text>
+                  </View>
+                  <View style={styles.healthStatDivider} />
+                  <View style={styles.healthStatItem}>
+                    <Text style={styles.healthStatValue}>{radiographed}</Text>
                     <Text style={styles.healthStatLabel}>Radiographed</Text>
                   </View>
                 </View>
@@ -643,7 +651,7 @@ export default function DogProfileScreen() {
                     <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
                       <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
                       <Text style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
-                      <Text style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, total)}</Text>
+                      <Text style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, radiographed)}</Text>
                     </View>
                   ))}
                 </View>
