@@ -131,12 +131,12 @@ export default function DogProfileScreen() {
     return `${months >= 0 ? months : 12 + months}m`;
   })();
 
-  const tabs: { key: TabKey; label: string; count?: number }[] = [
-    { key: "details", label: "Details" },
-    { key: "pedigree", label: "Pedigree" },
-    { key: "siblings", label: "Siblings", count: siblings.length },
-    { key: "progeny", label: "Progeny", count: progeny.length },
-    { key: "shows", label: "Conformation Shows", count: showResults.length },
+  const tabs: { key: TabKey; label: string; icon: string; count?: number }[] = [
+    { key: "details",  label: "Details",  icon: "list-outline"    as const },
+    { key: "pedigree", label: "Pedigree", icon: "git-branch-outline" as const },
+    { key: "siblings", label: "Siblings", icon: "people-outline"  as const, count: siblings.length },
+    { key: "progeny",  label: "Progeny",  icon: "paw-outline"     as const, count: progeny.length },
+    { key: "shows",    label: "Shows",    icon: "ribbon-outline"  as const, count: showResults.length },
   ];
 
   return (
@@ -220,22 +220,41 @@ export default function DogProfileScreen() {
         </Text>
       </View>
 
-      <View style={styles.tabBar}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-              {tab.label}
-              {tab.count != null ? ` (${tab.count})` : ""}
-            </Text>
-            {activeTab === tab.key && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabBar}
+        contentContainerStyle={styles.tabBarContent}
+      >
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tab, isActive && styles.tabActive]}
+              onPress={() => setActiveTab(tab.key)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name={tab.icon as any}
+                size={15}
+                color={isActive ? "#fff" : COLORS.textMuted}
+                style={{ marginRight: 5 }}
+              />
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                {tab.label}
+              </Text>
+              {tab.count != null && tab.count > 0 && (
+                <View style={[styles.tabBadge, isActive && styles.tabBadgeActive]}>
+                  <Text style={[styles.tabBadgeText, isActive && styles.tabBadgeTextActive]}>
+                    {tab.count}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       <View style={styles.contentArea}>
         {activeTab === "details" && (
@@ -515,30 +534,52 @@ export default function DogProfileScreen() {
 
         {activeTab === "shows" &&
           (showResults.length > 0 ? (
-            <View style={styles.card}>
-              {showResults.map((result) => (
-                <View
-                  key={result.id}
-                  style={styles.resultRow}
-                >
-                  <View style={styles.resultLeft}>
-                    <Text style={styles.resultShow} numberOfLines={1}>
-                      {result.showName}
-                    </Text>
-                    <Text style={styles.resultMeta}>
-                      {result.className} · {result.date}
-                    </Text>
-                  </View>
-                  <View style={styles.resultRight}>
-                    <View style={styles.gradingBadge}>
-                      <Text style={styles.gradingBadgeText}>{result.grading}</Text>
+            <View style={{ gap: 12 }}>
+              {showResults.map((result) => {
+                const g = (result.grading || "").toLowerCase();
+                const gradingColor =
+                  g.startsWith("exc") ? "#16a34a" :
+                  g.startsWith("v g") || g.startsWith("very") ? "#0891b2" :
+                  g.startsWith("g") ? COLORS.accent :
+                  g.startsWith("suf") ? "#ea580c" : COLORS.primary;
+                return (
+                  <View key={result.id} style={styles.showCard}>
+                    <View style={[styles.showGradingStripe, { backgroundColor: gradingColor }]} />
+                    <View style={styles.showCardInner}>
+                      <View style={styles.showCardTop}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.showName} numberOfLines={2}>{result.showName}</Text>
+                          <View style={styles.showMetaRow}>
+                            {result.className ? (
+                              <View style={styles.showClassBadge}>
+                                <Text style={styles.showClassText}>{result.className}</Text>
+                              </View>
+                            ) : null}
+                            {result.date ? (
+                              <Text style={styles.showDate}>
+                                <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} /> {result.date}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </View>
+                        <View style={styles.showRight}>
+                          <View style={[styles.showGradingBadge, { backgroundColor: gradingColor }]}>
+                            <Text style={styles.showGradingText}>{result.grading}</Text>
+                          </View>
+                          {result.placement ? (
+                            <View style={styles.showPlacement}>
+                              <Ionicons name="trophy-outline" size={12} color={gradingColor} />
+                              <Text style={[styles.showPlacementText, { color: gradingColor }]}>
+                                #{result.placement}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
                     </View>
-                    {result.placement ? (
-                      <Text style={styles.placementText}>#{result.placement}</Text>
-                    ) : null}
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           ) : (
             <View style={styles.emptyState}>
@@ -681,35 +722,58 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tabBar: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(15,92,59,0.1)",
     marginHorizontal: 16,
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  tabBarContent: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 4,
   },
   tab: {
-    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    position: "relative",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 9999,
+    backgroundColor: "rgba(15,92,59,0.07)",
   },
-  tabActive: {},
+  tabActive: {
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#94A3B8",
+    color: COLORS.textMuted,
   },
   tabTextActive: {
+    color: "#fff",
+  },
+  tabBadge: {
+    marginLeft: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "rgba(15,92,59,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  tabBadgeActive: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
     color: COLORS.primary,
   },
-  tabIndicator: {
-    position: "absolute",
-    bottom: -1,
-    left: 16,
-    right: 16,
-    height: 3,
-    borderRadius: 9999,
-    backgroundColor: COLORS.accent,
+  tabBadgeTextActive: {
+    color: "#fff",
   },
   contentArea: {
     paddingHorizontal: 16,
@@ -844,46 +908,81 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#94A3B8",
   },
-  resultRow: {
+  showCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(15,92,59,0.05)",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(15,92,59,0.07)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  showGradingStripe: {
+    width: 5,
+  },
+  showCardInner: {
+    flex: 1,
+    padding: 14,
+  },
+  showCardTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 12,
   },
-  resultLeft: {
-    flex: 1,
-  },
-  resultShow: {
+  showName: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  resultMeta: {
-    fontSize: 12,
-    color: "#94A3B8",
-    marginTop: 2,
-  },
-  resultRight: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  gradingBadge: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 9999,
-  },
-  gradingBadgeText: {
-    color: "#fff",
-    fontSize: 12,
     fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 6,
   },
-  placementText: {
-    fontSize: 12,
+  showMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  showClassBadge: {
+    backgroundColor: "rgba(15,92,59,0.08)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  showClassText: {
+    fontSize: 11,
     fontWeight: "600",
     color: COLORS.primary,
+  },
+  showDate: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  showRight: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  showGradingBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  showGradingText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  showPlacement: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  showPlacementText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   emptyState: {
     alignItems: "center",
