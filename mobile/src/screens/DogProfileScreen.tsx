@@ -779,6 +779,7 @@ const styles = StyleSheet.create({
   },
   contentArea: {
     paddingHorizontal: 16,
+    minHeight: 480,
   },
   card: {
     backgroundColor: "#FFFFFF",
