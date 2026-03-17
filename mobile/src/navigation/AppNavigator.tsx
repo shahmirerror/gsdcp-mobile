@@ -14,6 +14,10 @@ import ShowsScreen from "../screens/ShowsScreen";
 import ShowDetailScreen from "../screens/ShowDetailScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import LoginRegisterScreen from "../screens/LoginRegisterScreen";
+import KennelDirectoryScreen from "../screens/KennelDirectoryScreen";
+import MemberDirectoryScreen from "../screens/MemberDirectoryScreen";
+import RecentMatingsScreen from "../screens/RecentMatingsScreen";
+import CustomTabBar from "./CustomTabBar";
 
 const logoSquare = require("../../assets/logo-square.png");
 
@@ -46,6 +50,9 @@ export type RootTabParamList = {
   BreedersTab: undefined;
   ShowsTab: undefined;
   ProfileTab: undefined;
+  KennelDirectoryTab: undefined;
+  MemberDirectoryTab: undefined;
+  RecentMatingsTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -114,63 +121,19 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Tab.Navigator
         initialRouteName="HomeTab"
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            if (route.name === "HomeTab") {
-              return (
-                <Image
-                  source={logoSquare}
-                  style={{
-                    width: size + 4,
-                    height: size + 4,
-                    opacity: focused ? 1 : 0.5,
-                  }}
-                  resizeMode="contain"
-                />
-              );
-            }
-            let iconName: keyof typeof Ionicons.glyphMap = "home";
-            if (route.name === "DogsTab") iconName = focused ? "paw" : "paw-outline";
-            else if (route.name === "BreedersTab") iconName = focused ? "people" : "people-outline";
-            else if (route.name === "ShowsTab") iconName = focused ? "trophy" : "trophy-outline";
-            else if (route.name === "ProfileTab") iconName = focused ? "person" : "person-outline";
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: COLORS.textMuted,
-          tabBarStyle: {
-            backgroundColor: COLORS.surface,
-            borderTopColor: COLORS.border,
-          },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "500" },
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{
           headerShown: false,
-        })}
+        }}
       >
-        <Tab.Screen
-          name="DogsTab"
-          component={DogsStackNavigator}
-          options={{ title: "Dogs" }}
-        />
-        <Tab.Screen
-          name="BreedersTab"
-          component={BreedersStackNavigator}
-          options={{ title: "Breeders" }}
-        />
-        <Tab.Screen
-          name="HomeTab"
-          component={DashboardScreen}
-          options={{ title: "Home" }}
-        />
-        <Tab.Screen
-          name="ShowsTab"
-          component={ShowsStackNavigator}
-          options={{ title: "Shows" }}
-        />
-        <Tab.Screen
-          name="ProfileTab"
-          component={ProfileStackNavigator}
-          options={{ title: "Profile" }}
-        />
+        <Tab.Screen name="DogsTab" component={DogsStackNavigator} options={{ title: "Dogs" }} />
+        <Tab.Screen name="BreedersTab" component={BreedersStackNavigator} options={{ title: "Breeders" }} />
+        <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: "Home" }} />
+        <Tab.Screen name="ShowsTab" component={ShowsStackNavigator} options={{ title: "Shows" }} />
+        <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
+        <Tab.Screen name="KennelDirectoryTab" component={KennelDirectoryScreen} options={{ title: "Kennel Directory" }} />
+        <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryScreen} options={{ title: "Member Directory" }} />
+        <Tab.Screen name="RecentMatingsTab" component={RecentMatingsScreen} options={{ title: "Recent Matings" }} />
       </Tab.Navigator>
     </NavigationContainer>
   );
