@@ -11,11 +11,15 @@ import {
   RefreshControl,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchKennelDetail, KennelDetail, KennelMating } from "../lib/api";
+import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
+
+type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelProfile">;
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -56,28 +60,55 @@ function DetailItem({
   );
 }
 
-function MatingRow({ mating }: { mating: KennelMating }) {
+function MatingRow({
+  mating,
+  onSirePress,
+  onDamPress,
+}: {
+  mating: KennelMating;
+  onSirePress: () => void;
+  onDamPress: () => void;
+}) {
   return (
     <View style={styles.matingCard}>
-      <View style={styles.matingPairing}>
-        <View style={styles.dogBlock}>
-          <View style={[styles.sexDot, { backgroundColor: "#3B82F6" }]} />
-          <Text style={styles.dogName} numberOfLines={2}>
+      <TouchableOpacity
+        style={styles.dogRow}
+        onPress={onSirePress}
+        activeOpacity={0.7}
+        data-testid={`btn-sire-${mating.sire_dog_id}`}
+      >
+        <View style={[styles.sexBadge, styles.sireBadge]}>
+          <Text style={styles.sexBadgeText}>♂</Text>
+        </View>
+        <View style={styles.dogRowInfo}>
+          <Text style={styles.dogRowLabel}>Sire</Text>
+          <Text style={styles.dogRowName} numberOfLines={1}>
             {mating.sire_name.trim()}
           </Text>
-          <Text style={styles.sexLabel}>Sire</Text>
         </View>
-        <View style={styles.timesWrap}>
-          <Text style={styles.timesSign}>×</Text>
+        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+      </TouchableOpacity>
+
+      <View style={styles.dogRowDivider} />
+
+      <TouchableOpacity
+        style={styles.dogRow}
+        onPress={onDamPress}
+        activeOpacity={0.7}
+        data-testid={`btn-dam-${mating.dam_dog_id}`}
+      >
+        <View style={[styles.sexBadge, styles.damBadge]}>
+          <Text style={styles.sexBadgeText}>♀</Text>
         </View>
-        <View style={styles.dogBlock}>
-          <View style={[styles.sexDot, { backgroundColor: "#E11D48" }]} />
-          <Text style={styles.dogName} numberOfLines={2}>
+        <View style={styles.dogRowInfo}>
+          <Text style={styles.dogRowLabel}>Dam</Text>
+          <Text style={styles.dogRowName} numberOfLines={1}>
             {mating.dam_name.trim()}
           </Text>
-          <Text style={styles.sexLabel}>Dam</Text>
         </View>
-      </View>
+        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+      </TouchableOpacity>
+
       <View style={styles.matingFooter}>
         <Ionicons name="calendar-outline" size={13} color={COLORS.textMuted} />
         <Text style={styles.matingDate}>{formatDate(mating.mating_date)}</Text>
@@ -90,7 +121,7 @@ type TabKey = "info" | "matings";
 
 export default function KennelProfileScreen() {
   const route = useRoute<any>();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<Nav>();
   const { id } = route.params as { id: string; name?: string };
   const [activeTab, setActiveTab] = useState<TabKey>("info");
 
@@ -351,7 +382,22 @@ export default function KennelProfileScreen() {
           (matings.length > 0 ? (
             <View style={{ gap: 12 }}>
               {matings.map((m, i) => (
-                <MatingRow key={i} mating={m} />
+                <MatingRow
+                  key={i}
+                  mating={m}
+                  onSirePress={() =>
+                    navigation.navigate("DogProfile", {
+                      id: m.sire_dog_id,
+                      name: m.sire_name.trim(),
+                    })
+                  }
+                  onDamPress={() =>
+                    navigation.navigate("DogProfile", {
+                      id: m.dam_dog_id,
+                      name: m.dam_name.trim(),
+                    })
+                  }
+                />
               ))}
             </View>
           ) : (
@@ -626,56 +672,65 @@ const styles = StyleSheet.create({
   matingCard: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  matingPairing: {
+  dogRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     gap: 12,
-    marginBottom: 12,
   },
-  dogBlock: {
+  dogRowDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 14,
+  },
+  sexBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  sireBadge: {
+    backgroundColor: "#DBEAFE",
+  },
+  damBadge: {
+    backgroundColor: "#FCE7F3",
+  },
+  sexBadgeText: {
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  dogRowInfo: {
     flex: 1,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.md,
-    padding: 10,
-    gap: 4,
+    gap: 1,
   },
-  sexDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 2,
-  },
-  dogName: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
-    color: COLORS.text,
-    lineHeight: 18,
-  },
-  sexLabel: {
+  dogRowLabel: {
     fontSize: FONT_SIZES.xs,
     fontWeight: "700",
     color: COLORS.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginTop: 2,
   },
-  timesWrap: {
-    justifyContent: "center",
-    paddingTop: 14,
-  },
-  timesSign: {
-    fontSize: 20,
-    fontWeight: "300",
-    color: COLORS.textMuted,
+  dogRowName: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.text,
   },
   matingFooter: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
   matingDate: {
     fontSize: FONT_SIZES.sm,

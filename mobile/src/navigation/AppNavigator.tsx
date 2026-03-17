@@ -56,6 +56,7 @@ export type ProfileStackParamList = {
 export type KennelDirectoryStackParamList = {
   KennelDirectory: undefined;
   KennelProfile: { id: string; name?: string };
+  DogProfile: { id: string; name?: string };
 };
 
 export type TheClubStackParamList = {
@@ -133,6 +134,7 @@ function KennelDirectoryStackNavigator() {
     <KennelDirectoryStack.Navigator screenOptions={{ headerShown: false }}>
       <KennelDirectoryStack.Screen name="KennelDirectory" component={KennelDirectoryScreen} />
       <KennelDirectoryStack.Screen name="KennelProfile" component={KennelProfileScreen} />
+      <KennelDirectoryStack.Screen name="DogProfile" component={DogProfileScreen} />
     </KennelDirectoryStack.Navigator>
   );
 }
