@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   ImageBackground,
   RefreshControl,
-  SectionList,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -95,6 +94,7 @@ export default function ShowDetailScreen() {
   const navigation = useNavigation<any>();
   const { id, name } = route.params as { id: string; name?: string };
   const [activeTab, setActiveTab] = useState<TabKey>("info");
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
 
   const { data: show, isLoading, isError, refetch, isRefetching } = useQuery<ShowDetail>({
     queryKey: ["shows", id],
@@ -103,38 +103,41 @@ export default function ShowDetailScreen() {
 
   const results = show?.showResults || [];
 
-  const groupedResults = useMemo(() => {
-    if (!results.length) return [];
+  const CLASS_ORDER = [
+    "Working Female", "Working Male",
+    "Adult Female", "Adult Male",
+    "Open Female", "Open Male",
+    "Youth Female", "Youth Male",
+    "Junior Female", "Junior Male",
+    "Puppy Female", "Puppy Male",
+    "Minor Puppy Female", "Minor Puppy Male",
+  ];
 
-    const CLASS_ORDER = [
-      "Working Female", "Working Male",
-      "Adult Female", "Adult Male",
-      "Open Female", "Open Male",
-      "Youth Female", "Youth Male",
-      "Junior Female", "Junior Male",
-      "Puppy Female", "Puppy Male",
-      "Minor Puppy Female", "Minor Puppy Male",
-    ];
+  const normalize = (cls: string) => cls.replace(/[\r\n]+\s*/g, " ").trim();
 
-    const normalize = (cls: string) => cls.replace(/[\r\n]+\s*/g, " ").trim();
-
-    const groups: Record<string, ShowResultEntry[]> = {};
+  const classGroups = useMemo(() => {
+    if (!results.length) return new Map<string, ShowResultEntry[]>();
+    const groups = new Map<string, ShowResultEntry[]>();
     results.forEach((entry) => {
       const cls = normalize(entry.class || "Other");
-      if (!groups[cls]) groups[cls] = [];
-      groups[cls].push(entry);
+      if (!groups.has(cls)) groups.set(cls, []);
+      groups.get(cls)!.push(entry);
     });
-
-    Object.values(groups).forEach((arr) =>
-      arr.sort((a, b) => parseInt(a.seat) - parseInt(b.seat))
-    );
-
-    const ordered = CLASS_ORDER.filter((cls) => groups[cls]);
-    const remaining = Object.keys(groups).filter((cls) => !CLASS_ORDER.includes(cls));
-    const allKeys = [...ordered, ...remaining];
-
-    return allKeys.map((title) => ({ title, data: groups[title] }));
+    groups.forEach((arr) => arr.sort((a, b) => parseInt(a.seat) - parseInt(b.seat)));
+    return groups;
   }, [results]);
+
+  const orderedClassNames = useMemo(() => {
+    const ordered = CLASS_ORDER.filter((cls) => classGroups.has(cls));
+    const remaining = [...classGroups.keys()].filter((cls) => !CLASS_ORDER.includes(cls));
+    return [...ordered, ...remaining];
+  }, [classGroups]);
+
+  const activeClass = selectedClass && classGroups.has(selectedClass)
+    ? selectedClass
+    : orderedClassNames[0] || null;
+
+  const activeClassResults = activeClass ? classGroups.get(activeClass) || [] : [];
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
@@ -280,37 +283,72 @@ export default function ShowDetailScreen() {
   }
 
   return (
-    <SectionList
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      sections={groupedResults}
-      keyExtractor={(item, index) => `${item.dog_id}-${index}`}
-      ListHeaderComponent={renderHeader}
-      renderSectionHeader={({ section: { title, data } }) => (
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          <Text style={styles.sectionCount}>{data.length}</Text>
-        </View>
-      )}
-      renderItem={({ item }) => (
-        <ResultRow entry={item} onPress={() => handleDogPress(item)} />
-      )}
-      stickySectionHeadersEnabled={false}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
-      }
-      ListEmptyComponent={
-        <View style={styles.emptyState}>
-          <View style={styles.emptyIconWrap}>
-            <Ionicons name="trophy-outline" size={32} color={COLORS.primary} />
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        overScrollMode="always"
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+        }
+        stickyHeaderIndices={orderedClassNames.length > 0 ? [3] : undefined}
+      >
+        {renderHeader()}
+
+        {orderedClassNames.length > 0 && (
+          <View style={styles.classTabsWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.classTabsContent}
+            >
+              {orderedClassNames.map((cls) => {
+                const count = classGroups.get(cls)?.length || 0;
+                const isSelected = cls === activeClass;
+                return (
+                  <TouchableOpacity
+                    key={cls}
+                    style={[styles.classTab, isSelected && styles.classTabActive]}
+                    onPress={() => setSelectedClass(cls)}
+                    activeOpacity={0.7}
+                    data-testid={`class-tab-${cls.toLowerCase().replace(/\s/g, "-")}`}
+                  >
+                    <Text style={[styles.classTabText, isSelected && styles.classTabTextActive]}>
+                      {cls}
+                    </Text>
+                    <View style={[styles.classTabCount, isSelected && styles.classTabCountActive]}>
+                      <Text style={[styles.classTabCountText, isSelected && styles.classTabCountTextActive]}>
+                        {count}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
-          <Text style={styles.emptyTitle}>No Results Yet</Text>
-          <Text style={styles.emptyDesc}>Results will appear here once the show is complete.</Text>
-        </View>
-      }
-      ListFooterComponent={<View style={{ height: 32 }} />}
-    />
+        )}
+
+        {activeClassResults.length > 0 ? (
+          <View style={styles.resultsList}>
+            {activeClassResults.map((item, index) => (
+              <ResultRow key={`${item.dog_id}-${index}`} entry={item} onPress={() => handleDogPress(item)} />
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="trophy-outline" size={32} color={COLORS.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>No Results Yet</Text>
+            <Text style={styles.emptyDesc}>Results will appear here once the show is complete.</Text>
+          </View>
+        )}
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -525,29 +563,60 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.text,
   },
-  sectionHeader: {
+  classTabsWrapper: {
+    backgroundColor: "#f6f8f7",
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  classTabsContent: {
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  classTab: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    marginTop: SPACING.xs,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.text,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  classTabActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
-  sectionCount: {
+  classTabText: {
     fontSize: 12,
     fontWeight: "600",
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
+  },
+  classTabTextActive: {
+    color: "#fff",
+  },
+  classTabCount: {
     backgroundColor: COLORS.background,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: BORDER_RADIUS.full,
+    minWidth: 20,
+    alignItems: "center",
+  },
+  classTabCountActive: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  classTabCountText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+  },
+  classTabCountTextActive: {
+    color: "#fff",
+  },
+  resultsList: {
+    paddingTop: SPACING.sm,
   },
   resultRow: {
     flexDirection: "row",
