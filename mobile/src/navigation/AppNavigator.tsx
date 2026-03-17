@@ -13,6 +13,7 @@ import BreederProfileScreen from "../screens/BreederProfileScreen";
 import ShowsScreen from "../screens/ShowsScreen";
 import ShowDetailScreen from "../screens/ShowDetailScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import LoginRegisterScreen from "../screens/LoginRegisterScreen";
 
 const logoSquare = require("../../assets/logo-square.png");
 
@@ -34,6 +35,11 @@ export type ShowsStackParamList = {
   DogProfile: { id: string; name?: string };
 };
 
+export type ProfileStackParamList = {
+  ProfileHome: undefined;
+  LoginRegister: undefined;
+};
+
 export type RootTabParamList = {
   HomeTab: undefined;
   DogsTab: undefined;
@@ -46,6 +52,7 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 const DogsStack = createNativeStackNavigator<DogsStackParamList>();
 const BreedersStack = createNativeStackNavigator<BreedersStackParamList>();
 const ShowsStack = createNativeStackNavigator<ShowsStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 
 function DogsStackNavigator() {
   return (
@@ -86,6 +93,19 @@ function ShowsStackNavigator() {
       <ShowsStack.Screen name="ShowDetail" component={ShowDetailScreen} />
       <ShowsStack.Screen name="DogProfile" component={DogProfileScreen} />
     </ShowsStack.Navigator>
+  );
+}
+
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -148,7 +168,7 @@ export default function AppNavigator() {
         />
         <Tab.Screen
           name="ProfileTab"
-          component={ProfileScreen}
+          component={ProfileStackNavigator}
           options={{ title: "Profile" }}
         />
       </Tab.Navigator>

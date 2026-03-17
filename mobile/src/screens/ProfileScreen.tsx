@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -19,7 +21,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.card}>
-        <TouchableOpacity style={styles.menuItem} data-testid="button-sign-in">
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("LoginRegister")} data-testid="button-sign-in">
           <View style={[styles.menuIconWrap, { backgroundColor: "rgba(15,92,58,0.08)" }]}>
             <Ionicons name="log-in-outline" size={20} color={COLORS.primary} />
           </View>
