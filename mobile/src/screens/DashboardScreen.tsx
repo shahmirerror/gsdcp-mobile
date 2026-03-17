@@ -17,37 +17,6 @@ import { fetchDashboard, RecentMating } from "../lib/api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const quickActions = [
-  {
-    icon: "search" as const,
-    label: "Search Dogs",
-    tab: "DogsTab",
-    color: COLORS.primary,
-    bg: "rgba(15,92,58,0.1)",
-  },
-  {
-    icon: "people" as const,
-    label: "Breeders",
-    tab: "BreedersTab",
-    color: "#3B82F6",
-    bg: "rgba(59,130,246,0.1)",
-  },
-  {
-    icon: "trophy" as const,
-    label: "Shows",
-    tab: "ShowsTab",
-    color: COLORS.accent,
-    bg: "rgba(199,164,92,0.15)",
-  },
-  {
-    icon: "person" as const,
-    label: "Profile",
-    tab: "ProfileTab",
-    color: "#8B5CF6",
-    bg: "rgba(139,92,246,0.1)",
-  },
-];
-
 function formatMatingDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString("en-GB", {
@@ -129,34 +98,16 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </LinearGradient>
 
-      <View style={styles.quickActionsSection}>
-        <View style={styles.quickActionsGrid}>
-          {quickActions.map((action) => (
-            <TouchableOpacity
-              key={action.label}
-              style={styles.quickActionCard}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate(action.tab)}
-              data-testid={`button-quick-${action.label.toLowerCase().replace(/\s/g, "-")}`}
-            >
-              <View
-                style={[styles.quickActionIcon, { backgroundColor: action.bg }]}
-              >
-                <Ionicons name={action.icon} size={22} color={action.color} />
-              </View>
-              <Text style={styles.quickActionLabel}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
       <View style={styles.statsSection}>
         {statCards.map((stat) => (
           <View key={stat.label} style={styles.statCard}>
             <View style={styles.statIconWrap}>
               <Ionicons name={stat.icon} size={18} color={COLORS.primary} />
             </View>
-            <Text style={styles.statValue} data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}>
+            <Text
+              style={styles.statValue}
+              data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
+            >
               {stat.value}
             </Text>
             <Text style={styles.statLabel}>{stat.label}</Text>
@@ -181,7 +132,8 @@ export default function DashboardScreen() {
                 key={mating.friendly_URl}
                 style={[
                   styles.litterItem,
-                  i < dashboard.recentMatings.length - 1 && styles.litterItemBorder,
+                  i < dashboard.recentMatings.length - 1 &&
+                    styles.litterItemBorder,
                 ]}
                 data-testid={`card-litter-${i}`}
               >
@@ -194,14 +146,22 @@ export default function DashboardScreen() {
                     {mating.sire_name.trim()} × {mating.dam_name.trim()}
                   </Text>
                   <View style={styles.litterMeta}>
-                    <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} />
+                    <Ionicons
+                      name="calendar-outline"
+                      size={11}
+                      color={COLORS.textMuted}
+                    />
                     <Text style={styles.litterMetaText}>
                       {formatMatingDate(mating.mating_date)}
                     </Text>
                     {mating.city ? (
                       <>
                         <Text style={styles.litterMetaDot}>·</Text>
-                        <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
+                        <Ionicons
+                          name="location-outline"
+                          size={11}
+                          color={COLORS.textMuted}
+                        />
                         <Text style={styles.litterMetaText}>{mating.city}</Text>
                       </>
                     ) : null}
@@ -237,7 +197,9 @@ export default function DashboardScreen() {
           dashboard.upcomingShows.map((show) => {
             const date = new Date(show.dates[0]);
             const day = date.getDate().toString();
-            const month = date.toLocaleString("en-GB", { month: "short" }).toUpperCase();
+            const month = date
+              .toLocaleString("en-GB", { month: "short" })
+              .toUpperCase();
             return (
               <TouchableOpacity
                 key={show.id}
@@ -253,18 +215,28 @@ export default function DashboardScreen() {
                 <View style={styles.eventInfo}>
                   <View style={styles.eventMeta}>
                     <View style={styles.eventBadge}>
-                      <Text style={styles.eventBadgeText}>{show.event_type}</Text>
+                      <Text style={styles.eventBadgeText}>
+                        {show.event_type}
+                      </Text>
                     </View>
                   </View>
                   <Text style={styles.eventTitle}>{show.name}</Text>
                   {show.location ? (
                     <View style={styles.eventLocationRow}>
-                      <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+                      <Ionicons
+                        name="location-outline"
+                        size={12}
+                        color={COLORS.textMuted}
+                      />
                       <Text style={styles.eventLocation}>{show.location}</Text>
                     </View>
                   ) : null}
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={COLORS.textMuted}
+                />
               </TouchableOpacity>
             );
           })
