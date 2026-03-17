@@ -17,9 +17,17 @@ import LoginRegisterScreen from "../screens/LoginRegisterScreen";
 import KennelDirectoryScreen from "../screens/KennelDirectoryScreen";
 import MemberDirectoryScreen from "../screens/MemberDirectoryScreen";
 import RecentMatingsScreen from "../screens/RecentMatingsScreen";
-import CustomTabBar from "./CustomTabBar";
 
-const logoSquare = require("../../assets/logo-square.png");
+import TheClubScreen from "../screens/club/TheClubScreen";
+import AboutGSDCPScreen from "../screens/club/AboutGSDCPScreen";
+import SubscriptionScreen from "../screens/club/SubscriptionScreen";
+import RulesRegulationsScreen from "../screens/club/RulesRegulationsScreen";
+import TheTeamScreen from "../screens/club/TheTeamScreen";
+import GSDCPJudgesScreen from "../screens/club/GSDCPJudgesScreen";
+import VisitingJudgesScreen from "../screens/club/VisitingJudgesScreen";
+import NewsUpdatesScreen from "../screens/club/NewsUpdatesScreen";
+
+import CustomTabBar from "./CustomTabBar";
 
 export type DogsStackParamList = {
   DogSearch: undefined;
@@ -44,6 +52,17 @@ export type ProfileStackParamList = {
   LoginRegister: undefined;
 };
 
+export type TheClubStackParamList = {
+  TheClubHome: undefined;
+  AboutGSDCP: undefined;
+  Subscription: undefined;
+  RulesRegulations: undefined;
+  TheTeam: undefined;
+  GSDCPJudges: undefined;
+  VisitingJudges: undefined;
+  NewsUpdates: undefined;
+};
+
 export type RootTabParamList = {
   HomeTab: undefined;
   DogsTab: undefined;
@@ -53,6 +72,7 @@ export type RootTabParamList = {
   KennelDirectoryTab: undefined;
   MemberDirectoryTab: undefined;
   RecentMatingsTab: undefined;
+  TheClubTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -60,14 +80,11 @@ const DogsStack = createNativeStackNavigator<DogsStackParamList>();
 const BreedersStack = createNativeStackNavigator<BreedersStackParamList>();
 const ShowsStack = createNativeStackNavigator<ShowsStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const TheClubStack = createNativeStackNavigator<TheClubStackParamList>();
 
 function DogsStackNavigator() {
   return (
-    <DogsStack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <DogsStack.Navigator screenOptions={{ headerShown: false }}>
       <DogsStack.Screen name="DogSearch" component={DogSearchScreen} />
       <DogsStack.Screen name="DogProfile" component={DogProfileScreen} />
       <DogsStack.Screen name="BreederProfile" component={BreederProfileScreen} />
@@ -77,11 +94,7 @@ function DogsStackNavigator() {
 
 function BreedersStackNavigator() {
   return (
-    <BreedersStack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <BreedersStack.Navigator screenOptions={{ headerShown: false }}>
       <BreedersStack.Screen name="BreederDirectory" component={BreederDirectoryScreen} />
       <BreedersStack.Screen name="BreederProfile" component={BreederProfileScreen} />
       <BreedersStack.Screen name="DogProfile" component={DogProfileScreen} />
@@ -91,11 +104,7 @@ function BreedersStackNavigator() {
 
 function ShowsStackNavigator() {
   return (
-    <ShowsStack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <ShowsStack.Navigator screenOptions={{ headerShown: false }}>
       <ShowsStack.Screen name="ShowsList" component={ShowsScreen} />
       <ShowsStack.Screen name="ShowDetail" component={ShowDetailScreen} />
       <ShowsStack.Screen name="DogProfile" component={DogProfileScreen} />
@@ -105,14 +114,25 @@ function ShowsStackNavigator() {
 
 function ProfileStackNavigator() {
   return (
-    <ProfileStack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
     </ProfileStack.Navigator>
+  );
+}
+
+function TheClubStackNavigator() {
+  return (
+    <TheClubStack.Navigator screenOptions={{ headerShown: false }}>
+      <TheClubStack.Screen name="TheClubHome" component={TheClubScreen} />
+      <TheClubStack.Screen name="AboutGSDCP" component={AboutGSDCPScreen} />
+      <TheClubStack.Screen name="Subscription" component={SubscriptionScreen} />
+      <TheClubStack.Screen name="RulesRegulations" component={RulesRegulationsScreen} />
+      <TheClubStack.Screen name="TheTeam" component={TheTeamScreen} />
+      <TheClubStack.Screen name="GSDCPJudges" component={GSDCPJudgesScreen} />
+      <TheClubStack.Screen name="VisitingJudges" component={VisitingJudgesScreen} />
+      <TheClubStack.Screen name="NewsUpdates" component={NewsUpdatesScreen} />
+    </TheClubStack.Navigator>
   );
 }
 
@@ -122,18 +142,17 @@ export default function AppNavigator() {
       <Tab.Navigator
         initialRouteName="HomeTab"
         tabBar={(props) => <CustomTabBar {...props} />}
-        screenOptions={{
-          headerShown: false,
-        }}
+        screenOptions={{ headerShown: false }}
       >
         <Tab.Screen name="DogsTab" component={DogsStackNavigator} options={{ title: "Dogs" }} />
         <Tab.Screen name="BreedersTab" component={BreedersStackNavigator} options={{ title: "Breeders" }} />
         <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: "Home" }} />
         <Tab.Screen name="ShowsTab" component={ShowsStackNavigator} options={{ title: "Shows" }} />
         <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
-        <Tab.Screen name="KennelDirectoryTab" component={KennelDirectoryScreen} options={{ title: "Kennel Directory" }} />
-        <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryScreen} options={{ title: "Member Directory" }} />
-        <Tab.Screen name="RecentMatingsTab" component={RecentMatingsScreen} options={{ title: "Recent Matings" }} />
+        <Tab.Screen name="KennelDirectoryTab" component={KennelDirectoryScreen} />
+        <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryScreen} />
+        <Tab.Screen name="RecentMatingsTab" component={RecentMatingsScreen} />
+        <Tab.Screen name="TheClubTab" component={TheClubStackNavigator} />
       </Tab.Navigator>
     </NavigationContainer>
   );
