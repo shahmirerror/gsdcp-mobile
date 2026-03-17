@@ -38,7 +38,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd mobile && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 ./node_modules/.bin/expo start --web --port 5000"
+args = "cd mobile && EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 REACT_NATIVE_PACKAGER_HOSTNAME=3c66c08c-fdc6-4b24-8208-a54d9dec4460-00-ptuvjf5hnvcx.picard.replit.dev ./node_modules/.bin/expo start --web --port 5000"
 waitForPort = 5000
 
 [agent]
