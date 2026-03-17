@@ -1,92 +1,79 @@
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  FlatList,
   TextInput,
+  FlatList,
   TouchableOpacity,
+  StyleSheet,
   ActivityIndicator,
   Image,
-  Dimensions,
+  Modal,
+  Pressable,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
-import { useState, useMemo } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { COLORS, BORDER_RADIUS, SPACING } from "../lib/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchKennels, Kennel } from "../lib/api";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const DEFAULT_IMAGE = "user-not-found.png";
+function formatYear(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  const year = new Date(dateStr).getFullYear();
+  return isNaN(year) ? null : String(year);
+}
 
-function getInitials(name: string): string {
-  return name
+function KennelListItem({ kennel }: { kennel: Kennel }) {
+  const [imgError, setImgError] = useState(false);
+  const hasImage =
+    kennel.imageUrl &&
+    !kennel.imageUrl.includes("user-not-found") &&
+    !imgError;
+  const initials = kennel.kennelName
     .split(" ")
-    .slice(0, 2)
     .map((w) => w[0])
     .join("")
+    .slice(0, 2)
     .toUpperCase();
-}
-
-function getActiveSinceYear(dateStr: string): string {
-  return dateStr ? new Date(dateStr).getFullYear().toString() : "";
-}
-
-function isDefaultImage(url: string): boolean {
-  return !url || url.includes(DEFAULT_IMAGE);
-}
-
-function KennelCard({ kennel }: { kennel: Kennel }) {
-  const [imgError, setImgError] = useState(false);
-  const showAvatar = isDefaultImage(kennel.imageUrl) || imgError;
-  const initials = getInitials(kennel.kennelName);
-  const year = getActiveSinceYear(kennel.activeSince);
+  const year = formatYear(kennel.activeSince);
 
   return (
-    <View style={styles.card} data-testid={`card-kennel-${kennel.id}`}>
-      {showAvatar ? (
-        <View style={styles.avatarWrap}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
-      ) : (
+    <View style={styles.listItem} data-testid={`card-kennel-${kennel.id}`}>
+      {hasImage ? (
         <Image
           source={{ uri: kennel.imageUrl }}
-          style={styles.avatarImg}
+          style={styles.avatarImage}
+          resizeMode="cover"
           onError={() => setImgError(true)}
         />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
       )}
-
-      <View style={styles.cardBody}>
-        <Text style={styles.kennelName} numberOfLines={1}>
+      <View style={styles.itemInfo}>
+        <Text style={styles.itemName} numberOfLines={1}>
           {kennel.kennelName}
         </Text>
-
-        <View style={styles.metaRow}>
-          <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
-          <Text style={styles.metaText} numberOfLines={1}>
-            {kennel.city}, {kennel.country}
-          </Text>
-        </View>
-
-        <View style={styles.tagsRow}>
+        <Text style={styles.itemSub} numberOfLines={1}>
+          {kennel.city}, {kennel.country}
+        </Text>
+        <View style={styles.badges}>
           {year ? (
-            <View style={styles.tag}>
-              <Ionicons name="calendar-outline" size={10} color={COLORS.primary} />
-              <Text style={styles.tagText}>Since {year}</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Since {year}</Text>
             </View>
           ) : null}
           {kennel.phone ? (
-            <View style={styles.tag}>
-              <Ionicons name="call-outline" size={10} color={COLORS.primary} />
-              <Text style={styles.tagText} numberOfLines={1}>
-                {kennel.phone}
-              </Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{kennel.phone}</Text>
             </View>
           ) : null}
         </View>
       </View>
-
-      <Ionicons name="chevron-forward" size={16} color={COLORS.border} />
+      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
     </View>
   );
 }
@@ -94,106 +81,269 @@ function KennelCard({ kennel }: { kennel: Kennel }) {
 export default function KennelDirectoryScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
+  const [cityFilter, setCityFilter] = useState<string>("All");
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [tempCity, setTempCity] = useState<string>("All");
 
-  const { data: kennels, isLoading, isError, refetch } = useQuery<Kennel[]>({
-    queryKey: ["kennels"],
-    queryFn: fetchKennels,
-  });
+  const activeFilterCount = cityFilter !== "All" ? 1 : 0;
+
+  const openFilters = () => {
+    setTempCity(cityFilter);
+    setShowFilterModal(true);
+  };
+
+  const applyFilters = () => {
+    setCityFilter(tempCity);
+    setShowFilterModal(false);
+  };
+
+  const resetFilters = () => {
+    setTempCity("All");
+  };
+
+  const { data: kennels, isLoading, isError, refetch, isRefetching } =
+    useQuery<Kennel[]>({
+      queryKey: ["kennels"],
+      queryFn: fetchKennels,
+    });
+
+  const cities = useMemo(() => {
+    if (!kennels) return [] as string[];
+    const citySet = new Set<string>();
+    kennels.forEach((k) => {
+      if (k.city) citySet.add(k.city);
+    });
+    return [...citySet].sort();
+  }, [kennels]);
 
   const filtered = useMemo(() => {
     if (!kennels) return [];
-    const q = search.trim().toLowerCase();
-    if (!q) return kennels;
-    return kennels.filter(
-      (k) =>
-        k.kennelName.toLowerCase().includes(q) ||
-        k.city.toLowerCase().includes(q) ||
-        k.location.toLowerCase().includes(q),
-    );
-  }, [kennels, search]);
-
-  const uniqueFiltered = useMemo(() => {
     const seen = new Set<string>();
-    return filtered.filter((k) => {
+    let results = kennels.filter((k) => {
       if (seen.has(k.id)) return false;
       seen.add(k.id);
       return true;
     });
-  }, [filtered]);
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      results = results.filter(
+        (k) =>
+          k.kennelName.toLowerCase().includes(q) ||
+          k.city.toLowerCase().includes(q) ||
+          k.location.toLowerCase().includes(q),
+      );
+    }
+
+    if (cityFilter !== "All") {
+      results = results.filter((k) => k.city === cityFilter);
+    }
+
+    return results;
+  }, [kennels, search, cityFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Kennel Directory</Text>
-        <Text style={styles.subtitle}>
-          {kennels ? `${kennels.length} registered kennels` : "Browse GSDCP kennels"}
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={18} color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by kennel name or city..."
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+            data-testid="input-search-kennels"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearch("")}
+              data-testid="btn-clear-search"
+            >
+              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            activeFilterCount > 0 && styles.filterButtonActive,
+          ]}
+          onPress={openFilters}
+          activeOpacity={0.7}
+          data-testid="btn-open-filters"
+        >
+          <Ionicons
+            name="options-outline"
+            size={20}
+            color={activeFilterCount > 0 ? "#fff" : COLORS.textSecondary}
+          />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadgeCount}>
+              <Text style={styles.filterBadgeCountText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {activeFilterCount > 0 && (
+        <View style={styles.activeFiltersRow}>
+          {cityFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{cityFilter}</Text>
+              <TouchableOpacity
+                onPress={() => setCityFilter("All")}
+                data-testid="btn-remove-city-filter"
+              >
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => setCityFilter("All")}
+            data-testid="btn-clear-all-filters"
+          >
+            <Text style={styles.clearAllText}>Clear all</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <View style={styles.countRow}>
+        <Text style={styles.count} data-testid="text-kennel-count">
+          {filtered.length} {filtered.length === 1 ? "kennel" : "kennels"}
         </Text>
       </View>
 
-      <View style={styles.searchWrap}>
-        <Ionicons name="search" size={16} color={COLORS.textMuted} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by kennel name or city..."
-          placeholderTextColor={COLORS.textMuted}
-          value={search}
-          onChangeText={setSearch}
-          clearButtonMode="while-editing"
-          data-testid="input-kennel-search"
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch("")} data-testid="button-clear-search">
-            <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
-
       {isLoading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading kennels...</Text>
-        </View>
+        <ActivityIndicator
+          size="large"
+          color={COLORS.primary}
+          style={{ marginTop: SPACING.xxl }}
+          data-testid="loading-kennels"
+        />
       ) : isError ? (
-        <View style={styles.centered}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
-          <Text style={styles.errorText}>Failed to load kennels</Text>
+        <View style={styles.emptyState}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
+          <Text style={styles.emptyTitle}>Failed to load kennels</Text>
+          <Text style={styles.emptyDesc}>
+            Could not connect to the server. Please try again.
+          </Text>
           <TouchableOpacity
             style={styles.retryBtn}
             onPress={() => refetch()}
-            data-testid="button-retry-kennels"
+            data-testid="btn-retry"
           >
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
-      ) : uniqueFiltered.length === 0 ? (
-        <View style={styles.centered}>
-          <Ionicons name="home-outline" size={48} color={COLORS.textMuted} />
-          <Text style={styles.emptyTitle}>
-            {search ? "No kennels found" : "No kennels available"}
-          </Text>
-          <Text style={styles.emptyDesc}>
-            {search
-              ? `No results for "${search}"`
-              : "Check back later for registered kennels."}
-          </Text>
-        </View>
       ) : (
         <FlatList
-          data={uniqueFiltered}
+          data={filtered}
           keyExtractor={(item, index) => `${item.id}-${index}`}
-          renderItem={({ item }) => <KennelCard kennel={item} />}
           contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          ListHeaderComponent={
-            search && uniqueFiltered.length > 0 ? (
-              <Text style={styles.resultsCount}>
-                {uniqueFiltered.length} result{uniqueFiltered.length !== 1 ? "s" : ""}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
+          }
+          renderItem={({ item }) => <KennelListItem kennel={item} />}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>No kennels found</Text>
+              <Text style={styles.emptyDesc}>
+                Try adjusting your search or filters.
               </Text>
-            ) : null
+            </View>
           }
         />
       )}
+
+      <Modal
+        visible={showFilterModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setShowFilterModal(false)}
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filters</Text>
+              <TouchableOpacity
+                onPress={resetFilters}
+                data-testid="btn-reset-filters"
+              >
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterSectionTitle}>City</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterScroll}
+              contentContainerStyle={styles.filterOptionsRow}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.filterOption,
+                  tempCity === "All" && styles.filterOptionActive,
+                ]}
+                onPress={() => setTempCity("All")}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempCity === "All" && styles.filterOptionTextActive,
+                  ]}
+                >
+                  All
+                </Text>
+              </TouchableOpacity>
+              {cities.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[
+                    styles.filterOption,
+                    tempCity === opt && styles.filterOptionActive,
+                  ]}
+                  onPress={() => setTempCity(opt)}
+                  activeOpacity={0.7}
+                  data-testid={`filter-city-${opt}`}
+                >
+                  <Text
+                    style={[
+                      styles.filterOptionText,
+                      tempCity === opt && styles.filterOptionTextActive,
+                    ]}
+                  >
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.applyButton}
+              onPress={applyFilters}
+              activeOpacity={0.8}
+              data-testid="btn-apply-filters"
+            >
+              <Text style={styles.applyButtonText}>Apply Filters</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -203,170 +353,277 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 14,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
+    gap: SPACING.sm,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: COLORS.primaryDark,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
-  searchWrap: {
+  searchContainer: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.surface,
-    marginHorizontal: 16,
-    marginTop: 14,
-    marginBottom: 10,
     borderRadius: BORDER_RADIUS.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
-    gap: 8,
-  },
-  searchIcon: {
-    flexShrink: 0,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    height: 44,
+    fontSize: FONT_SIZES.md,
     color: COLORS.text,
-    padding: 0,
-    margin: 0,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterBadgeCount: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterBadgeCountText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  activeFiltersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
+  },
+  activeChipText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  clearAllText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    marginLeft: 4,
+  },
+  countRow: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
+  },
+  count: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
   },
   list: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
+    padding: SPACING.lg,
+    paddingTop: SPACING.sm,
   },
-  resultsCount: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontWeight: "500",
-    paddingVertical: 6,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginLeft: 72,
-  },
-  card: {
+  listItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  avatarWrap: {
+  avatar: {
     width: 48,
     height: 48,
-    borderRadius: 14,
-    backgroundColor: "rgba(15,92,58,0.10)",
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",
-    flexShrink: 0,
+    marginRight: SPACING.md,
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.full,
+    marginRight: SPACING.md,
+    backgroundColor: "#E8F5E9",
   },
   avatarText: {
-    fontSize: 16,
-    fontWeight: "700",
     color: COLORS.primary,
+    fontWeight: "600",
+    fontSize: FONT_SIZES.sm,
   },
-  avatarImg: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    flexShrink: 0,
-  },
-  cardBody: {
+  itemInfo: {
     flex: 1,
-    gap: 3,
   },
-  kennelName: {
-    fontSize: 15,
-    fontWeight: "700",
+  itemName: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
     color: COLORS.text,
   },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  metaText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    flex: 1,
-  },
-  tagsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
+  itemSub: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
-  tag: {
+  badges: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(15,92,58,0.07)",
-    borderRadius: BORDER_RADIUS.sm,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    gap: 3,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: COLORS.primary,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    marginTop: 8,
-  },
-  errorText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.text,
-    textAlign: "center",
-  },
-  retryBtn: {
+    gap: 6,
     marginTop: 4,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
+    flexWrap: "wrap",
   },
-  retryText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    fontSize: 14,
+  badge: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  badgeText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingTop: 60,
+    gap: SPACING.sm,
   },
   emptyTitle: {
-    fontSize: 17,
-    fontWeight: "700",
+    fontSize: FONT_SIZES.lg,
+    fontWeight: "600",
     color: COLORS.text,
-    textAlign: "center",
   },
   emptyDesc: {
-    fontSize: 13,
+    fontSize: FONT_SIZES.md,
     color: COLORS.textMuted,
     textAlign: "center",
-    lineHeight: 19,
+    paddingHorizontal: SPACING.xxl,
+  },
+  retryBtn: {
+    marginTop: SPACING.md,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
+  },
+  retryText: {
+    color: "#fff",
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+    paddingTop: 12,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#D1D5DB",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  resetText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  filterScroll: {
+    marginBottom: 24,
+  },
+  filterOptionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingRight: 8,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterOptionActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterOptionText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  filterOptionTextActive: {
+    color: "#fff",
+  },
+  applyButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  applyButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
