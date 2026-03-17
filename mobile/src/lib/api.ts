@@ -114,6 +114,7 @@ export type DogDetail = {
   pedigree: Pedigree | any[];
   siblings: Dog[];
   line_breeding: LineBreedingEntry[];
+  progeny: Dog[];
 };
 
 export type ShowJudge = {

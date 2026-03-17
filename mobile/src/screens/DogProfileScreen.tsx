@@ -71,7 +71,7 @@ function isPedigreePopulated(p: Pedigree | any[] | null | undefined): p is Pedig
   return p.gen1 !== undefined;
 }
 
-type TabKey = "details" | "pedigree" | "siblings";
+type TabKey = "details" | "pedigree" | "siblings" | "progeny" | "shows";
 
 export default function DogProfileScreen() {
   const route = useRoute<any>();
@@ -111,6 +111,7 @@ export default function DogProfileScreen() {
   const hasPedigree = isPedigreePopulated(pedigree);
   const siblings = (data.siblings ?? []).filter((s: Dog) => s.id !== dogId);
   const lineBreeding = data.line_breeding ?? [];
+  const progeny = data.progeny ?? [];
 
   const initials = dog.dog_name
     .split(" ")
@@ -133,6 +134,8 @@ export default function DogProfileScreen() {
     { key: "details", label: "Details" },
     { key: "pedigree", label: "Pedigree" },
     { key: "siblings", label: "Siblings", count: siblings.length },
+    { key: "progeny", label: "Progeny", count: progeny.length },
+    { key: "shows", label: "Conformation Shows", count: showResults.length },
   ];
 
   return (
@@ -365,31 +368,6 @@ export default function DogProfileScreen() {
               </View>
             </View>
 
-            {showResults.length > 0 && (
-              <View style={styles.card}>
-                <Text style={styles.cardHeading}>Show Results</Text>
-                {showResults.map((result) => (
-                  <View key={result.id} style={styles.resultRow}>
-                    <View style={styles.resultLeft}>
-                      <Text style={styles.resultShow} numberOfLines={1}>
-                        {result.showName}
-                      </Text>
-                      <Text style={styles.resultMeta}>
-                        {result.className} · {result.date}
-                      </Text>
-                    </View>
-                    <View style={styles.resultRight}>
-                      <View style={styles.gradingBadge}>
-                        <Text style={styles.gradingBadgeText}>{result.grading}</Text>
-                      </View>
-                      {result.placement && (
-                        <Text style={styles.placementText}>#{result.placement}</Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
           </>
         )}
 
@@ -435,6 +413,73 @@ export default function DogProfileScreen() {
               <Text style={styles.emptyTitle}>No Siblings Found</Text>
               <Text style={styles.emptyDesc}>
                 No sibling records are available for this dog.
+              </Text>
+            </View>
+          ))}
+
+        {activeTab === "progeny" &&
+          (progeny.length > 0 ? (
+            <View>
+              {progeny.map((dog: Dog) => (
+                <DogListItem
+                  key={dog.id}
+                  dog={dog}
+                  onPress={() =>
+                    navigation.push("DogProfile", {
+                      id: dog.id,
+                      name: dog.dog_name,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Progeny Recorded</Text>
+              <Text style={styles.emptyDesc}>
+                No offspring have been recorded for this dog.
+              </Text>
+            </View>
+          ))}
+
+        {activeTab === "shows" &&
+          (showResults.length > 0 ? (
+            <View style={styles.card}>
+              {showResults.map((result) => (
+                <View
+                  key={result.id}
+                  style={styles.resultRow}
+                >
+                  <View style={styles.resultLeft}>
+                    <Text style={styles.resultShow} numberOfLines={1}>
+                      {result.showName}
+                    </Text>
+                    <Text style={styles.resultMeta}>
+                      {result.className} · {result.date}
+                    </Text>
+                  </View>
+                  <View style={styles.resultRight}>
+                    <View style={styles.gradingBadge}>
+                      <Text style={styles.gradingBadgeText}>{result.grading}</Text>
+                    </View>
+                    {result.placement ? (
+                      <Text style={styles.placementText}>#{result.placement}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="ribbon-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Show Results</Text>
+              <Text style={styles.emptyDesc}>
+                This dog has not been entered in any conformation shows yet.
               </Text>
             </View>
           ))}
