@@ -43,21 +43,44 @@ const PLANS = [
   },
 ];
 
-function formatFeeLabel(optionName: string, remarks: string | null): string {
-  if (remarks) {
-    const cleaned = remarks
-      .replace(/fee amount/i, "")
-      .replace(/fee/i, "")
-      .trim();
-    if (cleaned.length > 3) return cleaned;
-  }
-  return optionName
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ")
-    .replace(/\bFee\b/gi, "Fee")
-    .replace(/\bKp\b/gi, "(KP)");
-}
+const FEE_CATEGORIES: { key: string; label: string; icon: string; names: string[] }[] = [
+  {
+    key: "membership",
+    label: "Membership Fee",
+    icon: "person-add-outline",
+    names: ["membership_fee", "membership_renewal_fee"],
+  },
+  {
+    key: "litter",
+    label: "Litter Registration Fee",
+    icon: "paw-outline",
+    names: ["litter_fee", "puppy_fees"],
+  },
+  {
+    key: "dog",
+    label: "Dog Registration Fee",
+    icon: "document-text-outline",
+    names: ["dog_registration_kp", "single_dog_reg_fee", "pedigree_fee"],
+  },
+  {
+    key: "show",
+    label: "Show Fee",
+    icon: "ribbon-outline",
+    names: ["breed_survey_fee", "endurance_test"],
+  },
+];
+
+const FEE_LABELS: Record<string, string> = {
+  membership_fee: "Membership",
+  membership_renewal_fee: "Renewal",
+  litter_fee: "Litter Registration",
+  puppy_fees: "Per Puppy",
+  dog_registration_kp: "Registration (KP No.)",
+  single_dog_reg_fee: "Single Dog Registration",
+  pedigree_fee: "Pedigree Certificate",
+  breed_survey_fee: "Breed Survey",
+  endurance_test: "Endurance Test",
+};
 
 function formatAmount(value: string): string {
   const num = parseInt(value, 10);
@@ -146,17 +169,33 @@ export default function SubscriptionScreen() {
       {isLoading ? (
         <ActivityIndicator style={{ marginVertical: 24 }} size="small" color={COLORS.primary} />
       ) : (
-        <View style={styles.feesCard}>
-          {(fees ?? []).map((fee: FeeItem, i: number) => (
-            <View
-              key={fee.id}
-              style={[styles.feeRow, i < (fees ?? []).length - 1 && styles.feeRowBorder]}
-              data-testid={`row-fee-${fee.id}`}
-            >
-              <Text style={styles.feeLabel}>{formatFeeLabel(fee.option_name, fee.remarks)}</Text>
-              <Text style={styles.feeAmount}>{formatAmount(fee.option_value)}</Text>
-            </View>
-          ))}
+        <View style={styles.categoriesWrap}>
+          {FEE_CATEGORIES.map((cat) => {
+            const catFees = (fees ?? []).filter((f: FeeItem) => cat.names.includes(f.option_name));
+            if (catFees.length === 0) return null;
+            return (
+              <View key={cat.key} style={styles.categoryBlock}>
+                <View style={styles.categoryHeader}>
+                  <Ionicons name={cat.icon as any} size={15} color={COLORS.primary} />
+                  <Text style={styles.categoryLabel}>{cat.label}</Text>
+                </View>
+                <View style={styles.feesCard}>
+                  {catFees.map((fee: FeeItem, i: number) => (
+                    <View
+                      key={fee.id}
+                      style={[styles.feeRow, i < catFees.length - 1 && styles.feeRowBorder]}
+                      data-testid={`row-fee-${fee.id}`}
+                    >
+                      <Text style={styles.feeLabel}>
+                        {FEE_LABELS[fee.option_name] ?? fee.option_name}
+                      </Text>
+                      <Text style={styles.feeAmount}>{formatAmount(fee.option_value)}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -208,8 +247,28 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
   featureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
   featureText: { fontSize: 13, color: COLORS.textSecondary },
+  categoriesWrap: {
+    paddingHorizontal: 16,
+    gap: 20,
+  },
+  categoryBlock: {
+    gap: 6,
+  },
+  categoryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 2,
+    marginBottom: 2,
+  },
+  categoryLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
   feesCard: {
-    marginHorizontal: 16,
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
