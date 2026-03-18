@@ -48,26 +48,26 @@ function MatingRow({ mating, onPressSire, onPressDam }: {
       </View>
 
       <View style={styles.itemInfo}>
-        <View style={styles.kennelRow}>
-          <Text style={styles.itemName} numberOfLines={1}>{mating.kennel_name}</Text>
-          {mating.litter_on_ground && (
-            <View style={styles.litterTag}>
-              <Ionicons name="paw" size={9} color="#fff" />
-              <Text style={styles.litterTagText}>Litter</Text>
-            </View>
-          )}
-        </View>
+        {/* Kennel */}
+        <Text style={styles.itemName} numberOfLines={1}>{mating.kennel_name}</Text>
 
-        <View style={styles.pairingLine}>
+        {/* Sire */}
+        <View style={styles.dogRow}>
+          <Text style={styles.dogLabel}>S</Text>
           <TouchableOpacity onPress={onPressSire} activeOpacity={0.7} data-testid={`btn-sire-${mating.id}`}>
             <Text style={styles.dogLink} numberOfLines={1}>{mating.sire_name.trim()}</Text>
           </TouchableOpacity>
-          <Text style={styles.timesText}> × </Text>
+        </View>
+
+        {/* Dam */}
+        <View style={styles.dogRow}>
+          <Text style={styles.dogLabel}>D</Text>
           <TouchableOpacity onPress={onPressDam} activeOpacity={0.7} data-testid={`btn-dam-${mating.id}`}>
             <Text style={styles.dogLink} numberOfLines={1}>{mating.dam_name.trim()}</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Tags */}
         <View style={styles.badges}>
           {mating.city ? (
             <View style={styles.badge}>
@@ -75,9 +75,12 @@ function MatingRow({ mating, onPressSire, onPressDam }: {
               <Text style={styles.badgeText}>{mating.city}</Text>
             </View>
           ) : null}
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{date.full}</Text>
-          </View>
+          {mating.litter_on_ground && (
+            <View style={[styles.badge, styles.litterBadge]}>
+              <Ionicons name="paw" size={10} color="#fff" />
+              <Text style={styles.litterBadgeText}>Litter on Ground</Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -390,19 +393,14 @@ const styles = StyleSheet.create({
   dateMonth: { fontSize: 10, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.4 },
 
   itemInfo: { flex: 1 },
-  kennelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
-  itemName: { flex: 1, fontSize: 15, fontWeight: "700", color: COLORS.text },
+  itemName: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 2 },
 
-  litterTag: {
-    flexDirection: "row", alignItems: "center", gap: 3,
-    backgroundColor: COLORS.primary, paddingHorizontal: 6, paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.full,
+  dogRow: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3,
   },
-  litterTagText: { fontSize: 9, fontWeight: "700", color: "#fff", letterSpacing: 0.2 },
-
-  pairingLine: {
-    flexDirection: "row", alignItems: "center", flexWrap: "wrap",
-    marginBottom: 6,
+  dogLabel: {
+    fontSize: 10, fontWeight: "800", color: COLORS.textMuted,
+    width: 12, textTransform: "uppercase", letterSpacing: 0.5,
   },
   dogLink: {
     fontSize: FONT_SIZES.sm,
@@ -410,11 +408,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     textDecorationLine: "underline",
     textDecorationColor: "rgba(15,92,59,0.3)",
-    maxWidth: 120,
   },
-  timesText: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, fontWeight: "300" },
 
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   badge: {
     flexDirection: "row", alignItems: "center", gap: 3,
     backgroundColor: COLORS.background,
@@ -423,6 +419,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   badgeText: { fontSize: 11, color: COLORS.textMuted, fontWeight: "500" },
+  litterBadge: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  litterBadgeText: { fontSize: 11, fontWeight: "700", color: "#fff" },
 
   emptyState: { alignItems: "center", paddingTop: 60, gap: SPACING.sm },
   emptyTitle: { fontSize: FONT_SIZES.lg, fontWeight: "600", color: COLORS.text },
