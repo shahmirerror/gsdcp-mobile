@@ -1,0 +1,107 @@
+"judges": [
+      {
+        "judge_id": "visit_judge-16",
+        "full_name": "Erich Bösl",
+        "credentials": "SV Judge",
+        "description": "&lt;p&gt;&lt;br /&gt;\r\nHaving discovered a love for animals at an early age, Erich B&amp;ouml;sl joined the SV in 1977. In December 1978 he established his breeding program under the kennel name &amp;quot;von der Piste Trophe.&amp;quot; Only two years later, in 1980, he won the North Bavarian Regional Show (his home area) in the youth class with his female &amp;quot;Jessy von der Wienerau&amp;quot;. In 1990 he presented for the first time a breeding group at the BSZS (&amp;quot;Siegershow&amp;quot;).&lt;/p&gt;\r\n\r\n&lt;p&gt;Through the years of continious work this kennel has produced many top ranking dogs and the kennel &amp;quot;von der Piste Trophe&amp;quot; is well known all over the world. The dog that Erich B&amp;ouml;sel is probably most proud of is Enschi von der Piste Trophe. In 1999 this fabulous female won the young dog class females at BSZS in Karlsruhe. At BSZS 2001 in D&amp;uuml;sseldorf Enschi went directly into the VA group and became VA3.&lt;/p&gt;\r\n\r\n&lt;p&gt;In 1993 Erich B&amp;ouml;sl became an SV judge. He is judging in many countries of the world. In 1999 he was nominated as Koermeister. He is also LG 19 breed-representative (LG Zuchtwart) in Nothern Bavaria. Erich B&amp;ouml;sel has been awarded the very enviable task of judging the working class females at BSZS 2010 in N&amp;uuml;rnberg. In 2000 he judged the youth class males at BSZS in Bremen, and his very convincing winner that year was SG1 Bax von der Luisenstrasse. Bax later, in 2003, became VA1.&lt;/p&gt;\r\n\r\n&lt;p&gt;Herr Erich B&amp;ouml;sl will also be judging all male classes at NASS (North American Sieger Show) this year in Herndon, VA, October 20-23, 2011.&lt;/p&gt;",
+        "imageUrl": "https://gsdcp.org/website_images/visit_judge_images/1637413370.jpg"
+      }
+    ],
+    "shows": [
+      {
+        "id": "show-140",
+        "title": "GSDCP LG Show - Lahore",
+        "venue": "Rose Garden, Bahria Town",
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2023-01-15"
+      },
+      {
+        "id": "show-141",
+        "title": "GSDCP LG Show - Faisalabad",
+        "venue": "Citi Housing, Sargodha Road",
+        "city": "Faisalabad",
+        "type": "Show",
+        "start_date": "2023-01-22"
+      },
+      {
+        "id": "show-142",
+        "title": "Muzafar Husain Memorial Sieger Show - 2023",
+        "venue": "KCP Ground, Rose Garden, Bahria Town",
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2023-02-04"
+      },
+      {
+        "id": "show-154",
+        "title": "GSDCP OG Show - Sheikhupura",
+        "venue": "Company Bagh",
+        "city": "Sheikhupura",
+        "type": "Show",
+        "start_date": "2024-01-07"
+      },
+      {
+        "id": "show-156",
+        "title": "GSDCP LG Show - Lahore",
+        "venue": "Jillani Park",
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2024-01-14"
+      },
+      {
+        "id": "show-158",
+        "title": "Pakistan Sieger Show - 2024",
+        "venue": "Jillani Park",
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2024-02-03"
+      },
+      {
+        "id": "show-175",
+        "title": "GSDCP LG Show - Lahore",
+        "venue": "Jilani Park",
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2025-01-12"
+      },
+      {
+        "id": "show-177",
+        "title": "Pakistan Sieger Show - 2025",
+        "venue": null,
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2025-02-08"
+      },
+      {
+        "id": "show-173",
+        "title": "GSDCP LG Show - Islamabad",
+        "venue": null,
+        "city": "Islamabad / Rawalpindi",
+        "type": "Show",
+        "start_date": "2024-12-15"
+      },
+      {
+        "id": "show-196",
+        "title": "GSDCP LG Show - Lahore",
+        "venue": "Jam-e-Shereen Park, Opposite Liberty Market",
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2026-01-18"
+      },
+      {
+        "id": "show-197",
+        "title": "GSDCP OG Show - Sialkot",
+        "venue": null,
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2026-01-25"
+      },
+      {
+        "id": "show-198",
+        "title": "Pakistan Sieger Show 2026",
+        "venue": "Aleem Dar Cricket Stadium, Bahria Town",
+        "city": "Lahore",
+        "type": "Show",
+        "start_date": "2026-02-07"
+      }
+    ]

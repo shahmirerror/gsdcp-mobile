@@ -71,6 +71,7 @@ export type TheClubStackParamList = {
   VisitingJudges: undefined;
   NewsUpdates: undefined;
   JudgeDetail: { id: string; backLabel?: string };
+  ShowDetail: { id: string; name?: string };
 };
 
 export type RootTabParamList = {
@@ -155,6 +156,7 @@ function TheClubStackNavigator() {
       <TheClubStack.Screen name="VisitingJudges" component={VisitingJudgesScreen} />
       <TheClubStack.Screen name="NewsUpdates" component={NewsUpdatesScreen} />
       <TheClubStack.Screen name="JudgeDetail" component={JudgeDetailScreen} />
+      <TheClubStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </TheClubStack.Navigator>
   );
 }

@@ -122,11 +122,11 @@ export default function JudgeDetailScreen() {
             <Text style={styles.credentials}>{judge.credentials}</Text>
           </View>
 
-          {/* Shows stat — only rendered if API provides the value */}
-          {judge.shows != null && (
+          {/* Shows judged count — only rendered when shows array is present */}
+          {judge.shows && judge.shows.length > 0 && (
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
-                <Text style={styles.statValue}>{judge.shows}+</Text>
+                <Text style={styles.statValue}>{judge.shows.length}</Text>
                 <Text style={styles.statLabel}>SHOWS JUDGED</Text>
               </View>
             </View>
@@ -170,21 +170,28 @@ export default function JudgeDetailScreen() {
               </View>
               <View style={styles.appointmentsCard}>
                 {judge.shows.map((show: JudgeShow, i: number) => (
-                  <View key={i} style={[styles.appointmentRow, i < judge.shows!.length - 1 && styles.appointmentRowBorder]}>
+                  <TouchableOpacity
+                    key={show.id}
+                    style={[styles.appointmentRow, i < judge.shows!.length - 1 && styles.appointmentRowBorder]}
+                    onPress={() => (navigation as any).push("ShowDetail", { id: show.id, name: show.title })}
+                    activeOpacity={0.7}
+                    data-testid={`show-appt-${show.id}`}
+                  >
                     <View style={styles.appointmentLeft}>
                       <View style={[styles.apptDot, i === 0 ? styles.apptDotActive : styles.apptDotInactive]} />
                       {i < judge.shows!.length - 1 && <View style={styles.apptLine} />}
                     </View>
                     <View style={styles.appointmentContent}>
-                      <Text style={styles.apptDate}>{formatShowDate(show.date)}</Text>
-                      <Text style={styles.apptName}>{show.show_name}</Text>
-                      {(show.location || show.category) && (
+                      <Text style={styles.apptDate}>{formatShowDate(show.start_date)}</Text>
+                      <Text style={styles.apptName}>{show.title}</Text>
+                      {(show.venue || show.city) && (
                         <Text style={styles.apptMeta}>
-                          {[show.location, show.category].filter(Boolean).join(" • ")}
+                          {[show.venue, show.city].filter(Boolean).join(", ")}
                         </Text>
                       )}
                     </View>
-                  </View>
+                    <Ionicons name="chevron-forward" size={15} color={COLORS.textMuted} />
+                  </TouchableOpacity>
                 ))}
               </View>
             </View>

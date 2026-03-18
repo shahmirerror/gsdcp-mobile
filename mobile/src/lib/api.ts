@@ -403,10 +403,12 @@ export async function fetchVisitingJudges(): Promise<JudgeItem[]> {
 }
 
 export type JudgeShow = {
-  show_name: string;
-  date: string;
-  location?: string;
-  category?: string;
+  id: string;
+  title: string;
+  start_date: string;
+  venue: string | null;
+  city: string;
+  type: string;
 };
 
 export type JudgeDetail = JudgeItem & {
