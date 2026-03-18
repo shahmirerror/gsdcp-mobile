@@ -283,13 +283,19 @@ export type RecentMating = {
   dam_dog_id: string;
   mating_date: string;
   city: string | null;
+  litter_on_ground?: boolean;
 };
 
 export async function fetchRecentMatings(): Promise<RecentMating[]> {
   const res = await fetch(`${BASE_URL}/recent-matings`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch recent matings");
-  return json.data.upcomingLitters;
+  const seen = new Set<string>();
+  return (json.data.upcomingLitters as RecentMating[]).filter((m) => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
 }
 
 export type DashboardData = {

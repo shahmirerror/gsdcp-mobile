@@ -38,6 +38,12 @@ function MatingCard({ mating, onPressSire, onPressDam }: { mating: RecentMating;
         <Text style={styles.kennelName} numberOfLines={1}>
           {mating.kennel_name}
         </Text>
+        {mating.litter_on_ground && (
+          <View style={styles.litterTag}>
+            <Ionicons name="paw" size={10} color="#fff" />
+            <Text style={styles.litterTagText}>Litter on Ground</Text>
+          </View>
+        )}
         {mating.city ? (
           <View style={styles.cityBadge}>
             <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
@@ -85,23 +91,28 @@ export default function RecentMatingsScreen() {
   const navigation = useNavigation<any>();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
+  const [litterFilter, setLitterFilter] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
+  const [tempLitter, setTempLitter] = useState(false);
 
-  const activeFilterCount = cityFilter !== "All" ? 1 : 0;
+  const activeFilterCount = (cityFilter !== "All" ? 1 : 0) + (litterFilter ? 1 : 0);
 
   const openFilters = () => {
     setTempCity(cityFilter);
+    setTempLitter(litterFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setCityFilter(tempCity);
+    setLitterFilter(tempLitter);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempCity("All");
+    setTempLitter(false);
   };
 
   const {
@@ -143,8 +154,12 @@ export default function RecentMatingsScreen() {
       results = results.filter((m) => m.city === cityFilter);
     }
 
+    if (litterFilter) {
+      results = results.filter((m) => m.litter_on_ground === true);
+    }
+
     return results;
-  }, [matings, search, cityFilter]);
+  }, [matings, search, cityFilter, litterFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -201,16 +216,22 @@ export default function RecentMatingsScreen() {
           {cityFilter !== "All" && (
             <View style={styles.activeChip}>
               <Text style={styles.activeChipText}>{cityFilter}</Text>
-              <TouchableOpacity
-                onPress={() => setCityFilter("All")}
-                data-testid="btn-remove-city-filter"
-              >
+              <TouchableOpacity onPress={() => setCityFilter("All")} data-testid="btn-remove-city-filter">
                 <Ionicons name="close" size={14} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
           )}
+          {litterFilter && (
+            <View style={[styles.activeChip, styles.activeChipGreen]}>
+              <Ionicons name="paw" size={11} color="#fff" />
+              <Text style={styles.activeChipTextWhite}>Litter on Ground</Text>
+              <TouchableOpacity onPress={() => setLitterFilter(false)} data-testid="btn-remove-litter-filter">
+                <Ionicons name="close" size={14} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity
-            onPress={() => setCityFilter("All")}
+            onPress={() => { setCityFilter("All"); setLitterFilter(false); }}
             data-testid="btn-clear-all-filters"
           >
             <Text style={styles.clearAllText}>Clear all</Text>
@@ -303,7 +324,23 @@ export default function RecentMatingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.filterSectionTitle}>City</Text>
+            <Text style={styles.filterSectionTitle}>Status</Text>
+            <TouchableOpacity
+              style={[styles.litterToggle, tempLitter && styles.litterToggleActive]}
+              onPress={() => setTempLitter(!tempLitter)}
+              activeOpacity={0.7}
+              data-testid="filter-litter-toggle"
+            >
+              <Ionicons name="paw" size={16} color={tempLitter ? "#fff" : COLORS.primary} />
+              <Text style={[styles.litterToggleText, tempLitter && styles.litterToggleTextActive]}>
+                Litter on Ground
+              </Text>
+              <View style={[styles.toggleSwitch, tempLitter && styles.toggleSwitchActive]}>
+                <View style={[styles.toggleThumb, tempLitter && styles.toggleThumbActive]} />
+              </View>
+            </TouchableOpacity>
+
+            <Text style={[styles.filterSectionTitle, { marginTop: 20 }]}>City</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -460,11 +497,65 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.primary,
   },
+  activeChipGreen: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  activeChipTextWhite: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: "#fff",
+  },
   clearAllText: {
     fontSize: FONT_SIZES.xs,
     fontWeight: "600",
     color: COLORS.textMuted,
     marginLeft: 4,
+  },
+  litterToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 4,
+    backgroundColor: "#fff",
+  },
+  litterToggleActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  litterToggleText: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  litterToggleTextActive: {
+    color: "#fff",
+  },
+  toggleSwitch: {
+    width: 40,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#D1D5DB",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+  toggleSwitchActive: {
+    backgroundColor: "rgba(255,255,255,0.35)",
+  },
+  toggleThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#fff",
+  },
+  toggleThumbActive: {
+    alignSelf: "flex-end",
   },
   countRow: {
     paddingHorizontal: SPACING.lg,
@@ -505,6 +596,21 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "700",
     color: COLORS.text,
+  },
+  litterTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  litterTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 0.2,
   },
   cityBadge: {
     flexDirection: "row",
