@@ -2,20 +2,23 @@ import {
   ScrollView,
   View,
   Text,
+  Image,
+  ImageBackground,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-import { fetchJudgeDetail } from "../../lib/api";
+import { fetchJudgeDetail, stripHtml } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
-import { stripHtml } from "../../lib/api";
+
+const heroBg = require("../../../assets/hero-bg.jpg");
 
 function getShortBadge(credentials: string): string {
   const c = credentials.toLowerCase();
@@ -60,54 +63,70 @@ export default function JudgeDetailScreen() {
   const certBadges = judge ? getCertBadges(judge.credentials) : [];
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Top navigation bar */}
-      <View style={styles.navbar}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => navigation.goBack()} data-testid="button-back">
-          <Ionicons name="chevron-back" size={22} color={COLORS.text} />
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Hero banner — same pattern as Dog/Breeder/Kennel profiles */}
+      <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
+        <LinearGradient
+          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
+          style={styles.heroGradient}
+          pointerEvents="none"
+        />
+        <TouchableOpacity
+          style={[styles.backButton, { top: insets.top + 12 }]}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+          data-testid="btn-back"
+        >
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>Judge Profile</Text>
-        <View style={styles.navBtn} />
-      </View>
+      </ImageBackground>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 80 }} />
-        ) : judge ? (
-          <>
-            {/* Profile hero */}
-            <View style={styles.heroSection}>
-              <View style={styles.photoWrap}>
-                {!imgError ? (
-                  <Image
-                    source={{ uri: judge.imageUrl }}
-                    style={styles.photo}
-                    onError={() => setImgError(true)}
-                  />
-                ) : (
-                  <View style={[styles.photo, styles.photoFallback]}>
-                    <Text style={styles.initials}>{initials}</Text>
-                  </View>
-                )}
-                <View style={styles.badgePill}>
-                  <Text style={styles.badgeText}>{shortBadge}</Text>
+      {/* Profile section */}
+      {isLoading ? (
+        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+      ) : judge ? (
+        <>
+          <View style={styles.profileSection}>
+            {/* Avatar with gold ring + credential badge */}
+            <View style={styles.avatarOuter}>
+              {!imgError ? (
+                <Image
+                  source={{ uri: judge.imageUrl }}
+                  style={styles.avatarPhoto}
+                  resizeMode="cover"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <View style={styles.avatarInner}>
+                  <Text style={styles.avatarInitials}>{initials}</Text>
                 </View>
+              )}
+              <View style={styles.badgePill}>
+                <Text style={styles.badgePillText}>{shortBadge}</Text>
               </View>
-
-              <Text style={styles.name}>{judge.full_name}</Text>
-              <Text style={styles.credentials}>{judge.credentials}</Text>
             </View>
 
-            {/* Contact CTA */}
-            <View style={styles.section}>
-              <TouchableOpacity style={styles.contactBtn} activeOpacity={0.85} data-testid="button-contact">
-                <Ionicons name="mail-outline" size={18} color="#fff" />
-                <Text style={styles.contactBtnText}>Contact for Assignment</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.name}>{judge.full_name}</Text>
+            <Text style={styles.credentials}>{judge.credentials}</Text>
+          </View>
 
-            {/* Certification badges */}
-            <View style={[styles.section, styles.badgesRow]}>
+          {/* Shows stat — only rendered if API provides the value */}
+          {judge.shows != null && (
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValue}>{judge.shows}+</Text>
+                <Text style={styles.statLabel}>SHOWS JUDGED</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Certification badges */}
+          <View style={styles.section}>
+            <View style={styles.badgesRow}>
               {certBadges.map((b, i) => (
                 <View key={i} style={styles.certBadge}>
                   <Ionicons
@@ -119,80 +138,109 @@ export default function JudgeDetailScreen() {
                 </View>
               ))}
             </View>
+          </View>
 
-            {/* Biography */}
-            {bio.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name="document-text-outline" size={18} color={COLORS.accent} />
-                  <Text style={styles.sectionTitle}>Biography</Text>
-                </View>
-                <View style={styles.bioCard}>
-                  <Text style={styles.bioText}>{bio}</Text>
-                </View>
+          {/* Biography */}
+          {bio.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="document-text-outline" size={18} color={COLORS.accent} />
+                <Text style={styles.sectionTitle}>Biography</Text>
               </View>
-            )}
-          </>
-        ) : null}
-      </ScrollView>
-    </View>
+              <View style={styles.bioCard}>
+                <Text style={styles.bioText}>{bio}</Text>
+              </View>
+            </View>
+          )}
+        </>
+      ) : null}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#f6f8f7" },
+  scrollContent: { paddingBottom: 48 },
 
-  navbar: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 12, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: "#F0F0EE",
+  heroBanner: { width: "100%", height: 256 },
+  heroGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: 256 },
+  backButton: {
+    position: "absolute",
+    left: 16,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center", alignItems: "center",
+    zIndex: 10,
   },
-  navBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center" },
-  navTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
 
-  heroSection: { alignItems: "center", paddingTop: 32, paddingBottom: 8, paddingHorizontal: 24 },
-  photoWrap: { position: "relative", marginBottom: 20 },
-  photo: {
-    width: 110, height: 110, borderRadius: 55,
-    borderWidth: 3, borderColor: COLORS.accent,
+  profileSection: {
+    alignItems: "center",
+    marginTop: -80,
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
-  photoFallback: {
-    backgroundColor: "rgba(15,92,58,0.08)",
+  avatarOuter: {
+    width: 144, height: 144, borderRadius: 72,
+    borderWidth: 4, borderColor: COLORS.accent,
+    backgroundColor: "#fff",
+    padding: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.1,
+    shadowRadius: 25,
+    elevation: 8,
+    position: "relative",
+  },
+  avatarPhoto: { flex: 1, borderRadius: 9999 },
+  avatarInner: {
+    flex: 1, borderRadius: 9999,
+    backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center", alignItems: "center",
   },
-  initials: { fontSize: 36, fontWeight: "800", color: COLORS.primary },
+  avatarInitials: { fontSize: 36, fontWeight: "800", color: COLORS.primary },
+
   badgePill: {
-    position: "absolute", bottom: -4, alignSelf: "center",
+    position: "absolute",
+    bottom: -2,
+    alignSelf: "center",
     left: "50%",
-    transform: [{ translateX: -28 }],
+    transform: [{ translateX: -26 }],
     backgroundColor: COLORS.accent,
-    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
-    minWidth: 56, alignItems: "center",
+    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
+    minWidth: 52, alignItems: "center",
     borderWidth: 2, borderColor: "#fff",
   },
-  badgeText: {
-    fontSize: 9, fontWeight: "800", color: "#fff",
-    textAlign: "center", textTransform: "uppercase", letterSpacing: 0.4, lineHeight: 12,
+  badgePillText: {
+    fontSize: 8, fontWeight: "800", color: "#fff",
+    textAlign: "center", textTransform: "uppercase", letterSpacing: 0.4, lineHeight: 11,
   },
+
   name: {
-    fontSize: 22, fontWeight: "800", color: COLORS.primaryDark,
-    textAlign: "center", marginBottom: 6,
+    fontSize: 24, fontWeight: "800", color: "#0F172A",
+    textAlign: "center", marginTop: 16, lineHeight: 32,
   },
   credentials: {
     fontSize: 13, color: COLORS.textSecondary,
-    textAlign: "center", lineHeight: 19, marginBottom: 4,
+    textAlign: "center", lineHeight: 19, marginTop: 4,
   },
+
+  statsRow: {
+    flexDirection: "row", justifyContent: "center",
+    marginHorizontal: 16, marginBottom: 4,
+    gap: 12,
+  },
+  statBox: {
+    flex: 1, maxWidth: 160,
+    backgroundColor: "#fff", borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1, borderColor: "#E8E8E4",
+    alignItems: "center", paddingVertical: 14,
+  },
+  statValue: { fontSize: 22, fontWeight: "800", color: COLORS.accent },
+  statLabel: { fontSize: 10, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 0.5, marginTop: 2 },
 
   section: { paddingHorizontal: 16, marginTop: 16 },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
-
-  contactBtn: {
-    backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.lg,
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, paddingVertical: 15,
-  },
-  contactBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 
   badgesRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   certBadge: {
@@ -204,7 +252,7 @@ const styles = StyleSheet.create({
   certBadgeText: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
 
   bioCard: {
-    backgroundColor: COLORS.background,
+    backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.md,
     padding: 16, borderWidth: 1, borderColor: "#E8E8E4",
   },
