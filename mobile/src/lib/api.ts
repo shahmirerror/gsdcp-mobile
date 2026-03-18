@@ -400,6 +400,16 @@ export async function fetchVisitingJudges(): Promise<JudgeItem[]> {
   return json.data.visiting_judges;
 }
 
+export type JudgeDetail = JudgeItem & { description: string };
+
+export async function fetchJudgeDetail(id: string): Promise<JudgeDetail> {
+  const res = await fetch(`${BASE_URL}/all-judges/${id}`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch judge detail");
+  const j = json.data.judges;
+  return Array.isArray(j) ? j[0] : j;
+}
+
 export type AboutItem = { id: number; content: string };
 export type RuleItem = { id: number; rule_name: string; content: string };
 export type NewsItem = { id: number; title: string; content: string };

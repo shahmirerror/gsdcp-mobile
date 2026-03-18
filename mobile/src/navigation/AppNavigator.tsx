@@ -27,6 +27,7 @@ import TheTeamScreen from "../screens/club/TheTeamScreen";
 import GSDCPJudgesScreen from "../screens/club/GSDCPJudgesScreen";
 import VisitingJudgesScreen from "../screens/club/VisitingJudgesScreen";
 import NewsUpdatesScreen from "../screens/club/NewsUpdatesScreen";
+import JudgeDetailScreen from "../screens/club/JudgeDetailScreen";
 
 import CustomTabBar from "./CustomTabBar";
 
@@ -68,6 +69,7 @@ export type TheClubStackParamList = {
   GSDCPJudges: undefined;
   VisitingJudges: undefined;
   NewsUpdates: undefined;
+  JudgeDetail: { id: string; backLabel?: string };
 };
 
 export type RootTabParamList = {
@@ -150,6 +152,7 @@ function TheClubStackNavigator() {
       <TheClubStack.Screen name="GSDCPJudges" component={GSDCPJudgesScreen} />
       <TheClubStack.Screen name="VisitingJudges" component={VisitingJudgesScreen} />
       <TheClubStack.Screen name="NewsUpdates" component={NewsUpdatesScreen} />
+      <TheClubStack.Screen name="JudgeDetail" component={JudgeDetailScreen} />
     </TheClubStack.Navigator>
   );
 }

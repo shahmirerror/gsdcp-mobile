@@ -11,11 +11,13 @@ import {
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchVisitingJudges, JudgeItem } from "../../lib/api";
+import { TheClubStackParamList } from "../../navigation/AppNavigator";
 
 function credentialColor(credentials: string): { bg: string; text: string } {
   const c = credentials.toLowerCase();
@@ -26,13 +28,13 @@ function credentialColor(credentials: string): { bg: string; text: string } {
   return { bg: "rgba(15,92,58,0.08)", text: COLORS.primary };
 }
 
-function VisitingJudgeCard({ judge }: { judge: JudgeItem }) {
+function VisitingJudgeCard({ judge, onPress }: { judge: JudgeItem; onPress: () => void }) {
   const [imgError, setImgError] = useState(false);
   const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
   const colors = credentialColor(judge.credentials);
 
   return (
-    <View style={styles.card} data-testid={`card-visiting-judge-${judge.judge_id}`}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75} data-testid={`card-visiting-judge-${judge.judge_id}`}>
       <View style={styles.avatarWrap}>
         {!imgError ? (
           <Image
@@ -52,12 +54,13 @@ function VisitingJudgeCard({ judge }: { judge: JudgeItem }) {
           <Text style={[styles.credText, { color: colors.text }]}>{judge.credentials}</Text>
         </View>
       </View>
-    </View>
+      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+    </TouchableOpacity>
   );
 }
 
 export default function VisitingJudgesScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<TheClubStackParamList>>();
   const insets = useSafeAreaInsets();
 
   const { data: judges, isLoading, refetch, isRefetching } = useQuery({
@@ -106,7 +109,11 @@ export default function VisitingJudgesScreen() {
       ) : (
         <View style={styles.cardsWrap}>
           {(judges ?? []).map((judge: JudgeItem) => (
-            <VisitingJudgeCard key={judge.judge_id} judge={judge} />
+            <VisitingJudgeCard
+              key={judge.judge_id}
+              judge={judge}
+              onPress={() => navigation.navigate("JudgeDetail", { id: judge.judge_id, backLabel: "Visiting Judges" })}
+            />
           ))}
         </View>
       )}
