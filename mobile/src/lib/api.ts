@@ -387,6 +387,7 @@ export type FeeItem = {
   option_name: string;
   option_value: string;
   remarks: string | null;
+  explanation: string | null;
 };
 
 export async function fetchAbout(): Promise<AboutItem[]> {
