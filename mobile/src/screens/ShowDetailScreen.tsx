@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -14,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
-import { fetchShow, ShowDetail, ShowResultEntry } from "../lib/api";
+import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge } from "../lib/api";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -66,6 +67,28 @@ function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap;
         <Text style={styles.infoValue}>{value}</Text>
       </View>
     </View>
+  );
+}
+
+function JudgeRow({ judge, onPress }: { judge: ShowJudge; onPress: () => void }) {
+  const [imgError, setImgError] = useState(false);
+  const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  const hasImg = !!judge.imageUrl && !imgError;
+  return (
+    <TouchableOpacity style={styles.judgeRow} onPress={onPress} activeOpacity={0.7} data-testid={`judge-${judge.id}`}>
+      <View style={styles.judgeAvatar}>
+        {hasImg ? (
+          <Image source={{ uri: judge.imageUrl }} style={styles.judgeAvatarImg} onError={() => setImgError(true)} />
+        ) : (
+          <Text style={styles.judgeAvatarInitials}>{initials}</Text>
+        )}
+      </View>
+      <View style={styles.judgeInfo}>
+        <Text style={styles.judgeName}>{judge.full_name}</Text>
+        {judge.credentials && <Text style={styles.judgeCredentials}>{judge.credentials}</Text>}
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+    </TouchableOpacity>
   );
 }
 
@@ -301,12 +324,11 @@ export default function ShowDetailScreen() {
               {show.judges.length === 1 ? "Judge" : "Judges"}
             </Text>
             {show.judges.map((judge) => (
-              <View key={judge.id} style={styles.judgeRow}>
-                <View style={styles.judgeAvatar}>
-                  <Ionicons name="person" size={18} color={COLORS.primary} />
-                </View>
-                <Text style={styles.judgeName}>{judge.full_name}</Text>
-              </View>
+              <JudgeRow
+                key={judge.id}
+                judge={judge}
+                onPress={() => navigation.push("JudgeDetail", { id: judge.id, backLabel: show.name })}
+              />
             ))}
           </View>
         )}
@@ -620,17 +642,28 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   judgeAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: `${COLORS.primary}10`,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: COLORS.accent,
   },
+  judgeAvatarImg: { width: 44, height: 44, borderRadius: 22 },
+  judgeAvatarInitials: { fontSize: 15, fontWeight: "800", color: COLORS.primary },
+  judgeInfo: { flex: 1 },
   judgeName: {
     fontSize: 15,
     fontWeight: "600",
     color: COLORS.text,
+  },
+  judgeCredentials: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
   filterTabsSticky: {
     backgroundColor: "#f6f8f7",

@@ -47,6 +47,7 @@ export type ShowsStackParamList = {
   ShowsList: undefined;
   ShowDetail: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
+  JudgeDetail: { id: string; backLabel?: string };
 };
 
 export type ProfileStackParamList = {
@@ -118,6 +119,7 @@ function ShowsStackNavigator() {
       <ShowsStack.Screen name="ShowsList" component={ShowsScreen} />
       <ShowsStack.Screen name="ShowDetail" component={ShowDetailScreen} />
       <ShowsStack.Screen name="DogProfile" component={DogProfileScreen} />
+      <ShowsStack.Screen name="JudgeDetail" component={JudgeDetailScreen} />
     </ShowsStack.Navigator>
   );
 }

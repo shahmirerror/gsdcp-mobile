@@ -173,6 +173,8 @@ export type DogDetail = {
 export type ShowJudge = {
   id: string;
   full_name: string;
+  credentials?: string;
+  imageUrl?: string;
 };
 
 export type Show = {
