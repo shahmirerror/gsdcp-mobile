@@ -15,8 +15,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-import { fetchJudgeDetail, stripHtml } from "../../lib/api";
+import { fetchJudgeDetail, stripHtml, JudgeShow } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
+
+const MONTHS = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+
+function formatShowDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr.toUpperCase();
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 const heroBg = require("../../../assets/hero-bg.jpg");
 
@@ -152,6 +160,35 @@ export default function JudgeDetailScreen() {
               </View>
             </View>
           )}
+
+          {/* Notable Appointments */}
+          {judge.shows && judge.shows.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="calendar-outline" size={18} color={COLORS.accent} />
+                <Text style={styles.sectionTitle}>Notable Appointments</Text>
+              </View>
+              <View style={styles.appointmentsCard}>
+                {judge.shows.map((show: JudgeShow, i: number) => (
+                  <View key={i} style={[styles.appointmentRow, i < judge.shows!.length - 1 && styles.appointmentRowBorder]}>
+                    <View style={styles.appointmentLeft}>
+                      <View style={[styles.apptDot, i === 0 ? styles.apptDotActive : styles.apptDotInactive]} />
+                      {i < judge.shows!.length - 1 && <View style={styles.apptLine} />}
+                    </View>
+                    <View style={styles.appointmentContent}>
+                      <Text style={styles.apptDate}>{formatShowDate(show.date)}</Text>
+                      <Text style={styles.apptName}>{show.show_name}</Text>
+                      {(show.location || show.category) && (
+                        <Text style={styles.apptMeta}>
+                          {[show.location, show.category].filter(Boolean).join(" • ")}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </>
       ) : null}
     </ScrollView>
@@ -257,4 +294,53 @@ const styles = StyleSheet.create({
     padding: 16, borderWidth: 1, borderColor: "#E8E8E4",
   },
   bioText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 22 },
+
+  appointmentsCard: {
+    backgroundColor: "#fff",
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1, borderColor: "#E8E8E4",
+    overflow: "hidden",
+  },
+  appointmentRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 14,
+  },
+  appointmentRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0EE",
+  },
+  appointmentLeft: {
+    alignItems: "center",
+    width: 14,
+    paddingTop: 3,
+  },
+  apptDot: {
+    width: 12, height: 12, borderRadius: 6,
+  },
+  apptDotActive: { backgroundColor: "#F97316" },
+  apptDotInactive: { backgroundColor: "#D1D5DB" },
+  apptLine: {
+    flex: 1,
+    width: 2,
+    backgroundColor: "#E8E8E4",
+    marginTop: 4,
+    minHeight: 20,
+  },
+  appointmentContent: { flex: 1 },
+  apptDate: {
+    fontSize: 10, fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase", letterSpacing: 0.6,
+    marginBottom: 3,
+  },
+  apptName: {
+    fontSize: 14, fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
+  },
+  apptMeta: {
+    fontSize: 12, color: COLORS.textMuted, lineHeight: 17,
+  },
 });

@@ -400,7 +400,17 @@ export async function fetchVisitingJudges(): Promise<JudgeItem[]> {
   return json.data.visiting_judges;
 }
 
-export type JudgeDetail = JudgeItem & { description: string; shows?: number };
+export type JudgeShow = {
+  show_name: string;
+  date: string;
+  location?: string;
+  category?: string;
+};
+
+export type JudgeDetail = JudgeItem & {
+  description: string;
+  shows?: JudgeShow[];
+};
 
 export async function fetchJudgeDetail(id: string): Promise<JudgeDetail> {
   const res = await fetch(`${BASE_URL}/all-judges/${id}`);
