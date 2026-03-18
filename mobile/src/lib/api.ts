@@ -420,8 +420,9 @@ export async function fetchJudgeDetail(id: string): Promise<JudgeDetail> {
   const res = await fetch(`${BASE_URL}/all-judges/${id}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch judge detail");
-  const j = json.data.judges;
-  return Array.isArray(j) ? j[0] : j;
+  const judgesArr = json.data.judges;
+  const judge = Array.isArray(judgesArr) ? judgesArr[0] : judgesArr;
+  return { ...judge, shows: json.data.shows || [] };
 }
 
 export type AboutItem = { id: number; content: string };
