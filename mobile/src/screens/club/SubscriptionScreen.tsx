@@ -50,7 +50,7 @@ const FEE_CATEGORIES: { key: string; label: string; icon: string; names: string[
   },
   {
     key: "show",
-    label: "Show Fee",
+    label: "Other Services",
     icon: "ribbon-outline",
     names: ["breed_survey_fee", "endurance_test", "online_stud_fee"],
   },
