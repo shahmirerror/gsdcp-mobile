@@ -275,17 +275,22 @@ export async function fetchBreeder(id: string): Promise<BreederDetail> {
 }
 
 export type RecentMating = {
+  id: string;
   kennel_name: string;
   sire_name: string;
+  sire_dog_id: string;
   dam_name: string;
+  dam_dog_id: string;
   mating_date: string;
   city: string | null;
-  status: string;
-  friendly_URl: string;
-  sire_dog_id: string;
-  dam_dog_id: string;
-  kennel_image: string | null;
 };
+
+export async function fetchRecentMatings(): Promise<RecentMating[]> {
+  const res = await fetch(`${BASE_URL}/recent-matings`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch recent matings");
+  return json.data.upcomingLitters;
+}
 
 export type DashboardData = {
   totalDogs: number;

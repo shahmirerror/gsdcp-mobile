@@ -55,6 +55,11 @@ export type ProfileStackParamList = {
   LoginRegister: undefined;
 };
 
+export type RecentMatingsStackParamList = {
+  RecentMatingsList: undefined;
+  DogProfile: { id: string; name?: string };
+};
+
 export type KennelDirectoryStackParamList = {
   KennelDirectory: undefined;
   KennelProfile: { id: string; name?: string };
@@ -91,6 +96,7 @@ const DogsStack = createNativeStackNavigator<DogsStackParamList>();
 const BreedersStack = createNativeStackNavigator<BreedersStackParamList>();
 const ShowsStack = createNativeStackNavigator<ShowsStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const RecentMatingsStack = createNativeStackNavigator<RecentMatingsStackParamList>();
 const KennelDirectoryStack = createNativeStackNavigator<KennelDirectoryStackParamList>();
 const TheClubStack = createNativeStackNavigator<TheClubStackParamList>();
 
@@ -131,6 +137,15 @@ function ProfileStackNavigator() {
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
     </ProfileStack.Navigator>
+  );
+}
+
+function RecentMatingsStackNavigator() {
+  return (
+    <RecentMatingsStack.Navigator screenOptions={{ headerShown: false }}>
+      <RecentMatingsStack.Screen name="RecentMatingsList" component={RecentMatingsScreen} />
+      <RecentMatingsStack.Screen name="DogProfile" component={DogProfileScreen} />
+    </RecentMatingsStack.Navigator>
   );
 }
 
@@ -176,7 +191,7 @@ export default function AppNavigator() {
         <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
         <Tab.Screen name="KennelDirectoryTab" component={KennelDirectoryStackNavigator} />
         <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryScreen} />
-        <Tab.Screen name="RecentMatingsTab" component={RecentMatingsScreen} />
+        <Tab.Screen name="RecentMatingsTab" component={RecentMatingsStackNavigator} />
         <Tab.Screen name="TheClubTab" component={TheClubStackNavigator} />
       </Tab.Navigator>
     </NavigationContainer>

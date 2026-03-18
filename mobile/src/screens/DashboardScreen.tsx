@@ -140,7 +140,7 @@ export default function DashboardScreen() {
           <View style={styles.activityCard}>
             {dashboard.recentMatings.map((mating, i) => (
               <View
-                key={mating.friendly_URl}
+                key={String(i)}
                 style={[
                   styles.litterItem,
                   i < dashboard.recentMatings.length - 1 &&

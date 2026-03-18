@@ -13,10 +13,11 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchDashboard, RecentMating } from "../lib/api";
+import { fetchRecentMatings, RecentMating } from "../lib/api";
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -27,9 +28,9 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function MatingCard({ mating }: { mating: RecentMating }) {
+function MatingCard({ mating, onPressSire, onPressDam }: { mating: RecentMating; onPressSire: () => void; onPressDam: () => void }) {
   return (
-    <View style={styles.card} data-testid={`card-mating-${mating.friendly_URl}`}>
+    <View style={styles.card} data-testid={`card-mating-${mating.id}`}>
       <View style={styles.cardHeader}>
         <View style={styles.heartWrap}>
           <Ionicons name="heart" size={16} color="#E11D48" />
@@ -46,23 +47,29 @@ function MatingCard({ mating }: { mating: RecentMating }) {
       </View>
 
       <View style={styles.pairingRow}>
-        <View style={styles.dogBlock}>
+        <TouchableOpacity style={styles.dogBlock} onPress={onPressSire} activeOpacity={0.7} data-testid={`btn-sire-${mating.id}`}>
           <View style={[styles.sexDot, { backgroundColor: "#3B82F6" }]} />
           <Text style={styles.dogName} numberOfLines={2}>
             {mating.sire_name.trim()}
           </Text>
-          <Text style={styles.sexLabel}>Sire</Text>
-        </View>
+          <View style={styles.dogLinkRow}>
+            <Text style={styles.sexLabel}>Sire</Text>
+            <Ionicons name="chevron-forward" size={11} color={COLORS.primary} />
+          </View>
+        </TouchableOpacity>
         <View style={styles.timesWrap}>
           <Text style={styles.timesSign}>×</Text>
         </View>
-        <View style={styles.dogBlock}>
+        <TouchableOpacity style={styles.dogBlock} onPress={onPressDam} activeOpacity={0.7} data-testid={`btn-dam-${mating.id}`}>
           <View style={[styles.sexDot, { backgroundColor: "#E11D48" }]} />
           <Text style={styles.dogName} numberOfLines={2}>
             {mating.dam_name.trim()}
           </Text>
-          <Text style={styles.sexLabel}>Dam</Text>
-        </View>
+          <View style={styles.dogLinkRow}>
+            <Text style={styles.sexLabel}>Dam</Text>
+            <Ionicons name="chevron-forward" size={11} color={COLORS.primary} />
+          </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.cardFooter}>
@@ -75,6 +82,7 @@ function MatingCard({ mating }: { mating: RecentMating }) {
 
 export default function RecentMatingsScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -97,28 +105,28 @@ export default function RecentMatingsScreen() {
   };
 
   const {
-    data: dashboard,
+    data: matings,
     isLoading,
     isError,
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ["/api/mobile/dashboard"],
-    queryFn: fetchDashboard,
+    queryKey: ["/api/mobile/recent-matings"],
+    queryFn: fetchRecentMatings,
   });
 
   const cities = useMemo(() => {
-    if (!dashboard?.recentMatings) return [] as string[];
+    if (!matings) return [] as string[];
     const citySet = new Set<string>();
-    dashboard.recentMatings.forEach((m) => {
+    matings.forEach((m) => {
       if (m.city) citySet.add(m.city);
     });
     return [...citySet].sort();
-  }, [dashboard]);
+  }, [matings]);
 
   const filtered = useMemo(() => {
-    if (!dashboard?.recentMatings) return [];
-    let results = dashboard.recentMatings;
+    if (!matings) return [];
+    let results = matings;
 
     const q = search.trim().toLowerCase();
     if (q) {
@@ -136,10 +144,15 @@ export default function RecentMatingsScreen() {
     }
 
     return results;
-  }, [dashboard, search, cityFilter]);
+  }, [matings, search, cityFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Recent Matings</Text>
+      </View>
+
       <View style={styles.searchRow}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={18} color={COLORS.textMuted} />
@@ -236,7 +249,7 @@ export default function RecentMatingsScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.friendly_URl}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -246,7 +259,13 @@ export default function RecentMatingsScreen() {
               colors={[COLORS.primary]}
             />
           }
-          renderItem={({ item }) => <MatingCard mating={item} />}
+          renderItem={({ item }) => (
+            <MatingCard
+              mating={item}
+              onPressSire={() => navigation.push("DogProfile", { id: item.sire_dog_id, name: item.sire_name.trim() })}
+              onPressDam={() => navigation.push("DogProfile", { id: item.dam_dog_id, name: item.dam_name.trim() })}
+            />
+          )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="heart-outline" size={48} color={COLORS.textMuted} />
@@ -351,11 +370,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  header: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.lg,
+    paddingTop: SPACING.sm,
     paddingBottom: SPACING.sm,
     gap: SPACING.sm,
   },
@@ -502,6 +532,8 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     padding: 10,
     gap: 4,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,59,0.08)",
   },
   sexDot: {
     width: 8,
@@ -515,13 +547,18 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     lineHeight: 18,
   },
+  dogLinkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 2,
+  },
   sexLabel: {
     fontSize: FONT_SIZES.xs,
     fontWeight: "700",
-    color: COLORS.textMuted,
+    color: COLORS.primary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginTop: 2,
   },
   timesWrap: {
     justifyContent: "center",
