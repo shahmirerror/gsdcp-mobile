@@ -382,7 +382,12 @@ export function stripHtml(html: string): string {
 export type AboutItem = { id: number; content: string };
 export type RuleItem = { id: number; rule_name: string; content: string };
 export type NewsItem = { id: number; title: string; content: string };
-export type FeeItem = { id: number; content: string };
+export type FeeItem = {
+  id: number;
+  option_name: string;
+  option_value: string;
+  remarks: string | null;
+};
 
 export async function fetchAbout(): Promise<AboutItem[]> {
   const res = await fetch(`${BASE_URL}/about`);

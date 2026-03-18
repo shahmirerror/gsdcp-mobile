@@ -13,14 +13,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-import { fetchFees, stripHtml } from "../../lib/api";
+import { fetchFees, FeeItem } from "../../lib/api";
 
 const PLANS = [
   {
     title: "Junior Member",
     subtitle: "Under 18 years",
-    price: "Rs. 1,000",
-    period: "per year",
     color: "#3B82F6",
     bg: "rgba(59,130,246,0.06)",
     border: "rgba(59,130,246,0.2)",
@@ -29,8 +27,6 @@ const PLANS = [
   {
     title: "Ordinary Member",
     subtitle: "Standard membership",
-    price: "Rs. 3,000",
-    period: "per year",
     color: COLORS.primary,
     bg: "rgba(15,92,58,0.06)",
     border: "rgba(15,92,58,0.2)",
@@ -40,14 +36,34 @@ const PLANS = [
   {
     title: "Life Member",
     subtitle: "One-time payment",
-    price: "Rs. 30,000",
-    period: "one-time",
     color: COLORS.accent,
     bg: "rgba(199,164,92,0.08)",
     border: "rgba(199,164,92,0.3)",
     features: ["All Ordinary benefits", "Lifetime voting rights", "Priority show entry", "Free dog registration (1/yr)", "Honorary recognition"],
   },
 ];
+
+function formatFeeLabel(optionName: string, remarks: string | null): string {
+  if (remarks) {
+    const cleaned = remarks
+      .replace(/fee amount/i, "")
+      .replace(/fee/i, "")
+      .trim();
+    if (cleaned.length > 3) return cleaned;
+  }
+  return optionName
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
+    .replace(/\bFee\b/gi, "Fee")
+    .replace(/\bKp\b/gi, "(KP)");
+}
+
+function formatAmount(value: string): string {
+  const num = parseInt(value, 10);
+  if (isNaN(num)) return value;
+  return `Rs. ${num.toLocaleString("en-PK")}`;
+}
 
 export default function SubscriptionScreen() {
   const navigation = useNavigation();
@@ -57,8 +73,6 @@ export default function SubscriptionScreen() {
     queryKey: ["/api/mobile/fees"],
     queryFn: fetchFees,
   });
-
-  const paymentInfo = fees ? fees.map((f) => stripHtml(f.content)).join("\n\n") : "";
 
   return (
     <ScrollView
@@ -114,10 +128,6 @@ export default function SubscriptionScreen() {
             )}
             <Text style={[styles.planTitle, { color: plan.color }]}>{plan.title}</Text>
             <Text style={styles.planSubtitle}>{plan.subtitle}</Text>
-            <View style={styles.priceRow}>
-              <Text style={[styles.planPrice, { color: plan.color }]}>{plan.price}</Text>
-              <Text style={styles.planPeriod}> / {plan.period}</Text>
-            </View>
             <View style={styles.divider} />
             {plan.features.map((f, i) => (
               <View key={i} style={styles.featureRow}>
@@ -130,31 +140,40 @@ export default function SubscriptionScreen() {
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>How to Pay</Text>
+        <Text style={styles.sectionTitle}>Service Fees</Text>
       </View>
 
       {isLoading ? (
         <ActivityIndicator style={{ marginVertical: 24 }} size="small" color={COLORS.primary} />
       ) : (
-        <View style={styles.paymentCard}>
-          <View style={styles.paymentIconRow}>
-            <Ionicons name="receipt-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.paymentTitle}>Payment Instructions</Text>
-          </View>
-          <Text style={styles.paymentBody}>{paymentInfo}</Text>
+        <View style={styles.feesCard}>
+          {(fees ?? []).map((fee: FeeItem, i: number) => (
+            <View
+              key={fee.id}
+              style={[styles.feeRow, i < (fees ?? []).length - 1 && styles.feeRowBorder]}
+              data-testid={`row-fee-${fee.id}`}
+            >
+              <Text style={styles.feeLabel}>{formatFeeLabel(fee.option_name, fee.remarks)}</Text>
+              <Text style={styles.feeAmount}>{formatAmount(fee.option_value)}</Text>
+            </View>
+          ))}
         </View>
       )}
+
+      <View style={styles.noteCard}>
+        <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+        <Text style={styles.noteText}>
+          All fees are subject to revision by the executive committee. Contact
+          the GSDCP office for the most current rates.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-    alignItems: "center",
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 28, alignItems: "center" },
   backBtn: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", marginBottom: 20, gap: 4 },
   backText: { fontSize: 15, color: "#fff", fontWeight: "600" },
   headerIconWrap: {
@@ -164,11 +183,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
   headerSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
-  sectionHeader: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-    marginBottom: 12,
-  },
+  sectionHeader: { paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: COLORS.text },
   plansWrap: { paddingHorizontal: 16, gap: 12 },
   planCard: {
@@ -190,33 +205,38 @@ const styles = StyleSheet.create({
   popularBadgeText: { fontSize: 9, fontWeight: "800", color: "#fff", letterSpacing: 0.5 },
   planTitle: { fontSize: 17, fontWeight: "800" },
   planSubtitle: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  priceRow: { flexDirection: "row", alignItems: "baseline", marginTop: 8 },
-  planPrice: { fontSize: 22, fontWeight: "800" },
-  planPeriod: { fontSize: 13, color: COLORS.textMuted },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
   featureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
   featureText: { fontSize: 13, color: COLORS.textSecondary },
-  paymentCard: {
+  feesCard: {
     marginHorizontal: 16,
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 18,
+    overflow: "hidden",
   },
-  paymentIconRow: {
+  feeRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
   },
-  paymentTitle: { fontSize: 14, fontWeight: "700", color: COLORS.primaryDark },
-  paymentBody: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    lineHeight: 21,
+  feeRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  feeLabel: { fontSize: 14, color: COLORS.text, flex: 1, marginRight: 8 },
+  feeAmount: { fontSize: 14, fontWeight: "700", color: COLORS.primaryDark },
+  noteCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    flexDirection: "row",
+    gap: 10,
+    backgroundColor: "rgba(15,92,58,0.06)",
+    borderRadius: BORDER_RADIUS.md,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
+    alignItems: "flex-start",
   },
+  noteText: { flex: 1, fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
 });
