@@ -18,34 +18,6 @@ import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchFees, FeeItem } from "../../lib/api";
 
-const PLANS = [
-  {
-    title: "Junior Member",
-    subtitle: "Under 18 years",
-    color: "#3B82F6",
-    bg: "rgba(59,130,246,0.06)",
-    border: "rgba(59,130,246,0.2)",
-    features: ["Membership card", "Club newsletter", "Discounted show entry", "Vote at AGM (guardian)"],
-  },
-  {
-    title: "Ordinary Member",
-    subtitle: "Standard membership",
-    color: COLORS.primary,
-    bg: "rgba(15,92,58,0.06)",
-    border: "rgba(15,92,58,0.2)",
-    features: ["Membership card", "Club newsletter", "Show entry eligibility", "Vote at AGM", "Litter registration"],
-    highlight: true,
-  },
-  {
-    title: "Life Member",
-    subtitle: "One-time payment",
-    color: COLORS.accent,
-    bg: "rgba(199,164,92,0.08)",
-    border: "rgba(199,164,92,0.3)",
-    features: ["All Ordinary benefits", "Lifetime voting rights", "Priority show entry", "Free dog registration (1/yr)", "Honorary recognition"],
-  },
-];
-
 const FEE_CATEGORIES: { key: string; label: string; icon: string; names: string[] }[] = [
   {
     key: "membership",
@@ -133,38 +105,6 @@ export default function SubscriptionScreen() {
           <Text style={styles.headerTitle}>Subscription & Fees</Text>
           <Text style={styles.headerSub}>Membership types and fee structure</Text>
         </LinearGradient>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Membership Plans</Text>
-        </View>
-
-        <View style={styles.plansWrap}>
-          {PLANS.map((plan) => (
-            <View
-              key={plan.title}
-              style={[
-                styles.planCard,
-                { backgroundColor: plan.bg, borderColor: plan.border },
-                plan.highlight && styles.planHighlight,
-              ]}
-            >
-              {plan.highlight && (
-                <View style={styles.popularBadge}>
-                  <Text style={styles.popularBadgeText}>MOST POPULAR</Text>
-                </View>
-              )}
-              <Text style={[styles.planTitle, { color: plan.color }]}>{plan.title}</Text>
-              <Text style={styles.planSubtitle}>{plan.subtitle}</Text>
-              <View style={styles.divider} />
-              {plan.features.map((f, i) => (
-                <View key={i} style={styles.featureRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={plan.color} />
-                  <Text style={styles.featureText}>{f}</Text>
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Service Fees</Text>
@@ -270,29 +210,6 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   sectionHeader: { paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: COLORS.text },
-  plansWrap: { paddingHorizontal: 16, gap: 12 },
-  planCard: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: 18,
-    borderWidth: 1.5,
-    position: "relative",
-  },
-  planHighlight: { borderWidth: 2 },
-  popularBadge: {
-    position: "absolute",
-    top: -10,
-    right: 16,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  popularBadgeText: { fontSize: 9, fontWeight: "800", color: "#fff", letterSpacing: 0.5 },
-  planTitle: { fontSize: 17, fontWeight: "800" },
-  planSubtitle: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
-  featureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
-  featureText: { fontSize: 13, color: COLORS.textSecondary },
   categoriesWrap: { paddingHorizontal: 16, gap: 20 },
   categoryBlock: { gap: 6 },
   categoryHeader: {
