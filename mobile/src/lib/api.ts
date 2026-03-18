@@ -276,6 +276,7 @@ export async function fetchBreeder(id: string): Promise<BreederDetail> {
 
 export type RecentMating = {
   id: string;
+  kennel_id: string;
   kennel_name: string;
   sire_name: string;
   sire_dog_id: string;

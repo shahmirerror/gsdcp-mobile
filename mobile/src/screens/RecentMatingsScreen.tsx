@@ -21,23 +21,25 @@ import { fetchRecentMatings, RecentMating } from "../lib/api";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-function parseMatingDate(dateStr: string): { day: string; month: string; full: string } {
+function parseMatingDate(dateStr: string): { day: string; month: string; year: string; full: string } {
   const parts = dateStr.split("-");
-  if (parts.length !== 3) return { day: "?", month: "???", full: dateStr };
+  if (parts.length !== 3) return { day: "?", month: "???", year: "?", full: dateStr };
   const day = parseInt(parts[2], 10);
   const monthIdx = parseInt(parts[1], 10) - 1;
   const year = parts[0];
   return {
     day: String(day),
     month: MONTHS[monthIdx] ?? "???",
+    year,
     full: `${day} ${MONTHS[monthIdx]} ${year}`,
   };
 }
 
-function MatingRow({ mating, onPressSire, onPressDam }: {
+function MatingRow({ mating, onPressSire, onPressDam, onPressKennel }: {
   mating: RecentMating;
   onPressSire: () => void;
   onPressDam: () => void;
+  onPressKennel: () => void;
 }) {
   const date = parseMatingDate(mating.mating_date);
   return (
@@ -45,11 +47,14 @@ function MatingRow({ mating, onPressSire, onPressDam }: {
       <View style={styles.dateBlock}>
         <Text style={styles.dateDay}>{date.day}</Text>
         <Text style={styles.dateMonth}>{date.month}</Text>
+        <Text style={styles.dateYear}>{date.year}</Text>
       </View>
 
       <View style={styles.itemInfo}>
         {/* Kennel */}
-        <Text style={styles.itemName} numberOfLines={1}>{mating.kennel_name}</Text>
+        <TouchableOpacity onPress={onPressKennel} activeOpacity={0.7} data-testid={`btn-kennel-${mating.id}`}>
+          <Text style={styles.itemName} numberOfLines={1}>{mating.kennel_name}</Text>
+        </TouchableOpacity>
 
         {/* Sire */}
         <View style={styles.dogRow}>
@@ -240,6 +245,7 @@ export default function RecentMatingsScreen() {
           renderItem={({ item }) => (
             <MatingRow
               mating={item}
+              onPressKennel={() => navigation.push("KennelProfile", { id: item.kennel_id, name: item.kennel_name })}
               onPressSire={() => navigation.push("DogProfile", { id: item.sire_dog_id, name: item.sire_name.trim() })}
               onPressDam={() => navigation.push("DogProfile", { id: item.dam_dog_id, name: item.dam_name.trim() })}
             />
@@ -391,12 +397,13 @@ const styles = StyleSheet.create({
   },
   dateDay: { fontSize: 18, fontWeight: "800", color: COLORS.primary, lineHeight: 22 },
   dateMonth: { fontSize: 10, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.4 },
+  dateYear: { fontSize: 9, fontWeight: "600", color: COLORS.textMuted, letterSpacing: 0.3, marginTop: 1 },
 
   itemInfo: { flex: 1 },
   itemName: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 2 },
 
   dogRow: {
-    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 3,
+    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6,
   },
   dogLabel: {
     fontSize: 10, fontWeight: "800", color: COLORS.textMuted,

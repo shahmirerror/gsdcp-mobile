@@ -58,6 +58,7 @@ export type ProfileStackParamList = {
 export type RecentMatingsStackParamList = {
   RecentMatingsList: undefined;
   DogProfile: { id: string; name?: string };
+  KennelProfile: { id: string; name?: string };
 };
 
 export type KennelDirectoryStackParamList = {
@@ -145,6 +146,7 @@ function RecentMatingsStackNavigator() {
     <RecentMatingsStack.Navigator screenOptions={{ headerShown: false }}>
       <RecentMatingsStack.Screen name="RecentMatingsList" component={RecentMatingsScreen} />
       <RecentMatingsStack.Screen name="DogProfile" component={DogProfileScreen} />
+      <RecentMatingsStack.Screen name="KennelProfile" component={KennelProfileScreen} />
     </RecentMatingsStack.Navigator>
   );
 }
