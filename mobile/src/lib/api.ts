@@ -353,6 +353,65 @@ export async function fetchKennelDetail(id: string): Promise<KennelDetail> {
   return json.data;
 }
 
+export function stripHtml(html: string): string {
+  return html
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&uuml;/g, "ü")
+    .replace(/&auml;/g, "ä")
+    .replace(/&ouml;/g, "ö")
+    .replace(/&apos;/g, "'")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<\/ol>/gi, "\n")
+    .replace(/<\/ul>/gi, "\n")
+    .replace(/<\/h[1-6]>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export type AboutItem = { id: number; content: string };
+export type RuleItem = { id: number; rule_name: string; content: string };
+export type NewsItem = { id: number; title: string; content: string };
+export type FeeItem = { id: number; content: string };
+
+export async function fetchAbout(): Promise<AboutItem[]> {
+  const res = await fetch(`${BASE_URL}/about`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch about");
+  return json.data.about;
+}
+
+export async function fetchRules(): Promise<RuleItem[]> {
+  const res = await fetch(`${BASE_URL}/rules`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch rules");
+  return json.data.rules;
+}
+
+export async function fetchNews(): Promise<NewsItem[]> {
+  const res = await fetch(`${BASE_URL}/news`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch news");
+  return json.data.news;
+}
+
+export async function fetchFees(): Promise<FeeItem[]> {
+  const res = await fetch(`${BASE_URL}/fees`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch fees");
+  return json.data.fees;
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";

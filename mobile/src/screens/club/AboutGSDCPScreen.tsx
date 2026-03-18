@@ -1,27 +1,46 @@
-import { ScrollView, View, Text, StyleSheet } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-
-const HIGHLIGHTS = [
-  { icon: "calendar" as const, label: "Founded", value: "1967" },
-  { icon: "location" as const, label: "Headquartered", value: "Lahore, Pakistan" },
-  { icon: "paw" as const, label: "Registered Dogs", value: "8,000+" },
-  { icon: "people" as const, label: "Active Members", value: "500+" },
-];
+import { fetchAbout, stripHtml } from "../../lib/api";
 
 export default function AboutGSDCPScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const { data, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/mobile/about"],
+    queryFn: fetchAbout,
+  });
+
+  const content = data
+    ? data.map((item) => stripHtml(item.content)).join("\n\n")
+    : "";
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
+        />
+      }
     >
       <LinearGradient
         colors={[COLORS.primaryDark, COLORS.primary]}
@@ -42,62 +61,17 @@ export default function AboutGSDCPScreen() {
         <Text style={styles.headerSub}>Our history, mission and objectives</Text>
       </LinearGradient>
 
-      <View style={styles.statsRow}>
-        {HIGHLIGHTS.map((item) => (
-          <View key={item.label} style={styles.statCard}>
-            <Ionicons name={item.icon} size={18} color={COLORS.primary} />
-            <Text style={styles.statValue}>{item.value}</Text>
-            <Text style={styles.statLabel}>{item.label}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Who We Are</Text>
-        <Text style={styles.body}>
-          The German Shepherd Dog Club of Pakistan (GSDCP) is the premier
-          registry and governing body for German Shepherd Dogs in Pakistan. We
-          are dedicated to the preservation, improvement, and promotion of the
-          German Shepherd Dog breed according to the standards set by the
-          Verein für Deutsche Schäferhunde (SV).
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Our Mission</Text>
-        <Text style={styles.body}>
-          To promote responsible breeding, ownership, and training of German
-          Shepherd Dogs in Pakistan, while maintaining the integrity of the
-          breed through rigorous health testing, pedigree registration, and
-          breed surveys.
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Our Objectives</Text>
-        {[
-          "Maintain an accurate pedigree registry for all registered German Shepherds in Pakistan",
-          "Organise national sieger shows, breed surveys, and endurance trials",
-          "Educate members on responsible breeding practices and the SV breed standard",
-          "Foster international relationships with SV-affiliated clubs worldwide",
-          "Promote the working ability and temperament of the German Shepherd Dog",
-        ].map((obj, i) => (
-          <View key={i} style={styles.bulletRow}>
-            <View style={styles.bullet} />
-            <Text style={styles.bulletText}>{obj}</Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Affiliation</Text>
-        <Text style={styles.body}>
-          The GSDCP is affiliated with the Verein für Deutsche Schäferhunde
-          (SV), the world's largest single-breed dog club, based in Augsburg,
-          Germany. All pedigrees and breed surveys conducted by GSDCP are
-          recognised internationally through this affiliation.
-        </Text>
-      </View>
+      {isLoading ? (
+        <ActivityIndicator
+          style={{ marginTop: 48 }}
+          size="large"
+          color={COLORS.primary}
+        />
+      ) : (
+        <View style={styles.section}>
+          <Text style={styles.body}>{content}</Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -128,24 +102,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
   headerSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
-  statsRow: {
-    flexDirection: "row",
-    marginHorizontal: 16,
-    marginTop: 20,
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: BORDER_RADIUS.lg,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 4,
-  },
-  statValue: { fontSize: 14, fontWeight: "800", color: COLORS.primaryDark },
-  statLabel: { fontSize: 9, fontWeight: "600", color: COLORS.textMuted, textAlign: "center", textTransform: "uppercase", letterSpacing: 0.3 },
   section: {
     marginHorizontal: 16,
     marginTop: 24,
@@ -155,29 +111,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: COLORS.primaryDark,
-    marginBottom: 10,
-  },
   body: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    lineHeight: 22,
+    lineHeight: 23,
   },
-  bulletRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 8,
-  },
-  bullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.accent,
-    marginTop: 8,
-  },
-  bulletText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 21 },
 });

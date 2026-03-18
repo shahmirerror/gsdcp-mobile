@@ -1,71 +1,44 @@
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-
-type NewsItem = {
-  id: string;
-  date: string;
-  category: string;
-  categoryColor: string;
-  title: string;
-  body: string;
-};
-
-const NEWS: NewsItem[] = [
-  {
-    id: "1",
-    date: "15 Mar 2026",
-    category: "Announcement",
-    categoryColor: COLORS.primary,
-    title: "GSDCP Breed Survey & Endurance Trial — Sialkot (March 29)",
-    body: "The upcoming Breed Survey and Endurance Trial will be held on March 29, 2026 in Sialkot. Judge: Faheem Asghar. Last date of entry: March 28. All interested members should register their dogs through the GSDCP office.",
-  },
-  {
-    id: "2",
-    date: "10 Mar 2026",
-    category: "Registration",
-    categoryColor: "#3B82F6",
-    title: "Online Dog Registration Now Available",
-    body: "GSDCP members can now register their dogs online through the GSDCP portal. Litter registrations, transfers, and pedigree requests can be submitted digitally. Contact the secretariat for login credentials.",
-  },
-  {
-    id: "3",
-    date: "02 Feb 2026",
-    category: "Results",
-    categoryColor: COLORS.accent,
-    title: "2025 National Sieger Show — Final Results Published",
-    body: "The full results of the 2025 GSDCP National Sieger Show have been published on the website. Congratulations to all participants. VA1 and SG titles have been forwarded to the SV for international recognition.",
-  },
-  {
-    id: "4",
-    date: "20 Jan 2026",
-    category: "Committee",
-    categoryColor: "#8B5CF6",
-    title: "Executive Committee Meeting — January 2026",
-    body: "The executive committee convened on January 20 to discuss the 2026 show calendar, fee revisions, and the upcoming international judge invitation programme. Minutes will be circulated to all members shortly.",
-  },
-  {
-    id: "5",
-    date: "05 Jan 2026",
-    category: "Announcement",
-    categoryColor: COLORS.primary,
-    title: "2026 Show Calendar Released",
-    body: "The GSDCP 2026 show and events calendar has been finalised. Major events include the Spring Breed Survey (March), Regional Shows (May, August), and the National Sieger Show (November). Full details available from the secretariat.",
-  },
-];
+import { fetchNews, stripHtml, NewsItem } from "../../lib/api";
 
 export default function NewsUpdatesScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const { data: news, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/mobile/news"],
+    queryFn: fetchNews,
+  });
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
+        />
+      }
     >
       <LinearGradient
         colors={[COLORS.primaryDark, COLORS.primary]}
@@ -86,20 +59,49 @@ export default function NewsUpdatesScreen() {
         <Text style={styles.headerSub}>Latest announcements from GSDCP</Text>
       </LinearGradient>
 
-      <View style={styles.cardsWrap}>
-        {NEWS.map((item) => (
-          <View key={item.id} style={styles.card} data-testid={`card-news-${item.id}`}>
-            <View style={styles.cardTop}>
-              <View style={[styles.categoryBadge, { backgroundColor: `${item.categoryColor}14` }]}>
-                <Text style={[styles.categoryText, { color: item.categoryColor }]}>{item.category}</Text>
-              </View>
-              <Text style={styles.date}>{item.date}</Text>
-            </View>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.body}>{item.body}</Text>
-          </View>
-        ))}
-      </View>
+      {isLoading ? (
+        <ActivityIndicator
+          style={{ marginTop: 48 }}
+          size="large"
+          color={COLORS.primary}
+        />
+      ) : (
+        <View style={styles.cardsWrap}>
+          {(news ?? []).map((item: NewsItem) => {
+            const isOpen = expandedId === item.id;
+            const bodyText = stripHtml(item.content);
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.card}
+                activeOpacity={0.85}
+                onPress={() => setExpandedId(isOpen ? null : item.id)}
+                data-testid={`card-news-${item.id}`}
+              >
+                <View style={styles.cardTop}>
+                  <View style={styles.newsIconWrap}>
+                    <Ionicons name="megaphone-outline" size={16} color={COLORS.accent} />
+                  </View>
+                  <Ionicons
+                    name={isOpen ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                </View>
+                <Text style={styles.title}>{item.title}</Text>
+                {isOpen && (
+                  <Text style={styles.body}>{bodyText}</Text>
+                )}
+                {!isOpen && (
+                  <Text style={styles.bodyPreview} numberOfLines={2}>
+                    {bodyText}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -130,13 +132,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
-  categoryBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  newsIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: `${COLORS.accent}18`,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  categoryText: { fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 },
-  date: { fontSize: 12, color: COLORS.textMuted },
-  title: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 8, lineHeight: 21 },
-  body: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
+  title: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 6, lineHeight: 21 },
+  body: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
+  bodyPreview: { fontSize: 13, color: COLORS.textMuted, lineHeight: 19 },
 });

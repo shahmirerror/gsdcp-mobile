@@ -1,9 +1,19 @@
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
+import { fetchFees, stripHtml } from "../../lib/api";
 
 const PLANS = [
   {
@@ -39,26 +49,30 @@ const PLANS = [
   },
 ];
 
-const FEES = [
-  { label: "New Dog Registration", amount: "Rs. 1,500" },
-  { label: "Transfer of Ownership", amount: "Rs. 500" },
-  { label: "Litter Registration", amount: "Rs. 2,000" },
-  { label: "Pedigree Certificate", amount: "Rs. 500" },
-  { label: "Breed Survey Fee", amount: "Rs. 2,500" },
-  { label: "Show Entry (per dog)", amount: "Rs. 1,000" },
-  { label: "Export Pedigree", amount: "Rs. 3,000" },
-  { label: "Duplicate Certificate", amount: "Rs. 300" },
-];
-
 export default function SubscriptionScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const { data: fees, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/mobile/fees"],
+    queryFn: fetchFees,
+  });
+
+  const paymentInfo = fees ? fees.map((f) => stripHtml(f.content)).join("\n\n") : "";
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
+        />
+      }
     >
       <LinearGradient
         colors={[COLORS.primaryDark, COLORS.primary]}
@@ -116,25 +130,20 @@ export default function SubscriptionScreen() {
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Service Fees</Text>
+        <Text style={styles.sectionTitle}>How to Pay</Text>
       </View>
 
-      <View style={styles.feesCard}>
-        {FEES.map((fee, i) => (
-          <View key={fee.label} style={[styles.feeRow, i < FEES.length - 1 && styles.feeRowBorder]}>
-            <Text style={styles.feeLabel}>{fee.label}</Text>
-            <Text style={styles.feeAmount}>{fee.amount}</Text>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginVertical: 24 }} size="small" color={COLORS.primary} />
+      ) : (
+        <View style={styles.paymentCard}>
+          <View style={styles.paymentIconRow}>
+            <Ionicons name="receipt-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.paymentTitle}>Payment Instructions</Text>
           </View>
-        ))}
-      </View>
-
-      <View style={styles.noteCard}>
-        <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
-        <Text style={styles.noteText}>
-          All fees are subject to revision by the executive committee. Contact
-          the GSDCP office for the most current rates.
-        </Text>
-      </View>
+          <Text style={styles.paymentBody}>{paymentInfo}</Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -168,9 +177,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     position: "relative",
   },
-  planHighlight: {
-    borderWidth: 2,
-  },
+  planHighlight: { borderWidth: 2 },
   popularBadge: {
     position: "absolute",
     top: -10,
@@ -189,35 +196,27 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
   featureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
   featureText: { fontSize: 13, color: COLORS.textSecondary },
-  feesCard: {
+  paymentCard: {
     marginHorizontal: 16,
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
-    overflow: "hidden",
+    padding: 18,
   },
-  feeRow: {
+  paymentIconRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 13,
-    paddingHorizontal: 16,
+    gap: 8,
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  feeRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  feeLabel: { fontSize: 14, color: COLORS.text },
-  feeAmount: { fontSize: 14, fontWeight: "700", color: COLORS.primaryDark },
-  noteCard: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    flexDirection: "row",
-    gap: 10,
-    backgroundColor: "rgba(15,92,58,0.06)",
-    borderRadius: BORDER_RADIUS.md,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(15,92,58,0.15)",
-    alignItems: "flex-start",
+  paymentTitle: { fontSize: 14, fontWeight: "700", color: COLORS.primaryDark },
+  paymentBody: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 21,
   },
-  noteText: { flex: 1, fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
 });

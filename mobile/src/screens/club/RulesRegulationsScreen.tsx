@@ -1,59 +1,44 @@
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-
-const CHAPTERS = [
-  {
-    number: "I",
-    title: "Name, Seat & Objectives",
-    content: "The club shall be named the German Shepherd Dog Club of Pakistan (GSDCP). Its registered seat is in Lahore. The club aims to promote the breeding, training, and exhibition of German Shepherd Dogs according to the standards of the Verein für Deutsche Schäferhunde (SV), Germany.",
-  },
-  {
-    number: "II",
-    title: "Membership",
-    content: "Membership is open to all persons above the age of 18 who subscribe to the objectives of the club. Junior membership is available for those under 18 with parental consent. All members must abide by the club's code of ethics and pay annual dues as determined by the executive committee.",
-  },
-  {
-    number: "III",
-    title: "Executive Committee",
-    content: "The club is governed by an executive committee consisting of a President, Vice President, Secretary General, Treasurer, and not fewer than three additional committee members. The committee is elected by ordinary members at the Annual General Meeting and holds office for two years.",
-  },
-  {
-    number: "IV",
-    title: "Registration & Pedigrees",
-    content: "All German Shepherd Dogs bred by GSDCP members must be registered with the club. Litter registration must be applied for within three months of whelping. Pedigrees will only be issued for dogs whose parentage has been verified through DNA testing where required by the committee.",
-  },
-  {
-    number: "V",
-    title: "Breed Surveys (Körung)",
-    content: "The GSDCP conducts official breed surveys following SV guidelines. Dogs must meet minimum working title, age, and health requirements before being presented for survey. Surveyed dogs receive a Körung certificate valid for life or for the period specified by the examining judge.",
-  },
-  {
-    number: "VI",
-    title: "Shows & Trials",
-    content: "The club organises an annual National Sieger Show and other sanctioned events. Entry is open to all registered dogs whose owners are in good standing with the club. Show results are recorded in the club's registry and submitted to the SV.",
-  },
-  {
-    number: "VII",
-    title: "Discipline & Misconduct",
-    content: "Any member found to have engaged in fraudulent registration, unethical breeding, or conduct unbecoming of a club member may be suspended or expelled by a two-thirds majority vote of the executive committee. The affected member has the right to appeal to the full membership at a general meeting.",
-  },
-];
+import { fetchRules, stripHtml, RuleItem } from "../../lib/api";
 
 export default function RulesRegulationsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const [expanded, setExpanded] = useState<string | null>("I");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const { data: rules, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/mobile/rules"],
+    queryFn: fetchRules,
+  });
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
+        />
+      }
     >
       <LinearGradient
         colors={[COLORS.primaryDark, COLORS.primary]}
@@ -74,44 +59,56 @@ export default function RulesRegulationsScreen() {
         <Text style={styles.headerSub}>Club constitution and bylaws</Text>
       </LinearGradient>
 
-      <View style={styles.noteCard}>
-        <Ionicons name="information-circle-outline" size={18} color="#3B82F6" />
-        <Text style={styles.noteText}>
-          This is an abridged version of the GSDCP constitution. Tap any chapter to expand.
-        </Text>
-      </View>
+      {isLoading ? (
+        <ActivityIndicator
+          style={{ marginTop: 48 }}
+          size="large"
+          color={COLORS.primary}
+        />
+      ) : (
+        <>
+          <View style={styles.noteCard}>
+            <Ionicons name="information-circle-outline" size={18} color="#3B82F6" />
+            <Text style={styles.noteText}>
+              Tap any section to expand its full content.
+            </Text>
+          </View>
 
-      <View style={styles.chaptersWrap}>
-        {CHAPTERS.map((chapter) => {
-          const isOpen = expanded === chapter.number;
-          return (
-            <TouchableOpacity
-              key={chapter.number}
-              style={[styles.chapterCard, isOpen && styles.chapterCardOpen]}
-              onPress={() => setExpanded(isOpen ? null : chapter.number)}
-              activeOpacity={0.8}
-              data-testid={`chapter-${chapter.number}`}
-            >
-              <View style={styles.chapterHeader}>
-                <View style={styles.chapterNumWrap}>
-                  <Text style={styles.chapterNum}>{chapter.number}</Text>
-                </View>
-                <Text style={styles.chapterTitle} numberOfLines={isOpen ? undefined : 1}>
-                  {chapter.title}
-                </Text>
-                <Ionicons
-                  name={isOpen ? "chevron-up" : "chevron-down"}
-                  size={18}
-                  color={COLORS.textMuted}
-                />
-              </View>
-              {isOpen && (
-                <Text style={styles.chapterBody}>{chapter.content}</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+          <View style={styles.chaptersWrap}>
+            {(rules ?? []).map((rule: RuleItem, index: number) => {
+              const isOpen = expandedId === rule.id;
+              return (
+                <TouchableOpacity
+                  key={rule.id}
+                  style={[styles.chapterCard, isOpen && styles.chapterCardOpen]}
+                  onPress={() => setExpandedId(isOpen ? null : rule.id)}
+                  activeOpacity={0.8}
+                  data-testid={`chapter-${rule.id}`}
+                >
+                  <View style={styles.chapterHeader}>
+                    <View style={styles.chapterNumWrap}>
+                      <Text style={styles.chapterNum}>{index + 1}</Text>
+                    </View>
+                    <Text style={styles.chapterTitle} numberOfLines={isOpen ? undefined : 1}>
+                      {rule.rule_name}
+                    </Text>
+                    <Ionicons
+                      name={isOpen ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={COLORS.textMuted}
+                    />
+                  </View>
+                  {isOpen && (
+                    <Text style={styles.chapterBody}>
+                      {stripHtml(rule.content)}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -161,6 +158,7 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 10,
     backgroundColor: "rgba(15,92,58,0.08)",
     justifyContent: "center", alignItems: "center",
+    flexShrink: 0,
   },
   chapterNum: { fontSize: 12, fontWeight: "800", color: COLORS.primary },
   chapterTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: COLORS.text },
