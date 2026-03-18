@@ -1,27 +1,75 @@
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
+import { fetchJudges, JudgeItem } from "../../lib/api";
 
-const JUDGES = [
-  { name: "Mian Nadeem Akhtar", city: "Lahore", license: "SV Licensed", speciality: "Breed Conformation & Survey", since: "2005" },
-  { name: "Faheem Asghar", city: "Sialkot", license: "GSDCP Licensed", speciality: "Breed Conformation", since: "2012" },
-  { name: "Dr. Asim Nawaz", city: "Islamabad", license: "SV Licensed", speciality: "Working Trials & HD Evaluation", since: "2009" },
-  { name: "Zulfiqar Ali", city: "Rawalpindi", license: "GSDCP Licensed", speciality: "Breed Conformation", since: "2015" },
-  { name: "Col. (Retd.) Saeed Ahmad", city: "Lahore", license: "SV Licensed", speciality: "Schutzhund / IPO Trials", since: "2003" },
-];
+function credentialColor(credentials: string): { bg: string; text: string } {
+  if (credentials.toLowerCase().includes("fci")) return { bg: "rgba(59,130,246,0.1)", text: "#2563EB" };
+  if (credentials.toLowerCase().includes("sv")) return { bg: "rgba(199,164,92,0.12)", text: COLORS.accent };
+  return { bg: "rgba(15,92,58,0.08)", text: COLORS.primary };
+}
+
+function JudgeCard({ judge }: { judge: JudgeItem }) {
+  const [imgError, setImgError] = useState(false);
+  const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  const colors = credentialColor(judge.credentials);
+
+  return (
+    <View style={styles.card} data-testid={`card-judge-${judge.judge_id}`}>
+      <View style={styles.avatarWrap}>
+        {!imgError ? (
+          <Image
+            source={{ uri: judge.imageUrl }}
+            style={styles.avatar}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <View style={[styles.avatar, styles.avatarFallback]}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.info}>
+        <Text style={styles.name}>{judge.full_name}</Text>
+        <View style={[styles.credBadge, { backgroundColor: colors.bg }]}>
+          <Text style={[styles.credText, { color: colors.text }]}>{judge.credentials}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function GSDCPJudgesScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const { data: judges, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/mobile/judges"],
+    queryFn: fetchJudges,
+  });
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
     >
       <LinearGradient
         colors={[COLORS.primaryDark, COLORS.primary]}
@@ -50,44 +98,22 @@ export default function GSDCPJudgesScreen() {
         </Text>
       </View>
 
-      <View style={styles.cardsWrap}>
-        {JUDGES.map((judge, i) => {
-          const initials = judge.name.split(" ").filter(w => /^[A-Z]/.test(w)).slice(0, 2).map(w => w[0]).join("");
-          const isSV = judge.license.includes("SV");
-          return (
-            <View key={i} style={styles.card}>
-              <View style={styles.avatarWrap}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initials}</Text>
-                </View>
-                <View style={[styles.licenseDot, { backgroundColor: isSV ? COLORS.accent : COLORS.primary }]} />
-              </View>
-              <View style={styles.info}>
-                <Text style={styles.name}>{judge.name}</Text>
-                <View style={[styles.licenseBadge, { backgroundColor: isSV ? "rgba(199,164,92,0.12)" : "rgba(15,92,58,0.08)" }]}>
-                  <Text style={[styles.licenseText, { color: isSV ? COLORS.accent : COLORS.primary }]}>{judge.license}</Text>
-                </View>
-                <Text style={styles.speciality}>{judge.speciality}</Text>
-                <View style={styles.meta}>
-                  <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
-                  <Text style={styles.metaText}>{judge.city}</Text>
-                  <Text style={styles.dot}>·</Text>
-                  <Text style={styles.metaText}>Since {judge.since}</Text>
-                </View>
-              </View>
-            </View>
-          );
-        })}
-      </View>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 48 }} size="large" color={COLORS.primary} />
+      ) : (
+        <View style={styles.cardsWrap}>
+          {(judges ?? []).map((judge: JudgeItem) => (
+            <JudgeCard key={judge.judge_id} judge={judge} />
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    paddingHorizontal: 20, paddingBottom: 28, alignItems: "center",
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 28, alignItems: "center" },
   backBtn: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", marginBottom: 20, gap: 4 },
   backText: { fontSize: 15, color: "#fff", fontWeight: "600" },
   headerIconWrap: {
@@ -108,32 +134,25 @@ const styles = StyleSheet.create({
   infoText: { flex: 1, fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
   cardsWrap: { paddingHorizontal: 16, marginTop: 16, gap: 10 },
   card: {
-    flexDirection: "row", alignItems: "flex-start",
+    flexDirection: "row", alignItems: "center",
     backgroundColor: "#fff", borderRadius: BORDER_RADIUS.lg,
     padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 14,
   },
-  avatarWrap: { position: "relative" },
+  avatarWrap: {},
   avatar: {
-    width: 52, height: 52, borderRadius: 16,
+    width: 56, height: 56, borderRadius: 16,
+  },
+  avatarFallback: {
     backgroundColor: "rgba(15,92,58,0.08)",
     justifyContent: "center", alignItems: "center",
   },
-  avatarText: { fontSize: 16, fontWeight: "800", color: COLORS.primary },
-  licenseDot: {
-    position: "absolute", bottom: -2, right: -2,
-    width: 14, height: 14, borderRadius: 7,
-    borderWidth: 2, borderColor: "#fff",
-  },
+  avatarText: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
   info: { flex: 1 },
-  name: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 4 },
-  licenseBadge: {
+  name: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 6 },
+  credBadge: {
     alignSelf: "flex-start",
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 6, marginBottom: 4,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6,
   },
-  licenseText: { fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 },
-  speciality: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 4 },
-  meta: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metaText: { fontSize: 12, color: COLORS.textMuted },
-  dot: { fontSize: 12, color: COLORS.textMuted },
+  credText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 },
 });

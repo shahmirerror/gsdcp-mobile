@@ -1,54 +1,78 @@
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
+import { fetchVisitingJudges, JudgeItem } from "../../lib/api";
 
-const JUDGES = [
-  {
-    name: "Lothar Quoll",
-    country: "Germany",
-    flag: "🇩🇪",
-    affiliation: "SV Hauptzuchtschule",
-    visits: ["2019 National Sieger Show", "2022 Breed Survey Camp"],
-    speciality: "Breed Conformation & Körung",
-  },
-  {
-    name: "Stefan Doering",
-    country: "Germany",
-    flag: "🇩🇪",
-    affiliation: "SV — Bundessieger Judge",
-    visits: ["2023 National Sieger Show"],
-    speciality: "Breed Conformation",
-  },
-  {
-    name: "Eyal Barak",
-    country: "Israel",
-    flag: "🇮🇱",
-    affiliation: "IKC / SV Affiliated",
-    visits: ["2018 Regional Show, Karachi"],
-    speciality: "Working Dogs & IPO",
-  },
-  {
-    name: "Yvan Baerts",
-    country: "Belgium",
-    flag: "🇧🇪",
-    affiliation: "FCI International Judge",
-    visits: ["2016 GSDCP Championship Show"],
-    speciality: "FCI & SV Breed Standard",
-  },
-];
+function credentialColor(credentials: string): { bg: string; text: string } {
+  const c = credentials.toLowerCase();
+  if (c.includes("wusv")) return { bg: "rgba(139,92,246,0.1)", text: "#7C3AED" };
+  if (c.includes("sv")) return { bg: "rgba(199,164,92,0.12)", text: COLORS.accent };
+  if (c.includes("fci")) return { bg: "rgba(59,130,246,0.1)", text: "#2563EB" };
+  if (c.includes("körmeister")) return { bg: "rgba(15,92,58,0.08)", text: COLORS.primary };
+  return { bg: "rgba(15,92,58,0.08)", text: COLORS.primary };
+}
+
+function VisitingJudgeCard({ judge }: { judge: JudgeItem }) {
+  const [imgError, setImgError] = useState(false);
+  const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  const colors = credentialColor(judge.credentials);
+
+  return (
+    <View style={styles.card} data-testid={`card-visiting-judge-${judge.judge_id}`}>
+      <View style={styles.avatarWrap}>
+        {!imgError ? (
+          <Image
+            source={{ uri: judge.imageUrl }}
+            style={styles.avatar}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <View style={[styles.avatar, styles.avatarFallback]}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.info}>
+        <Text style={styles.name}>{judge.full_name}</Text>
+        <View style={[styles.credBadge, { backgroundColor: colors.bg }]}>
+          <Text style={[styles.credText, { color: colors.text }]}>{judge.credentials}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function VisitingJudgesScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const { data: judges, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/mobile/visiting-judges"],
+    queryFn: fetchVisitingJudges,
+  });
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
     >
       <LinearGradient
         colors={[COLORS.primaryDark, COLORS.primary]}
@@ -77,33 +101,15 @@ export default function VisitingJudgesScreen() {
         </Text>
       </View>
 
-      <View style={styles.cardsWrap}>
-        {JUDGES.map((judge, i) => (
-          <View key={i} style={styles.card}>
-            <View style={styles.flagWrap}>
-              <Text style={styles.flag}>{judge.flag}</Text>
-            </View>
-            <View style={styles.info}>
-              <Text style={styles.name}>{judge.name}</Text>
-              <View style={styles.countryRow}>
-                <Text style={styles.country}>{judge.country}</Text>
-                <Text style={styles.dot}>·</Text>
-                <Text style={styles.affiliation}>{judge.affiliation}</Text>
-              </View>
-              <Text style={styles.speciality}>{judge.speciality}</Text>
-              <View style={styles.visitsWrap}>
-                <Text style={styles.visitsLabel}>Visits:</Text>
-                {judge.visits.map((v, vi) => (
-                  <View key={vi} style={styles.visitRow}>
-                    <View style={styles.visitDot} />
-                    <Text style={styles.visitText}>{v}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        ))}
-      </View>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 48 }} size="large" color={COLORS.primary} />
+      ) : (
+        <View style={styles.cardsWrap}>
+          {(judges ?? []).map((judge: JudgeItem) => (
+            <VisitingJudgeCard key={judge.judge_id} judge={judge} />
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -131,26 +137,25 @@ const styles = StyleSheet.create({
   infoText: { flex: 1, fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
   cardsWrap: { paddingHorizontal: 16, marginTop: 16, gap: 10 },
   card: {
-    flexDirection: "row", alignItems: "flex-start",
+    flexDirection: "row", alignItems: "center",
     backgroundColor: "#fff", borderRadius: BORDER_RADIUS.lg,
-    padding: 16, borderWidth: 1, borderColor: COLORS.border, gap: 14,
+    padding: 14, borderWidth: 1, borderColor: COLORS.border, gap: 14,
   },
-  flagWrap: {
-    width: 52, height: 52, borderRadius: 16,
+  avatarWrap: {},
+  avatar: {
+    width: 56, height: 56, borderRadius: 16,
+  },
+  avatarFallback: {
     backgroundColor: COLORS.background,
     justifyContent: "center", alignItems: "center",
   },
-  flag: { fontSize: 28 },
+  avatarText: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
   info: { flex: 1 },
-  name: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 3 },
-  countryRow: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 3 },
-  country: { fontSize: 12, fontWeight: "600", color: "#E11D48" },
-  dot: { fontSize: 12, color: COLORS.textMuted },
-  affiliation: { fontSize: 12, color: COLORS.textMuted, flex: 1 },
-  speciality: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 8 },
-  visitsWrap: { gap: 4 },
-  visitsLabel: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 },
-  visitRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  visitDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: COLORS.accent },
-  visitText: { fontSize: 12, color: COLORS.textSecondary },
+  name: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 6 },
+  credBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6,
+  },
+  credText: { fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 },
 });

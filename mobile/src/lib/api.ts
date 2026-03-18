@@ -379,6 +379,27 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
+export type JudgeItem = {
+  judge_id: string;
+  full_name: string;
+  credentials: string;
+  imageUrl: string;
+};
+
+export async function fetchJudges(): Promise<JudgeItem[]> {
+  const res = await fetch(`${BASE_URL}/judges`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch judges");
+  return json.data.judges;
+}
+
+export async function fetchVisitingJudges(): Promise<JudgeItem[]> {
+  const res = await fetch(`${BASE_URL}/visiting-judges`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch visiting judges");
+  return json.data.visiting_judges;
+}
+
 export type AboutItem = { id: number; content: string };
 export type RuleItem = { id: number; rule_name: string; content: string };
 export type NewsItem = { id: number; title: string; content: string };
