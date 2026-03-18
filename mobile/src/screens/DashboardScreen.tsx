@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchDashboard, RecentMating } from "../lib/api";
+import { fetchDashboard, fetchNews, stripHtml, NewsItem } from "../lib/api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -35,6 +35,13 @@ export default function DashboardScreen() {
     queryKey: ["/api/mobile/dashboard"],
     queryFn: fetchDashboard,
   });
+
+  const { data: newsData, isLoading: newsLoading } = useQuery({
+    queryKey: ["/api/mobile/news"],
+    queryFn: fetchNews,
+  });
+
+  const recentNews = (newsData ?? []).slice(0, 2);
 
   const statCards = [
     {
@@ -252,38 +259,46 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.section}>
-        <TouchableOpacity
-          style={styles.ctaCard}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate("ProfileTab")}
-          data-testid="button-join-community"
-        >
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.primaryDark]}
-            style={styles.ctaGradient}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>News & Updates</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ClubTab")}
+            activeOpacity={0.7}
+            data-testid="link-view-all-news"
           >
-            <View style={styles.ctaContent}>
-              <Ionicons
-                name="shield-checkmark"
-                size={32}
-                color={COLORS.accent}
-              />
-              <Text style={styles.ctaTitle}>Join GSDCP</Text>
-              <Text style={styles.ctaDesc}>
-                Register your litter, enter shows, and access full ancestry
-                tools.
-              </Text>
-              <View style={styles.ctaButton}>
-                <Text style={styles.ctaButtonText}>Get Started</Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={16}
-                  color={COLORS.primaryDark}
-                />
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {newsLoading ? (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : recentNews.length > 0 ? (
+          <View style={styles.activityCard}>
+            {recentNews.map((item: NewsItem, i: number) => (
+              <View
+                key={item.id}
+                style={[styles.newsItem, i < recentNews.length - 1 && styles.newsItemBorder]}
+                data-testid={`card-news-dash-${item.id}`}
+              >
+                <View style={styles.newsIconWrap}>
+                  <Ionicons name="megaphone-outline" size={14} color={COLORS.accent} />
+                </View>
+                <View style={styles.newsTextWrap}>
+                  <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
+                  <Text style={styles.newsBody} numberOfLines={2}>
+                    {stripHtml(item.content)}
+                  </Text>
+                </View>
               </View>
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.activityCard}>
+            <Text style={styles.emptyText}>No news at this time.</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -570,43 +585,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
   },
-  ctaCard: {
-    borderRadius: 20,
-    overflow: "hidden",
-  },
-  ctaGradient: {
-    borderRadius: 20,
-  },
-  ctaContent: {
-    padding: 24,
-    alignItems: "center",
-  },
-  ctaTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  ctaDesc: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.8)",
-    textAlign: "center",
-    lineHeight: 19,
-    marginBottom: 16,
-  },
-  ctaButton: {
+  newsItem: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 24,
+    alignItems: "flex-start",
     paddingVertical: 12,
-    borderRadius: 10,
-    gap: 6,
+    gap: 12,
   },
-  ctaButtonText: {
-    fontSize: 14,
+  newsItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  newsIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: `rgba(199,164,92,0.12)`,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  newsTextWrap: {
+    flex: 1,
+  },
+  newsTitle: {
+    fontSize: 13,
     fontWeight: "700",
-    color: COLORS.primaryDark,
+    color: COLORS.text,
+    marginBottom: 3,
+    lineHeight: 19,
+  },
+  newsBody: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    lineHeight: 17,
   },
 });
