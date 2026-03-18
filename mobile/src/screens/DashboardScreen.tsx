@@ -128,8 +128,14 @@ export default function DashboardScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Upcoming Litters</Text>
-          <View style={styles.liveDot} />
+          <Text style={styles.sectionTitle}>Recent Matings</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("RecentMatingsTab")}
+            activeOpacity={0.7}
+            data-testid="link-view-all-matings"
+          >
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
         </View>
 
         {isLoading ? (
