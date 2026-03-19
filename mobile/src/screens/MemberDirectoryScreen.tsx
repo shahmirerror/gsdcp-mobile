@@ -87,6 +87,19 @@ export default function MemberDirectoryScreen() {
     debounceTimer.current = setTimeout(() => setDebouncedSearch(text.trim()), 400);
   };
 
+  const clearSearch = () => {
+    setSearch("");
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    setDebouncedSearch("");
+  };
+
+  const setTypeFilter = (prefix: string) => {
+    const next = search === prefix ? "" : prefix;
+    setSearch(next);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    setDebouncedSearch(next);
+  };
+
   useEffect(() => {
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, []);
@@ -190,7 +203,7 @@ export default function MemberDirectoryScreen() {
             data-testid="input-search-members"
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} data-testid="btn-clear-search">
+            <TouchableOpacity onPress={clearSearch} data-testid="btn-clear-search">
               <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
             </TouchableOpacity>
           )}
@@ -211,6 +224,29 @@ export default function MemberDirectoryScreen() {
               <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
             </View>
           )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Membership type quick filters */}
+      <View style={styles.typeRow}>
+        <TouchableOpacity
+          style={[styles.typeChip, search === "T-" && styles.typeChipActive]}
+          onPress={() => setTypeFilter("T-")}
+          activeOpacity={0.7}
+          data-testid="chip-type-temporary"
+        >
+          <View style={[styles.typeChipDot, { backgroundColor: search === "T-" ? "#fff" : "#F59E0B" }]} />
+          <Text style={[styles.typeChipText, search === "T-" && styles.typeChipTextActive]}>Temporary</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.typeChip, search === "P-" && styles.typeChipActivePerm]}
+          onPress={() => setTypeFilter("P-")}
+          activeOpacity={0.7}
+          data-testid="chip-type-permanent"
+        >
+          <View style={[styles.typeChipDot, { backgroundColor: search === "P-" ? "#fff" : COLORS.primary }]} />
+          <Text style={[styles.typeChipText, search === "P-" && styles.typeChipTextActive]}>Permanent</Text>
         </TouchableOpacity>
       </View>
 
@@ -408,6 +444,32 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+
+  typeRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  typeChip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1.5, borderColor: COLORS.border,
+    backgroundColor: "#fff",
+  },
+  typeChipActive: {
+    backgroundColor: "#F59E0B", borderColor: "#F59E0B",
+  },
+  typeChipActivePerm: {
+    backgroundColor: COLORS.primary, borderColor: COLORS.primary,
+  },
+  typeChipDot: { width: 7, height: 7, borderRadius: 4 },
+  typeChipText: { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
+  typeChipTextActive: { color: "#fff" },
 
   chipsRow: { maxHeight: 44, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: COLORS.border },
   chipsContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, flexDirection: "row", alignItems: "center" },
