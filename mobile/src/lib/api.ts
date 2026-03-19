@@ -490,6 +490,16 @@ export type MembersPage = {
   pagination: PaginationMeta;
 };
 
+export async function fetchMemberDetail(id: string): Promise<Member> {
+  const res = await fetch(`${BASE_URL}/members/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch member detail");
+  const text = await res.text();
+  if (text.trim().startsWith("<")) throw new Error("Server returned HTML");
+  const json = JSON.parse(text);
+  if (!json.success) throw new Error("Failed to fetch member detail");
+  return json.data as Member;
+}
+
 export async function fetchMembersPage(
   page: number = 1,
   options?: { q?: string },

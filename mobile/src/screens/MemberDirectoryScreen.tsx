@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMembersPage, Member, MembersPage } from "../lib/api";
@@ -35,11 +36,11 @@ function isValidImage(url: string | null): boolean {
   return url.startsWith("http");
 }
 
-function MemberListItem({ member }: { member: Member }) {
+function MemberListItem({ member, onPress }: { member: Member; onPress: () => void }) {
   const initials = getInitials(member.member_name);
   const hasImage = isValidImage(member.imageUrl);
   return (
-    <View style={styles.listItem} data-testid={`card-member-${member.id}`}>
+    <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-member-${member.id}`}>
       {hasImage ? (
         <Image source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
       ) : (
@@ -66,12 +67,14 @@ function MemberListItem({ member }: { member: Member }) {
           ) : null}
         </View>
       </View>
-    </View>
+      <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+    </TouchableOpacity>
   );
 }
 
 export default function MemberDirectoryScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
@@ -327,7 +330,12 @@ export default function MemberDirectoryScreen() {
               colors={[COLORS.primary]}
             />
           }
-          renderItem={({ item }) => <MemberListItem member={item} />}
+          renderItem={({ item }) => (
+            <MemberListItem
+              member={item}
+              onPress={() => navigation.push("MemberProfile", { id: item.id, member: item })}
+            />
+          )}
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footerLoader}>
