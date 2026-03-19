@@ -16,7 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog } from "../lib/api";
+import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, Dog } from "../lib/api";
+import { DogListItem } from "../components/DogListItem";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -48,11 +49,29 @@ function getMembershipType(no: string): { label: string; color: string; bg: stri
   return { label: "Member", color: COLORS.textMuted, bg: COLORS.border };
 }
 
-function calcAge(dob: string | null): string | null {
-  if (!dob) return null;
-  const years = Math.floor((Date.now() - new Date(dob).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
-  if (years < 1) return "< 1 Yr";
-  return `${years} Yr${years !== 1 ? "s" : ""}`;
+function toListDog(d: MemberOwnedDog): Dog {
+  return {
+    id: d.id,
+    dog_name: d.dog_name,
+    KP: d.KP || null,
+    breed: d.breed,
+    sex: d.sex,
+    dob: d.dob,
+    color: d.color || null,
+    imageUrl: d.imageUrl,
+    owner: d.owner || null,
+    breeder: d.breeder || null,
+    sire: d.sire || null,
+    sire_id: null,
+    dam: d.dam || null,
+    dam_id: null,
+    titles: d.titles,
+    microchip: d.microchip,
+    foreign_reg_no: d.foreign_reg_no || null,
+    hair: d.hair || null,
+    hd: null, ed: null, working_title: null, dna_status: null,
+    breed_survey_period: null, show_rating: null,
+  };
 }
 
 /* ── DetailItem — matches DogProfileScreen ─────────── */
@@ -115,55 +134,6 @@ function KennelTab() {
   );
 }
 
-/* ── Dog row card — matches DogProfileScreen visual language */
-function DogRow({ dog, onPress }: { dog: MemberOwnedDog; onPress: () => void }) {
-  const hasPhoto = isValidImage(dog.imageUrl);
-  const initials = getInitials(dog.dog_name);
-  const age = calcAge(dog.dob);
-  const sexColor = dog.sex === "Male" ? "#1D4ED8" : "#BE185D";
-  const sexBg   = dog.sex === "Male" ? "#EFF6FF" : "#FDF2F8";
-
-  return (
-    <TouchableOpacity style={styles.dogRow} onPress={onPress} activeOpacity={0.72} data-testid={`card-dog-${dog.id}`}>
-      {/* thumbnail */}
-      <View style={styles.dogThumb}>
-        {hasPhoto ? (
-          <Image source={{ uri: dog.imageUrl! }} style={styles.dogThumbImg} resizeMode="cover" />
-        ) : (
-          <View style={styles.dogThumbPlaceholder}>
-            <Ionicons name="paw" size={22} color={COLORS.primary} style={{ opacity: 0.28 }} />
-          </View>
-        )}
-      </View>
-
-      {/* info */}
-      <View style={{ flex: 1 }}>
-        <Text style={styles.dogRowName} numberOfLines={1}>{dog.dog_name}</Text>
-        <Text style={styles.dogRowKP}  numberOfLines={1}>
-          {dog.KP ? `KP ${dog.KP}` : dog.foreign_reg_no || "—"}
-        </Text>
-        <View style={styles.dogRowTags}>
-          <View style={[styles.pill, { backgroundColor: sexBg }]}>
-            <Text style={[styles.pillTxt, { color: sexColor }]}>{dog.sex}</Text>
-          </View>
-          {dog.color ? (
-            <View style={[styles.pill, { backgroundColor: "rgba(15,92,59,0.07)" }]}>
-              <Text style={[styles.pillTxt, { color: COLORS.textMuted }]} numberOfLines={1}>{dog.color}</Text>
-            </View>
-          ) : null}
-          {age ? (
-            <View style={[styles.pill, { backgroundColor: "rgba(15,92,59,0.07)" }]}>
-              <Text style={[styles.pillTxt, { color: COLORS.textMuted }]}>{age}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
-
-      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
-    </TouchableOpacity>
-  );
-}
-
 /* ── Tab: Dogs ─────────────────────────────────────── */
 function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d: MemberOwnedDog) => void }) {
   if (dogs.length === 0) {
@@ -179,12 +149,11 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
   }
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardHeading}>Registered Dogs</Text>
-      {dogs.map((dog, i) => (
-        <DogRow
+    <View>
+      {dogs.map((dog) => (
+        <DogListItem
           key={dog.id}
-          dog={dog}
+          dog={toListDog(dog)}
           onPress={() => onDogPress(dog)}
         />
       ))}
@@ -442,24 +411,6 @@ const styles = StyleSheet.create({
   detailTextWrap: { flex: 1 },
   detailLabel: { fontSize: 12, fontWeight: "500", color: "#94A3B8", marginBottom: 2 },
   detailValue: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
-
-  /* Dog rows */
-  dogRow: {
-    flexDirection: "row", alignItems: "center", gap: 14,
-    paddingVertical: 14,
-    borderTopWidth: 1, borderTopColor: "rgba(15,92,59,0.06)",
-  },
-  dogThumb: {
-    width: 60, height: 60, borderRadius: 12,
-    overflow: "hidden", backgroundColor: "rgba(15,92,59,0.06)",
-  },
-  dogThumbImg: { width: "100%", height: "100%" },
-  dogThumbPlaceholder: { flex: 1, justifyContent: "center", alignItems: "center" },
-  dogRowName: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
-  dogRowKP: { fontSize: 12, color: "#64748B", marginTop: 1 },
-  dogRowTags: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 5 },
-  pill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9999 },
-  pillTxt: { fontSize: 10, fontWeight: "700" },
 
   /* Empty states */
   emptyState: {
