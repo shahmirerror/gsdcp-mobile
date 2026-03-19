@@ -2,12 +2,14 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   Image,
   ImageBackground,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -18,17 +20,13 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog } from "../lib/api";
 
 const heroBg = require("../../assets/hero-bg.jpg");
+const SCREEN_W = Dimensions.get("window").width;
+const DOG_CARD_W = 140;
 
 function getInitials(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return "?";
-  return trimmed
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  return trimmed.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function isValidImage(url: string | null | undefined): boolean {
@@ -39,58 +37,70 @@ function isValidImage(url: string | null | undefined): boolean {
   return url.startsWith("http");
 }
 
-function getMembershipType(no: string): { label: string; color: string; bg: string } {
-  if (no.startsWith("T-")) return { label: "Temporary Member", color: "#92400E", bg: "#FEF3C7" };
-  if (no.startsWith("P-")) return { label: "Permanent Member", color: "#fff", bg: COLORS.primary };
-  return { label: "Member", color: COLORS.textMuted, bg: COLORS.background };
+function getMembershipType(no: string): { label: string; color: string } {
+  if (no.startsWith("T-")) return { label: "Temporary Member", color: "#F59E0B" };
+  if (no.startsWith("P-")) return { label: "Permanent Member", color: COLORS.primary };
+  return { label: "Member", color: COLORS.textMuted };
 }
 
-function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoIconWrap}>
-        <Ionicons name={icon} size={18} color={COLORS.primary} />
-      </View>
-      <View style={styles.infoText}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
-      </View>
-    </View>
-  );
+function calcAge(dob: string | null): string | null {
+  if (!dob) return null;
+  const diff = Date.now() - new Date(dob).getTime();
+  const years = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+  if (years < 1) return "< 1 Year";
+  return `${years} Year${years !== 1 ? "s" : ""}`;
 }
 
 function DogCard({ dog, onPress }: { dog: MemberOwnedDog; onPress: () => void }) {
   const hasPhoto = isValidImage(dog.imageUrl);
   const initials = getInitials(dog.dog_name);
+  const age = calcAge(dog.dob);
   const sexColor = dog.sex === "Male" ? "#1D4ED8" : "#BE185D";
   const sexBg = dog.sex === "Male" ? "#EFF6FF" : "#FDF2F8";
+
   return (
-    <TouchableOpacity style={styles.dogCard} onPress={onPress} activeOpacity={0.7} data-testid={`card-dog-${dog.id}`}>
-      <View style={styles.dogAvatarWrap}>
+    <TouchableOpacity style={styles.dogCard} onPress={onPress} activeOpacity={0.75} data-testid={`card-dog-${dog.id}`}>
+      <View style={styles.dogPhotoWrap}>
         {hasPhoto ? (
-          <Image source={{ uri: dog.imageUrl! }} style={styles.dogAvatar} resizeMode="cover" />
+          <Image source={{ uri: dog.imageUrl! }} style={styles.dogPhoto} resizeMode="cover" />
         ) : (
-          <View style={styles.dogAvatarPlaceholder}>
-            <Text style={styles.dogAvatarInitials}>{initials}</Text>
+          <View style={styles.dogPhotoPlaceholder}>
+            <Ionicons name="paw" size={28} color={COLORS.primary} style={{ opacity: 0.3 }} />
           </View>
         )}
       </View>
-      <View style={styles.dogInfo}>
-        <Text style={styles.dogName} numberOfLines={1}>{dog.dog_name}</Text>
-        <Text style={styles.dogKP} numberOfLines={1}>KP {dog.KP || dog.foreign_reg_no}</Text>
-        <View style={styles.dogTags}>
-          <View style={[styles.dogTag, { backgroundColor: sexBg, borderColor: sexColor }]}>
-            <Text style={[styles.dogTagText, { color: sexColor }]}>{dog.sex}</Text>
+      <View style={styles.dogCardBody}>
+        <Text style={styles.dogCardName} numberOfLines={1}>{dog.dog_name}</Text>
+        <View style={styles.dogCardMeta}>
+          <View style={[styles.sexPill, { backgroundColor: sexBg }]}>
+            <Text style={[styles.sexPillText, { color: sexColor }]}>{dog.sex}</Text>
           </View>
-          {dog.color ? (
-            <View style={styles.dogTagGrey}>
-              <Text style={styles.dogTagGreyText}>{dog.color}</Text>
-            </View>
-          ) : null}
+          {age ? <Text style={styles.dogCardAge}>{age}</Text> : null}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
     </TouchableOpacity>
+  );
+}
+
+function StatusRow({
+  icon,
+  label,
+  value,
+  valueColor,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
+  return (
+    <View style={styles.statusRow}>
+      <View style={styles.statusLeft}>
+        <Ionicons name={icon} size={18} color={COLORS.textMuted} style={{ marginRight: 10 }} />
+        <Text style={styles.statusLabel}>{label}</Text>
+      </View>
+      <Text style={[styles.statusValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
+    </View>
   );
 }
 
@@ -123,8 +133,8 @@ export default function MemberProfileScreen() {
       <View style={[styles.centered, { paddingTop: insets.top }]}>
         <Ionicons name="person-outline" size={48} color={COLORS.textMuted} />
         <Text style={styles.errorText}>Member not found</Text>
-        <TouchableOpacity style={styles.backBtn2} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtn2Text}>Go back</Text>
+        <TouchableOpacity style={styles.goBackBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.goBackBtnText}>Go back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -142,23 +152,29 @@ export default function MemberProfileScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
     >
-      {/* Hero */}
-      <ImageBackground source={heroBg} style={styles.hero} resizeMode="cover">
+      {/* ── Hero ── */}
+      <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
-          colors={["rgba(8,58,36,0.55)", "rgba(15,92,58,0.85)"]}
+          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.55)", "#F5F5F2"]}
           style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
         />
+        {/* back button */}
         <TouchableOpacity
           style={[styles.backButton, { top: insets.top + 12 }]}
           onPress={() => navigation.goBack()}
           activeOpacity={0.8}
           data-testid="btn-back"
         >
-          <Ionicons name="chevron-back" size={22} color="#fff" />
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
+        {/* title centered in hero */}
+        <View style={[styles.heroTitleWrap, { top: insets.top + 12 }]}>
+          <Text style={styles.heroTitle}>Member Profile</Text>
+        </View>
       </ImageBackground>
 
-      {/* Profile section */}
+      {/* ── Avatar & Name ── */}
       <View style={styles.profileSection}>
         <View style={styles.avatarOuter}>
           {hasPhoto ? (
@@ -169,47 +185,70 @@ export default function MemberProfileScreen() {
             </View>
           )}
         </View>
-        <View style={[styles.typeBadge, { backgroundColor: membershipType.bg }]}>
-          <Text style={[styles.typeBadgeText, { color: membershipType.color }]}>{membershipType.label}</Text>
-        </View>
         <Text style={styles.memberName}>{memberName}</Text>
-        <Text style={styles.memberNo}>{member.membership_no}</Text>
+        <Text style={[styles.memberSub, { color: membershipType.color }]}>
+          {membershipType.label}
+          <Text style={styles.memberSubDot}>  ·  </Text>
+          <Text style={styles.memberSubId}>GSDCP ID: #{member.membership_no}</Text>
+        </Text>
       </View>
 
-      {/* Details card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Member Information</Text>
-        {member.membership_no ? (
-          <InfoRow icon="card-outline" label="Membership No" value={member.membership_no} />
-        ) : null}
-        {member.city ? (
-          <InfoRow icon="location-outline" label="City" value={member.city} />
-        ) : null}
-        {member.country ? (
-          <InfoRow icon="flag-outline" label="Country" value={member.country} />
-        ) : null}
-        {showAddress ? (
-          <InfoRow icon="home-outline" label="Address" value={(detail?.member as any).address} />
-        ) : null}
-        <InfoRow icon="shield-checkmark-outline" label="Membership Type" value={membershipType.label} />
+      {/* ── Membership Status card ── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Membership Status</Text>
+        <View style={styles.card}>
+          <StatusRow
+            icon="card-outline"
+            label="Membership No"
+            value={member.membership_no}
+          />
+          <StatusRow
+            icon="checkmark-circle-outline"
+            label="Status"
+            value={member.membership_no.startsWith("P-") ? "Active" : "Temporary"}
+            valueColor={member.membership_no.startsWith("P-") ? COLORS.primary : "#F59E0B"}
+          />
+          {member.city ? (
+            <StatusRow icon="location-outline" label="City" value={member.city} />
+          ) : null}
+          {member.country ? (
+            <StatusRow icon="flag-outline" label="Country" value={member.country} />
+          ) : null}
+          {showAddress ? (
+            <StatusRow icon="home-outline" label="Address" value={(detail?.member as any).address} />
+          ) : null}
+        </View>
       </View>
 
-      {/* Owned dogs */}
+      {/* ── My Dogs ── */}
       {isLoading ? (
-        <View style={styles.dogsLoadingWrap}>
+        <View style={styles.dogsLoadingRow}>
           <ActivityIndicator size="small" color={COLORS.primary} />
           <Text style={styles.dogsLoadingText}>Loading dogs…</Text>
         </View>
       ) : ownedDogs.length > 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Registered Dogs ({ownedDogs.length})</Text>
-          {ownedDogs.map((dog) => (
-            <DogCard
-              key={dog.id}
-              dog={dog}
-              onPress={() => navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })}
-            />
-          ))}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>My Dogs ({ownedDogs.length})</Text>
+            {ownedDogs.length > 3 && (
+              <TouchableOpacity activeOpacity={0.7}>
+                <Text style={styles.viewAll}>View All</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <FlatList
+            data={ownedDogs}
+            keyExtractor={(d) => d.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dogsList}
+            renderItem={({ item }) => (
+              <DogCard
+                dog={item}
+                onPress={() => navigation.push("DogProfile", { id: item.id, name: item.dog_name })}
+              />
+            )}
+          />
         </View>
       ) : null}
 
@@ -219,121 +258,136 @@ export default function MemberProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: "#F5F5F2" },
 
-  hero: { height: 220, justifyContent: "flex-end" },
+  /* Hero */
+  heroBanner: { width: "100%", height: 220 },
   backButton: {
-    position: "absolute", left: 16,
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    position: "absolute",
+    left: 16,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.32)",
     justifyContent: "center", alignItems: "center",
+    zIndex: 10,
+  },
+  heroTitleWrap: {
+    position: "absolute",
+    left: 0, right: 0,
+    alignItems: "center",
+    zIndex: 5,
+  },
+  heroTitle: {
+    fontSize: 17, fontWeight: "700", color: "#fff",
+    textShadowColor: "rgba(0,0,0,0.25)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
 
+  /* Profile section */
   profileSection: {
     alignItems: "center",
     marginTop: -72,
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
   avatarOuter: {
-    width: 144, height: 144, borderRadius: 72,
+    width: 136, height: 136, borderRadius: 68,
     borderWidth: 4, borderColor: COLORS.accent,
     backgroundColor: "#fff",
     overflow: "hidden",
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.15, shadowRadius: 10,
+    elevation: 8,
   },
   avatarInner: {
-    flex: 1,
-    backgroundColor: "rgba(15,92,59,0.1)",
+    flex: 1, backgroundColor: "rgba(15,92,59,0.08)",
     justifyContent: "center", alignItems: "center",
   },
   avatarImage: { width: "100%", height: "100%" },
-  avatarInitials: { fontSize: 44, fontWeight: "800", color: COLORS.primary },
+  avatarInitials: { fontSize: 42, fontWeight: "800", color: COLORS.primary },
 
-  typeBadge: {
-    paddingHorizontal: 14, paddingVertical: 5,
-    borderRadius: BORDER_RADIUS.full,
-    marginBottom: 10,
+  memberName: {
+    fontSize: 22, fontWeight: "800", color: COLORS.text,
+    textAlign: "center", paddingHorizontal: SPACING.lg,
+    marginBottom: 4,
   },
-  typeBadgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
+  memberSub: {
+    fontSize: 13, fontWeight: "600", textAlign: "center",
+  },
+  memberSubDot: { color: COLORS.textMuted, fontWeight: "400" },
+  memberSubId: { color: COLORS.textMuted, fontWeight: "500" },
 
-  memberName: { fontSize: 22, fontWeight: "800", color: COLORS.text, textAlign: "center", paddingHorizontal: SPACING.lg },
-  memberNo: { fontSize: 14, color: COLORS.textMuted, fontWeight: "600", marginTop: 4 },
+  /* Sections */
+  section: { paddingHorizontal: SPACING.md, marginTop: SPACING.sm },
+  sectionHeader: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", marginBottom: SPACING.sm,
+  },
+  sectionTitle: {
+    fontSize: 12, fontWeight: "700", color: COLORS.textMuted,
+    textTransform: "uppercase", letterSpacing: 0.9,
+  },
+  viewAll: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
 
+  /* Status card */
   card: {
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.sm,
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.md,
     borderWidth: 1, borderColor: COLORS.border,
+    overflow: "hidden",
   },
-  cardTitle: {
-    fontSize: 11, fontWeight: "700", color: COLORS.textMuted,
-    textTransform: "uppercase", letterSpacing: 0.8,
-    marginBottom: SPACING.md,
-  },
-
-  infoRow: {
-    flexDirection: "row", alignItems: "center", gap: SPACING.md,
-    paddingVertical: 10,
+  statusRow: {
+    flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.md, paddingVertical: 13,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  infoIconWrap: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "rgba(15,92,59,0.08)",
-    justifyContent: "center", alignItems: "center",
-  },
-  infoText: { flex: 1 },
-  infoLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
-  infoValue: { fontSize: 15, color: COLORS.text, fontWeight: "600", marginTop: 1 },
+  statusLeft: { flexDirection: "row", alignItems: "center" },
+  statusLabel: { fontSize: 14, color: COLORS.text, fontWeight: "500" },
+  statusValue: { fontSize: 14, fontWeight: "700", color: COLORS.text },
 
-  dogsLoadingWrap: {
+  /* Dogs horizontal list */
+  dogsList: { paddingRight: SPACING.md },
+  dogCard: {
+    width: DOG_CARD_W,
+    marginRight: SPACING.sm,
+    backgroundColor: "#fff",
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1, borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  dogPhotoWrap: {
+    width: DOG_CARD_W, height: 100,
+    backgroundColor: "rgba(15,92,59,0.06)",
+  },
+  dogPhoto: { width: "100%", height: "100%" },
+  dogPhotoPlaceholder: {
+    flex: 1, justifyContent: "center", alignItems: "center",
+  },
+  dogCardBody: { padding: SPACING.sm },
+  dogCardName: {
+    fontSize: 13, fontWeight: "700", color: COLORS.text, marginBottom: 4,
+  },
+  dogCardMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
+  sexPill: {
+    paddingHorizontal: 7, paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  sexPillText: { fontSize: 10, fontWeight: "700" },
+  dogCardAge: { fontSize: 11, color: COLORS.textMuted, fontWeight: "500" },
+
+  /* Loading / error */
+  dogsLoadingRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: SPACING.sm, padding: SPACING.lg,
   },
   dogsLoadingText: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
-
-  dogCard: {
-    flexDirection: "row", alignItems: "center",
-    paddingVertical: SPACING.sm, gap: SPACING.sm,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  dogAvatarWrap: {
-    width: 52, height: 52, borderRadius: 10,
-    overflow: "hidden", backgroundColor: "rgba(15,92,59,0.07)",
-  },
-  dogAvatar: { width: "100%", height: "100%" },
-  dogAvatarPlaceholder: {
-    flex: 1, justifyContent: "center", alignItems: "center",
-  },
-  dogAvatarInitials: { fontSize: 18, fontWeight: "800", color: COLORS.primary },
-
-  dogInfo: { flex: 1 },
-  dogName: { fontSize: 15, fontWeight: "700", color: COLORS.text },
-  dogKP: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
-  dogTags: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
-  dogTag: {
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.full, borderWidth: 1,
-  },
-  dogTagText: { fontSize: 10, fontWeight: "700" },
-  dogTagGrey: {
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.border,
-  },
-  dogTagGreyText: { fontSize: 10, fontWeight: "600", color: COLORS.textMuted },
-
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: SPACING.md },
   errorText: { fontSize: FONT_SIZES.md, color: COLORS.textMuted },
-  backBtn2: {
+  goBackBtn: {
     paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.full, backgroundColor: COLORS.primary,
   },
-  backBtn2Text: { fontSize: FONT_SIZES.sm, fontWeight: "700", color: "#fff" },
+  goBackBtnText: { fontSize: FONT_SIZES.sm, fontWeight: "700", color: "#fff" },
 });
