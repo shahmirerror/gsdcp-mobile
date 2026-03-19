@@ -490,14 +490,46 @@ export type MembersPage = {
   pagination: PaginationMeta;
 };
 
-export async function fetchMemberDetail(id: string): Promise<Member> {
+export type MemberOwnedDog = {
+  id: string;
+  dog_name: string;
+  KP: string;
+  foreign_reg_no: string;
+  breed: string;
+  hair: string;
+  sex: string;
+  dob: string | null;
+  color: string;
+  imageUrl: string | null;
+  owner: string;
+  breeder: string;
+  sire: string;
+  dam: string;
+  titles: string[];
+  microchip: string | null;
+};
+
+export type MemberDetail = {
+  member: Member & {
+    address: string | null;
+    check_email: "Show" | "Hide";
+    check_phone: "Show" | "Hide";
+    check_address: "Show" | "Hide";
+  };
+  ownedDogs: MemberOwnedDog[];
+};
+
+export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
   const res = await fetch(`${BASE_URL}/members/${id}`);
   if (!res.ok) throw new Error("Failed to fetch member detail");
   const text = await res.text();
   if (text.trim().startsWith("<")) throw new Error("Server returned HTML");
   const json = JSON.parse(text);
   if (!json.success) throw new Error("Failed to fetch member detail");
-  return json.data as Member;
+  return {
+    member: json.data.member,
+    ownedDogs: json.data.ownedDogs ?? [],
+  };
 }
 
 export async function fetchMembersPage(
