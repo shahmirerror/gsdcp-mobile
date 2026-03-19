@@ -37,8 +37,9 @@ const MENU_ITEMS = [
     route: "KennelDirectoryTab",
     dx: -130,
     dy: -95,
-    color: COLORS.primary,
-    bg: "rgba(15,92,58,0.12)",
+    iconColor: "#fff",
+    bg: COLORS.primary,
+    border: "#083A24",
   },
   {
     label: "Member\nDirectory",
@@ -46,8 +47,9 @@ const MENU_ITEMS = [
     route: "MemberDirectoryTab",
     dx: -48,
     dy: -155,
-    color: "#3B82F6",
-    bg: "rgba(59,130,246,0.12)",
+    iconColor: "#fff",
+    bg: "#2563EB",
+    border: "#1E40AF",
   },
   {
     label: "Recent\nMatings",
@@ -55,8 +57,9 @@ const MENU_ITEMS = [
     route: "RecentMatingsTab",
     dx: 48,
     dy: -155,
-    color: "#E11D48",
-    bg: "rgba(225,29,72,0.10)",
+    iconColor: "#fff",
+    bg: "#DC2626",
+    border: "#991B1B",
   },
   {
     label: "The\nClub",
@@ -64,8 +67,9 @@ const MENU_ITEMS = [
     route: "TheClubTab",
     dx: 130,
     dy: -95,
-    color: COLORS.accent,
-    bg: "rgba(199,164,92,0.14)",
+    iconColor: "#fff",
+    bg: COLORS.accent,
+    border: "#A07C3A",
   },
 ];
 
@@ -212,7 +216,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
             {
               opacity: animValue.interpolate({
                 inputRange: [0, 1],
-                outputRange: [0, 0.45],
+                outputRange: [0, 0.6],
               }),
             },
           ]}
@@ -254,14 +258,14 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
               pointerEvents="box-none"
             >
               <TouchableOpacity
-                style={[styles.menuButton, { backgroundColor: item.bg }]}
+                style={[styles.menuButton, { backgroundColor: item.bg, borderColor: item.border }]}
                 onPress={() => handleMenuItemPress(item.route)}
                 activeOpacity={0.8}
                 data-testid={`button-menu-${item.route.toLowerCase()}`}
               >
-                <Ionicons name={item.icon} size={22} color={item.color} />
+                <Ionicons name={item.icon} size={24} color={item.iconColor} />
               </TouchableOpacity>
-              <Text style={[styles.menuLabel, { color: "#fff" }]} numberOfLines={2}>
+              <Text style={styles.menuLabel} numberOfLines={2}>
                 {item.label}
               </Text>
             </Animated.View>
@@ -393,16 +397,18 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.25)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 12,
   },
   menuLabel: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "800",
     textAlign: "center",
-    marginTop: 6,
+    marginTop: 7,
     lineHeight: 14,
+    color: "#fff",
+    letterSpacing: 0.2,
   },
 });
