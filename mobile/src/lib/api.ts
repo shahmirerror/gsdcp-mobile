@@ -490,8 +490,13 @@ export type MembersPage = {
   pagination: PaginationMeta;
 };
 
-export async function fetchMembersPage(page: number = 1): Promise<MembersPage> {
-  const res = await fetch(`${BASE_URL}/members?page=${page}`);
+export async function fetchMembersPage(
+  page: number = 1,
+  options?: { q?: string },
+): Promise<MembersPage> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (options?.q) params.set("q", options.q);
+  const res = await fetch(`${BASE_URL}/members?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch members");
   return {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Pressable,
   ScrollView,
   RefreshControl,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -27,13 +28,25 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
+function isValidImage(url: string | null): boolean {
+  if (!url) return false;
+  if (url.includes("user-not-found")) return false;
+  if (url.startsWith("https::")) return false;
+  return url.startsWith("http");
+}
+
 function MemberListItem({ member }: { member: Member }) {
   const initials = getInitials(member.member_name);
+  const hasImage = isValidImage(member.imageUrl);
   return (
     <View style={styles.listItem} data-testid={`card-member-${member.id}`}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
+      {hasImage ? (
+        <Image source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+      ) : (
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </View>
+      )}
 
       <View style={styles.itemInfo}>
         <Text style={styles.itemName} numberOfLines={1}>{member.member_name}</Text>
@@ -60,11 +73,23 @@ function MemberListItem({ member }: { member: Member }) {
 export default function MemberDirectoryScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
   const [countryFilter, setCountryFilter] = useState<string>("All");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
   const [tempCountry, setTempCountry] = useState<string>("All");
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSearchChange = (text: string) => {
+    setSearch(text);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDebouncedSearch(text.trim()), 400);
+  };
+
+  useEffect(() => {
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, []);
 
   const activeFilterCount =
     (cityFilter !== "All" ? 1 : 0) + (countryFilter !== "All" ? 1 : 0);
@@ -96,8 +121,9 @@ export default function MemberDirectoryScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<MembersPage>({
-    queryKey: ["members-pages"],
-    queryFn: ({ pageParam }) => fetchMembersPage(pageParam as number),
+    queryKey: ["members-pages", debouncedSearch],
+    queryFn: ({ pageParam }) =>
+      fetchMembersPage(pageParam as number, { q: debouncedSearch || undefined }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage?.pagination?.hasMorePages
@@ -131,15 +157,6 @@ export default function MemberDirectoryScreen() {
 
   const filtered = useMemo(() => {
     let results = allMembers;
-    const q = search.trim().toLowerCase();
-    if (q) {
-      results = results.filter(
-        (m) =>
-          m.member_name.toLowerCase().includes(q) ||
-          m.membership_no.toLowerCase().includes(q) ||
-          (m.city && m.city.toLowerCase().includes(q)),
-      );
-    }
     if (countryFilter !== "All") {
       results = results.filter((m) => m.country === countryFilter);
     }
@@ -147,7 +164,7 @@ export default function MemberDirectoryScreen() {
       results = results.filter((m) => m.city === cityFilter);
     }
     return results;
-  }, [allMembers, search, countryFilter, cityFilter]);
+  }, [allMembers, countryFilter, cityFilter]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -166,7 +183,7 @@ export default function MemberDirectoryScreen() {
           <TextInput
             style={styles.searchInput}
             value={search}
-            onChangeText={setSearch}
+            onChangeText={handleSearchChange}
             placeholder="Search by name, membership no, city..."
             placeholderTextColor={COLORS.textMuted}
             autoCorrect={false}
@@ -428,6 +445,7 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
     borderWidth: 1.5, borderColor: "rgba(15,92,59,0.15)",
   },
+  avatarImage: { width: 44, height: 44, borderRadius: 22 },
   avatarText: { fontSize: 14, fontWeight: "800", color: COLORS.primary },
 
   itemInfo: { flex: 1 },
