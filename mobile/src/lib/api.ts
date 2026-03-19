@@ -476,6 +476,22 @@ export async function fetchFees(): Promise<FeeItem[]> {
   return json.data.fees;
 }
 
+export type Member = {
+  id: string;
+  member_name: string;
+  membership_no: string;
+  imageUrl: string | null;
+  city: string | null;
+  country: string | null;
+};
+
+export async function fetchMembers(): Promise<Member[]> {
+  const res = await fetch(`${BASE_URL}/members`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch members");
+  return Object.values(json.data) as Member[];
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";
