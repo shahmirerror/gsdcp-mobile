@@ -215,21 +215,18 @@ export default function MemberProfileScreen() {
       {/* ── Hero ── */}
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
-          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.55)", "#F5F5F2"]}
-          style={StyleSheet.absoluteFillObject}
+          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
+          style={styles.heroGradient}
           pointerEvents="none"
         />
         <TouchableOpacity
-          style={[styles.backButton, { top: insets.top + 12 }]}
+          style={styles.backButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
           data-testid="btn-back"
         >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <View style={[styles.heroTitleWrap, { top: insets.top + 12 }]}>
-          <Text style={styles.heroTitle}>Member Profile</Text>
-        </View>
       </ImageBackground>
 
       {/* ── Avatar & Name ── */}
@@ -303,21 +300,20 @@ export default function MemberProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f6f8f7" },
 
-  /* Hero */
-  heroBanner: { width: "100%", height: 220 },
+  /* Hero — matches DogProfileScreen / KennelProfileScreen / BreederProfileScreen */
+  heroBanner: { width: "100%", height: 256 },
+  heroGradient: {
+    position: "absolute", left: 0, right: 0, bottom: 0, height: 256,
+  },
   backButton: {
-    position: "absolute", left: 16,
+    position: "absolute", top: 48, left: 16,
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.32)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "center", alignItems: "center", zIndex: 10,
   },
-  heroTitleWrap: {
-    position: "absolute", left: 0, right: 0, alignItems: "center", zIndex: 5,
-  },
-  heroTitle: { fontSize: 17, fontWeight: "700", color: "#fff" },
 
-  /* Profile section */
-  profileSection: { alignItems: "center", marginTop: -72, paddingBottom: SPACING.md },
+  /* Profile section — matches DogProfileScreen */
+  profileSection: { alignItems: "center", marginTop: -80, paddingHorizontal: 16, marginBottom: 24 },
   avatarOuter: {
     width: 136, height: 136, borderRadius: 68,
     borderWidth: 4, borderColor: COLORS.accent,
