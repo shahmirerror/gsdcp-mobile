@@ -485,11 +485,19 @@ export type Member = {
   country: string | null;
 };
 
-export async function fetchMembers(): Promise<Member[]> {
-  const res = await fetch(`${BASE_URL}/members`);
+export type MembersPage = {
+  data: Member[];
+  pagination: PaginationMeta;
+};
+
+export async function fetchMembersPage(page: number = 1): Promise<MembersPage> {
+  const res = await fetch(`${BASE_URL}/members?page=${page}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch members");
-  return Object.values(json.data) as Member[];
+  return {
+    data: Object.values(json.data) as Member[],
+    pagination: json.pagination as PaginationMeta,
+  };
 }
 
 export function getAncestorName(ancestor: PedigreeAncestor): string {

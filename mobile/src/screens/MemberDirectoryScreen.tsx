@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,10 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchMembers, Member } from "../lib/api";
+import { fetchMembersPage, Member, MembersPage } from "../lib/api";
 
 function getInitials(name: string): string {
   return name
@@ -86,35 +86,51 @@ export default function MemberDirectoryScreen() {
     setTempCountry("All");
   };
 
-  const { data: members, isLoading, isError, refetch, isRefetching } = useQuery<Member[]>({
-    queryKey: ["members"],
-    queryFn: fetchMembers,
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery<MembersPage>({
+    queryKey: ["members-pages"],
+    queryFn: ({ pageParam }) => fetchMembersPage(pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage?.pagination?.hasMorePages
+        ? lastPage.pagination.currentPage + 1
+        : undefined,
   });
 
+  const allMembers = useMemo(() => {
+    if (!data) return [];
+    return data.pages.flatMap((page) => page.data);
+  }, [data]);
+
   const { countries, cities } = useMemo(() => {
-    if (!members) return { countries: [] as string[], cities: [] as string[] };
     const countrySet = new Set<string>();
     const citySet = new Set<string>();
-    members.forEach((m) => {
+    allMembers.forEach((m) => {
       if (m.country) countrySet.add(m.country);
       if (m.city) citySet.add(m.city);
     });
     return { countries: [...countrySet].sort(), cities: [...citySet].sort() };
-  }, [members]);
+  }, [allMembers]);
 
   const filteredCities = useMemo(() => {
     if (tempCountry === "All") return cities;
-    if (!members) return [];
     const citySet = new Set<string>();
-    members.forEach((m) => {
+    allMembers.forEach((m) => {
       if (m.country === tempCountry && m.city) citySet.add(m.city);
     });
     return [...citySet].sort();
-  }, [members, cities, tempCountry]);
+  }, [allMembers, cities, tempCountry]);
 
   const filtered = useMemo(() => {
-    if (!members) return [];
-    let results = members;
+    let results = allMembers;
     const q = search.trim().toLowerCase();
     if (q) {
       results = results.filter(
@@ -131,7 +147,15 @@ export default function MemberDirectoryScreen() {
       results = results.filter((m) => m.city === cityFilter);
     }
     return results;
-  }, [members, search, countryFilter, cityFilter]);
+  }, [allMembers, search, countryFilter, cityFilter]);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const totalLoaded = allMembers.length;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -210,11 +234,12 @@ export default function MemberDirectoryScreen() {
         </ScrollView>
       )}
 
-      {/* Results count */}
+      {/* Results meta */}
       {!isLoading && !isError && (
         <View style={styles.resultsMeta}>
           <Text style={styles.resultsText}>
             {filtered.length} member{filtered.length !== 1 ? "s" : ""}
+            {hasNextPage ? ` (${totalLoaded} loaded)` : ""}
           </Text>
         </View>
       )}
@@ -239,10 +264,31 @@ export default function MemberDirectoryScreen() {
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           showsVerticalScrollIndicator={false}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.4}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
           }
           renderItem={({ item }) => <MemberListItem member={item} />}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.footerLoaderText}>Loading more members...</Text>
+              </View>
+            ) : hasNextPage ? (
+              <TouchableOpacity style={styles.loadMoreBtn} onPress={() => fetchNextPage()} data-testid="btn-load-more">
+                <Text style={styles.loadMoreText}>Load more</Text>
+              </TouchableOpacity>
+            ) : totalLoaded > 0 ? (
+              <Text style={styles.endText}>All {totalLoaded} members loaded</Text>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={48} color={COLORS.textMuted} />
@@ -266,7 +312,6 @@ export default function MemberDirectoryScreen() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Country */}
             <Text style={styles.filterLabel}>Country</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {["All", ...countries].map((c) => (
@@ -281,7 +326,6 @@ export default function MemberDirectoryScreen() {
               ))}
             </ScrollView>
 
-            {/* City */}
             <Text style={[styles.filterLabel, { marginTop: SPACING.md }]}>City</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {["All", ...filteredCities].map((c) => (
@@ -398,6 +442,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
   },
   badgeText: { fontSize: 11, color: COLORS.textMuted, fontWeight: "500" },
+
+  footerLoader: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 20 },
+  footerLoaderText: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
+  loadMoreBtn: { alignSelf: "center", marginVertical: 16, paddingHorizontal: 24, paddingVertical: 10, borderRadius: BORDER_RADIUS.full, borderWidth: 1, borderColor: COLORS.primary },
+  loadMoreText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.primary },
+  endText: { textAlign: "center", fontSize: 12, color: COLORS.textMuted, paddingVertical: 20 },
 
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: SPACING.sm },
   errorText: { fontSize: FONT_SIZES.md, color: COLORS.textMuted },
