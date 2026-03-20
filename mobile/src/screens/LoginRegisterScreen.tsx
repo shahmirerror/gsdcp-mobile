@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Image,
   ImageBackground,
-  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -22,7 +21,6 @@ import { useAuth } from "../contexts/AuthContext";
 
 const logo = require("../../assets/logo-square.png");
 const heroBg = require("../../assets/hero-bg.jpg");
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function LoginRegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -59,46 +57,44 @@ export default function LoginRegisterScreen() {
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: 48 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
-        {/* ── Hero ── */}
-        <ImageBackground source={heroBg} style={styles.hero} resizeMode="cover">
+        {/* ── Hero — exact same pattern as DogProfile / MemberProfile ── */}
+        <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
           <LinearGradient
-            colors={["rgba(8,58,36,0.45)", "rgba(8,58,36,0.72)", "rgba(8,58,36,0.92)"]}
-            style={StyleSheet.absoluteFillObject}
+            colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
+            style={styles.heroGradient}
+            pointerEvents="none"
           />
-
-          {/* Back button */}
           <TouchableOpacity
-            style={[styles.backBtn, { top: insets.top + 12 }]}
+            style={[styles.backButton, { top: insets.top + 12 }]}
             onPress={() => navigation.goBack()}
-            activeOpacity={0.75}
+            activeOpacity={0.7}
             data-testid="btn-back"
           >
-            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
-
-          {/* Brand */}
-          <View style={[styles.brand, { paddingTop: insets.top + 56 }]}>
-            <View style={styles.logoWrap}>
-              <Image source={logo} style={styles.logo} resizeMode="contain" />
-            </View>
-            <Text style={styles.brandTitle}>GSDCP</Text>
-            <Text style={styles.brandSub}>GERMAN SHEPHERD DOG CLUB OF PAKISTAN</Text>
-            <View style={styles.heroDivider} />
-            <Text style={styles.heroTagline}>
-              Preserving the standard of the breed since 1978
-            </Text>
-          </View>
         </ImageBackground>
 
-        {/* ── Form card ── */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Member Sign In</Text>
-          <Text style={styles.cardSub}>Access your kennel, pedigrees & show records.</Text>
+        {/* ── Brand — sits at marginTop:-80, matching the avatar/profileSection pattern ── */}
+        <View style={styles.brandSection}>
+          <View style={styles.logoOuter}>
+            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+          </View>
+          <Text style={styles.clubTitle}>GSDCP</Text>
+          <Text style={styles.clubSubtitle}>GERMAN SHEPHERD DOG CLUB OF PAKISTAN</Text>
+          <Text style={styles.clubTagline}>
+            Preserving the standard of the breed since 1978
+          </Text>
+        </View>
+
+        {/* ── Form ── */}
+        <View style={styles.formArea}>
+          <Text style={styles.formTitle}>Member Sign In</Text>
+          <Text style={styles.formSub}>Access your kennel, pedigrees & show records.</Text>
 
           {error ? (
             <View style={styles.errorBox}>
@@ -107,7 +103,7 @@ export default function LoginRegisterScreen() {
             </View>
           ) : null}
 
-          {/* Identifier */}
+          {/* Email / Membership ID */}
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>EMAIL OR MEMBERSHIP ID</Text>
             <View style={styles.fieldRow}>
@@ -164,7 +160,7 @@ export default function LoginRegisterScreen() {
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          {/* Sign In */}
+          {/* Sign In button */}
           <TouchableOpacity
             style={[styles.signInBtn, loading && { opacity: 0.65 }]}
             onPress={handleLogin}
@@ -182,7 +178,7 @@ export default function LoginRegisterScreen() {
             )}
           </TouchableOpacity>
 
-          {/* ── WUSV divider ── */}
+          {/* WUSV divider */}
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerLabel}>WUSV AFFILIATE</Text>
@@ -210,93 +206,90 @@ export default function LoginRegisterScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: "#f6f8f7" },
 
-  /* ── Hero ── */
-  hero: {
-    height: SCREEN_HEIGHT * 0.46,
-    justifyContent: "flex-end",
+  /* ── Hero — exact match to DogProfileScreen / MemberProfileScreen ── */
+  heroBanner: { width: "100%", height: 256 },
+  heroGradient: {
+    position: "absolute",
+    left: 0, right: 0, bottom: 0,
+    height: 256,
   },
-  backBtn: {
+  backButton: {
     position: "absolute",
     left: 16,
-    width: 40,
-    height: 40,
+    width: 40, height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
   },
-  brand: {
+
+  /* ── Brand section — sits at marginTop:-80 like profileSection ── */
+  brandSection: {
     alignItems: "center",
-    paddingBottom: 40,
-    paddingHorizontal: 24,
+    marginTop: -80,
+    paddingHorizontal: 16,
+    marginBottom: 28,
   },
-  logoWrap: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 2,
+  logoOuter: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+    borderWidth: 4,
     borderColor: COLORS.accent,
+    backgroundColor: COLORS.primary,
+    overflow: "hidden",
+    marginBottom: SPACING.md,
     justifyContent: "center",
     alignItems: "center",
-    overflow: "hidden",
-    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  logo: { width: 54, height: 54 },
-  brandTitle: {
-    fontSize: 32,
+  logoImage: { width: 100, height: 100 },
+  clubTitle: {
+    fontSize: 26,
     fontWeight: "800",
-    color: "#fff",
-    letterSpacing: 3,
+    color: COLORS.primary,
+    letterSpacing: 2,
+    marginTop: 8,
+    marginBottom: 4,
   },
-  brandSub: {
+  clubSubtitle: {
     fontSize: 10,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.75)",
+    fontWeight: "700",
+    color: COLORS.textMuted,
     letterSpacing: 1.5,
-    marginTop: 4,
     textAlign: "center",
+    marginBottom: 8,
   },
-  heroDivider: {
-    width: 40,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: COLORS.accent,
-    marginTop: 18,
-    marginBottom: 14,
-  },
-  heroTagline: {
+  clubTagline: {
     fontSize: 13,
     fontStyle: "italic",
-    color: "rgba(255,255,255,0.8)",
+    color: COLORS.textSecondary,
     textAlign: "center",
     lineHeight: 20,
+    paddingHorizontal: 24,
   },
 
-  /* ── Card ── */
-  card: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    marginTop: -24,
-    paddingTop: 32,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+  /* ── Form area ── */
+  formArea: {
+    paddingHorizontal: 16,
   },
-  cardTitle: {
+  formTitle: {
     fontSize: 22,
     fontWeight: "800",
     color: COLORS.text,
     marginBottom: 6,
   },
-  cardSub: {
+  formSub: {
     fontSize: FONT_SIZES.md,
     color: COLORS.textSecondary,
-    marginBottom: 28,
+    marginBottom: 24,
     lineHeight: 22,
   },
 
