@@ -18,6 +18,15 @@ import { fetchDashboard, fetchNews, stripHtml, NewsItem } from "../lib/api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+/** Returns the current GSDCP season label, e.g. "2025/2026".
+ *  The new season starts in August — so Aug 1 2026 → "2026/2027". */
+function getCurrentSeason(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-indexed: January=0 … July=6, August=7
+  return month >= 7 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
+}
+
 function formatMatingDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString("en-GB", {
@@ -43,9 +52,11 @@ export default function DashboardScreen() {
 
   const recentNews = (newsData ?? []).slice(0, 2);
 
+  const season = getCurrentSeason();
+
   const statCards = [
     {
-      label: "Registered Dogs",
+      label: "Registered Dogs in Club",
       value: dashboard ? `${dashboard.totalDogs.toLocaleString()}` : "—",
       icon: "paw" as const,
     },
@@ -55,7 +66,7 @@ export default function DashboardScreen() {
       icon: "people" as const,
     },
     {
-      label: "Shows This Year",
+      label: `Shows in ${season} season`,
       value: dashboard ? `${dashboard.totalShows}` : "—",
       icon: "trophy" as const,
     },
