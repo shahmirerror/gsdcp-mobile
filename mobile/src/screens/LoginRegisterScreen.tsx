@@ -30,21 +30,49 @@ const MODES: { id: SignInMode; label: string; icon: string }[] = [
   { id: "otp",        label: "Phone OTP",        icon: "phone-portrait-outline" },
 ];
 
-/** Auto-formats membership input → uppercase letter + hyphen + digits.
- *  e.g. "p123" → "P-123", "P-456" stays as-is */
-function formatMembershipNo(raw: string): string {
-  const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (cleaned.length === 0) return "";
-  const letter = cleaned[0];
-  if (!/[A-Z]/.test(letter)) return letter;
-  const digits = cleaned.slice(1).replace(/[^0-9]/g, "");
-  if (digits.length === 0) return letter;
-  return `${letter}-${digits}`;
+/**
+ * Smart membership-number formatter that respects backspace.
+ * - Typing "p" → "P-"  (letter auto-uppercased, hyphen auto-inserted)
+ * - Typing "1" from "P-" → "P-1"
+ * - Backspacing from "P-" → ""  (clears entirely so hyphen doesn't trap the user)
+ * - Backspacing from "P-123" → "P-12"  (normal digit deletion)
+ * - Non-letter first char → rejected silently
+ * - Non-digit after the hyphen → rejected silently
+ */
+function smartFormatMembershipNo(raw: string, prev: string): string {
+  // Detect a backspace that would leave just the letter with no hyphen/digits.
+  // In that state clear fully — otherwise the auto-hyphen would trap the user.
+  if (raw.length < prev.length && /^[A-Z]-$/.test(prev) && /^[A-Z]$/.test(raw)) {
+    return "";
+  }
+
+  // Strip everything except uppercase letters and digits
+  const stripped = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!stripped) return "";
+
+  const letter = stripped[0];
+  if (!/[A-Z]/.test(letter)) return ""; // first char must be a letter
+
+  const digits = stripped.slice(1).replace(/\D/g, "");
+  // Auto-insert hyphen as soon as the letter is present
+  return digits ? `${letter}-${digits}` : `${letter}-`;
 }
 
 /** Validates membership number: single uppercase letter, hyphen, 1+ digits */
 function isValidMembershipNo(value: string): boolean {
   return /^[A-Z]-\d+$/.test(value);
+}
+
+/** Live status for the membership field */
+function memberNoStatus(value: string): { icon: string; text: string; color: string } | null {
+  if (!value) return null;
+  if (isValidMembershipNo(value))
+    return { icon: "checkmark-circle", text: "Valid membership number", color: "#16A34A" };
+  if (/^[A-Z]-$/.test(value))
+    return { icon: "information-circle-outline", text: "Now enter your membership digits", color: COLORS.textMuted };
+  if (/^[A-Z]-\d+$/.test(value) === false && value.length > 2)
+    return { icon: "alert-circle-outline", text: "Digits only after the hyphen (e.g. P-1234)", color: "#D97706" };
+  return null;
 }
 
 export default function LoginRegisterScreen() {
@@ -73,12 +101,15 @@ export default function LoginRegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const memberPasswordRef = useRef<TextInput>(null);
-  const userPasswordRef   = useRef<TextInput>(null);
-  const otpRef            = useRef<TextInput>(null);
+  const memberPasswordRef  = useRef<TextInput>(null);
+  const userPasswordRef    = useRef<TextInput>(null);
+  const otpRef             = useRef<TextInput>(null);
+  const prevMemberNoRef    = useRef(""); // tracks last formatted value for backspace detection
 
   const handleMemberNoChange = (raw: string) => {
-    setMemberNo(formatMembershipNo(raw));
+    const formatted = smartFormatMembershipNo(raw, prevMemberNoRef.current);
+    prevMemberNoRef.current = formatted;
+    setMemberNo(formatted);
   };
 
   const handleSendOtp = () => {
@@ -216,25 +247,51 @@ export default function LoginRegisterScreen() {
             <>
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>MEMBERSHIP NUMBER</Text>
-                <View style={styles.fieldHint}>
-                  <Text style={styles.hintText}>Format: one letter · hyphen · digits  (e.g. P-1234)</Text>
-                </View>
-                <View style={styles.fieldRow}>
-                  <Ionicons name="card-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="P-1234"
-                    placeholderTextColor={COLORS.textMuted}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    value={memberNo}
-                    onChangeText={handleMemberNoChange}
-                    returnKeyType="next"
-                    maxLength={10}
-                    onSubmitEditing={() => memberPasswordRef.current?.focus()}
-                    data-testid="input-membership-no"
-                  />
-                </View>
+                {(() => {
+                  const status = memberNoStatus(memberNo);
+                  const valid  = isValidMembershipNo(memberNo);
+                  return (
+                    <>
+                      <View style={[
+                        styles.fieldRow,
+                        valid
+                          ? styles.fieldRowValid
+                          : memberNo.length > 2 && !valid
+                            ? styles.fieldRowWarn
+                            : null,
+                      ]}>
+                        <Ionicons
+                          name="card-outline"
+                          size={18}
+                          color={valid ? "#16A34A" : COLORS.textMuted}
+                          style={styles.fieldIcon}
+                        />
+                        <TextInput
+                          style={styles.fieldInput}
+                          placeholder="P-1234"
+                          placeholderTextColor={COLORS.textMuted}
+                          autoCapitalize="characters"
+                          autoCorrect={false}
+                          value={memberNo}
+                          onChangeText={handleMemberNoChange}
+                          returnKeyType="next"
+                          maxLength={12}
+                          onSubmitEditing={() => memberPasswordRef.current?.focus()}
+                          data-testid="input-membership-no"
+                        />
+                        {valid && (
+                          <Ionicons name="checkmark-circle" size={20} color="#16A34A" style={{ marginLeft: 4 }} />
+                        )}
+                      </View>
+                      {status && (
+                        <View style={styles.liveHint}>
+                          <Ionicons name={status.icon as any} size={13} color={status.color} />
+                          <Text style={[styles.liveHintText, { color: status.color }]}>{status.text}</Text>
+                        </View>
+                      )}
+                    </>
+                  );
+                })()}
               </View>
 
               <View style={styles.fieldGroup}>
@@ -525,6 +582,13 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: 11, color: COLORS.textMuted, fontStyle: "italic",
   },
+  liveHint: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    marginTop: 6,
+  },
+  liveHintText: {
+    fontSize: 11, fontWeight: "600",
+  },
   fieldRow: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: "#fff",
@@ -534,6 +598,14 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+  },
+  fieldRowValid: {
+    borderColor: "#16A34A",
+    backgroundColor: "#F0FDF4",
+  },
+  fieldRowWarn: {
+    borderColor: "#D97706",
+    backgroundColor: "#FFFBEB",
   },
   fieldIcon: { marginRight: 10 },
   fieldInput: {
