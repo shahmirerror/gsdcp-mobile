@@ -509,6 +509,21 @@ export type MemberOwnedDog = {
   microchip: string | null;
 };
 
+export type MemberKennel = {
+  kennel_id: string;
+  kennelName: string;
+  suffix: string | null;
+  prefix: string | null;
+  city: string | null;
+  country: string | null;
+  location: string | null;
+  phone: string | null;
+  email: string | null;
+  imageUrl: string | null;
+  description: string | null;
+  active_since: string | null;
+};
+
 export type MemberDetail = {
   member: Member & {
     address: string | null;
@@ -517,6 +532,7 @@ export type MemberDetail = {
     check_address: "Show" | "Hide";
   };
   ownedDogs: MemberOwnedDog[];
+  kennel: MemberKennel | null;
 };
 
 export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
@@ -529,6 +545,7 @@ export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
   return {
     member: json.data.member,
     ownedDogs: json.data.ownedDogs ?? [],
+    kennel: json.data.kennel ?? null,
   };
 }
 

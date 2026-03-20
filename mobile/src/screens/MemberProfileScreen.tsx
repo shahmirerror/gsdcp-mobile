@@ -16,7 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, Dog } from "../lib/api";
+import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 
 const heroBg = require("../../assets/hero-bg.jpg");
@@ -122,14 +122,99 @@ function DetailTab({ detail, passedMember }: { detail: MemberDetail | undefined;
 }
 
 /* ── Tab: Kennel ───────────────────────────────────── */
-function KennelTab() {
-  return (
-    <View style={styles.emptyState}>
-      <View style={styles.emptyIconWrap}>
-        <Ionicons name="home-outline" size={32} color={COLORS.primary} />
+function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undefined; navigation: any }) {
+  if (!kennel) {
+    return (
+      <View style={styles.emptyState}>
+        <View style={styles.emptyIconWrap}>
+          <Ionicons name="home-outline" size={32} color={COLORS.primary} />
+        </View>
+        <Text style={styles.emptyTitle}>No Kennel Registered</Text>
+        <Text style={styles.emptyDesc}>This member has not registered a kennel with GSDCP.</Text>
       </View>
-      <Text style={styles.emptyTitle}>No Kennel Registered</Text>
-      <Text style={styles.emptyDesc}>This member has not registered a kennel with GSDCP.</Text>
+    );
+  }
+
+  const hasImage =
+    kennel.imageUrl &&
+    !kennel.imageUrl.includes("user-not-found") &&
+    !kennel.imageUrl.startsWith("https::");
+
+  const initials = kennel.kennelName
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const phone =
+    kennel.phone && kennel.phone !== "+00-000-000-0000" ? kennel.phone : null;
+
+  const activeSince = kennel.active_since
+    ? new Date(kennel.active_since).getFullYear().toString()
+    : null;
+
+  return (
+    <View style={styles.card}>
+      {/* Kennel identity row */}
+      <View style={styles.kennelHeader}>
+        {hasImage ? (
+          <Image source={{ uri: kennel.imageUrl! }} style={styles.kennelAvatar} />
+        ) : (
+          <View style={[styles.kennelAvatar, styles.kennelAvatarPlaceholder]}>
+            <Text style={styles.kennelAvatarInitials}>{initials}</Text>
+          </View>
+        )}
+        <View style={{ flex: 1, marginLeft: 14 }}>
+          <Text style={styles.kennelName}>{kennel.kennelName}</Text>
+          {kennel.suffix ? (
+            <Text style={styles.kennelSuffix}>"{kennel.suffix}"</Text>
+          ) : null}
+          {kennel.city ? (
+            <Text style={styles.kennelCity}>
+              {kennel.city}{kennel.country ? `, ${kennel.country}` : ""}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      <Text style={styles.cardHeading}>Kennel Details</Text>
+      <View style={styles.detailsGrid}>
+        {kennel.prefix ? (
+          <DetailItem icon="text-outline" label="Prefix" value={kennel.prefix} />
+        ) : null}
+        {phone ? (
+          <DetailItem icon="call-outline" label="Phone" value={phone} />
+        ) : null}
+        {kennel.email ? (
+          <DetailItem icon="mail-outline" label="Email" value={kennel.email} />
+        ) : null}
+        {kennel.location ? (
+          <DetailItem icon="location-outline" label="Location" value={kennel.location} />
+        ) : null}
+        {activeSince ? (
+          <DetailItem icon="calendar-outline" label="Active Since" value={activeSince} />
+        ) : null}
+      </View>
+
+      <TouchableOpacity
+        style={styles.kennelViewBtn}
+        activeOpacity={0.8}
+        onPress={() =>
+          navigation.push("KennelProfile", {
+            id: kennel.kennel_id,
+            name: kennel.kennelName,
+          })
+        }
+        data-testid="btn-view-kennel"
+      >
+        <Ionicons name="home" size={16} color="#fff" style={{ marginRight: 6 }} />
+        <Text style={styles.kennelViewBtnText}>View Full Kennel Profile</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -283,7 +368,7 @@ export default function MemberProfileScreen() {
         ) : activeTab === "detail" ? (
           <DetailTab detail={detail} passedMember={passedMember} />
         ) : activeTab === "kennel" ? (
-          <KennelTab />
+          <KennelTab kennel={detail?.kennel} navigation={navigation} />
         ) : (
           <DogsTab
             dogs={ownedDogs}
@@ -407,6 +492,35 @@ const styles = StyleSheet.create({
   detailTextWrap: { flex: 1 },
   detailLabel: { fontSize: 12, fontWeight: "500", color: "#94A3B8", marginBottom: 2 },
   detailValue: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
+
+  /* Kennel tab */
+  divider: {
+    height: 1, backgroundColor: "rgba(15,92,59,0.06)", marginVertical: 20,
+  },
+  kennelHeader: { flexDirection: "row", alignItems: "center" },
+  kennelAvatar: {
+    width: 64, height: 64, borderRadius: 12, overflow: "hidden",
+  },
+  kennelAvatarPlaceholder: {
+    backgroundColor: "rgba(15,92,59,0.1)",
+    justifyContent: "center", alignItems: "center",
+  },
+  kennelAvatarInitials: {
+    fontSize: 20, fontWeight: "700", color: COLORS.primary,
+  },
+  kennelName: { fontSize: 17, fontWeight: "700", color: "#0F172A", marginBottom: 2 },
+  kennelSuffix: { fontSize: 13, fontStyle: "italic", color: COLORS.textMuted, marginBottom: 2 },
+  kennelCity: { fontSize: 13, color: COLORS.textMuted },
+  kennelViewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+  },
+  kennelViewBtnText: { fontSize: 14, fontWeight: "700", color: "#fff" },
 
   /* Empty states */
   emptyState: {
