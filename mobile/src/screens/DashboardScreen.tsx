@@ -66,7 +66,7 @@ export default function DashboardScreen() {
       icon: "people" as const,
     },
     {
-      label: `Shows in ${season} season`,
+      label: `Events in ${season} season`,
       value: dashboard ? `${dashboard.totalShows}` : "—",
       icon: "trophy" as const,
     },
