@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../lib/theme";
+import { useAuth } from "../contexts/AuthContext";
 
 import DashboardScreen from "../screens/DashboardScreen";
 import DogSearchScreen from "../screens/DogSearchScreen";
@@ -143,8 +144,13 @@ function ShowsStackNavigator() {
 }
 
 function ProfileStackNavigator() {
+  const { isLoggedIn } = useAuth();
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator
+      key={isLoggedIn ? "auth" : "guest"}
+      initialRouteName={isLoggedIn ? "ProfileHome" : "LoginRegister"}
+      screenOptions={{ headerShown: false }}
+    >
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
     </ProfileStack.Navigator>

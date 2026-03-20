@@ -150,7 +150,10 @@ export default function LoginRegisterScreen() {
         phone.trim();
       const credential = mode === "otp" ? otpCode.trim() : (mode === "membership" ? memberPassword : userPassword);
       await login(identifier, credential);
-      navigation.goBack();
+      // If we arrived here directly (Profile tab, not logged in), the navigator
+      // will re-mount automatically with ProfileHome. If we navigated here from
+      // inside the app, go back to wherever the user came from.
+      if (navigation.canGoBack()) navigation.goBack();
     } catch (e: any) {
       setError(e.message ?? "Sign in failed. Please try again.");
     } finally {
@@ -184,14 +187,16 @@ export default function LoginRegisterScreen() {
             style={styles.heroGradient}
             pointerEvents="none"
           />
-          <TouchableOpacity
-            style={[styles.backButton, { top: insets.top + 12 }]}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            data-testid="btn-back"
-          >
-            <Ionicons name="arrow-back" size={22} color="#fff" />
-          </TouchableOpacity>
+          {navigation.canGoBack() && (
+            <TouchableOpacity
+              style={[styles.backButton, { top: insets.top + 12 }]}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+              data-testid="btn-back"
+            >
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+          )}
         </ImageBackground>
 
         {/* ── Brand ── */}
