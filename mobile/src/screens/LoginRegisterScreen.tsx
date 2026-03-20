@@ -37,8 +37,14 @@ export default function LoginRegisterScreen() {
 
   const handleLogin = async () => {
     setError("");
-    if (!identifier.trim()) { setError("Please enter your email or membership ID"); return; }
-    if (!password) { setError("Please enter your password"); return; }
+    if (!identifier.trim()) {
+      setError("Please enter your email or membership ID");
+      return;
+    }
+    if (!password) {
+      setError("Please enter your password");
+      return;
+    }
     setLoading(true);
     try {
       await login(identifier.trim(), password);
@@ -63,7 +69,11 @@ export default function LoginRegisterScreen() {
         bounces={false}
       >
         {/* ── Hero — exact same pattern as DogProfile / MemberProfile ── */}
-        <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
+        <ImageBackground
+          source={heroBg}
+          style={styles.heroBanner}
+          resizeMode="cover"
+        >
           <LinearGradient
             colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
             style={styles.heroGradient}
@@ -82,19 +92,21 @@ export default function LoginRegisterScreen() {
         {/* ── Brand — sits at marginTop:-80, matching the avatar/profileSection pattern ── */}
         <View style={styles.brandSection}>
           <View style={styles.logoOuter}>
-            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+            <Image
+              source={logo}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
-          <Text style={styles.clubTitle}>GSDCP</Text>
-          <Text style={styles.clubSubtitle}>GERMAN SHEPHERD DOG CLUB OF PAKISTAN</Text>
-          <Text style={styles.clubTagline}>
-            Preserving the standard of the breed since 1978
-          </Text>
+          <Text style={styles.clubTitle}>Member Sign In</Text>
         </View>
 
         {/* ── Form ── */}
         <View style={styles.formArea}>
           <Text style={styles.formTitle}>Member Sign In</Text>
-          <Text style={styles.formSub}>Access your kennel, pedigrees & show records.</Text>
+          <Text style={styles.formSub}>
+            Access your kennel, pedigrees & show records.
+          </Text>
 
           {error ? (
             <View style={styles.errorBox}>
@@ -107,7 +119,12 @@ export default function LoginRegisterScreen() {
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>EMAIL OR MEMBERSHIP ID</Text>
             <View style={styles.fieldRow}>
-              <Ionicons name="person-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+              <Ionicons
+                name="person-outline"
+                size={18}
+                color={COLORS.textMuted}
+                style={styles.fieldIcon}
+              />
               <TextInput
                 style={styles.fieldInput}
                 placeholder="GSDCP-XXXX-2024"
@@ -128,7 +145,12 @@ export default function LoginRegisterScreen() {
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>PASSWORD</Text>
             <View style={styles.fieldRow}>
-              <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={18}
+                color={COLORS.textMuted}
+                style={styles.fieldIcon}
+              />
               <TextInput
                 ref={passwordRef}
                 style={styles.fieldInput}
@@ -156,7 +178,10 @@ export default function LoginRegisterScreen() {
           </View>
 
           {/* Forgot */}
-          <TouchableOpacity style={styles.forgotRow} data-testid="btn-forgot-password">
+          <TouchableOpacity
+            style={styles.forgotRow}
+            data-testid="btn-forgot-password"
+          >
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
@@ -173,7 +198,12 @@ export default function LoginRegisterScreen() {
             ) : (
               <>
                 <Text style={styles.signInBtnText}>SIGN IN</Text>
-                <Ionicons name="log-in-outline" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                <Ionicons
+                  name="log-in-outline"
+                  size={20}
+                  color="#fff"
+                  style={{ marginLeft: 8 }}
+                />
               </>
             )}
           </TouchableOpacity>
@@ -187,8 +217,13 @@ export default function LoginRegisterScreen() {
 
           {/* Support */}
           <View style={styles.supportRow}>
-            <Text style={styles.supportQuestion}>Need assistance with your account?</Text>
-            <TouchableOpacity style={styles.supportBtn} data-testid="btn-contact-support">
+            <Text style={styles.supportQuestion}>
+              Need assistance with your account?
+            </Text>
+            <TouchableOpacity
+              style={styles.supportBtn}
+              data-testid="btn-contact-support"
+            >
               <Ionicons name="paw" size={13} color={COLORS.accent} />
               <Text style={styles.supportBtnText}>CONTACT SUPPORT</Text>
             </TouchableOpacity>
@@ -196,7 +231,8 @@ export default function LoginRegisterScreen() {
 
           {/* Footer */}
           <Text style={styles.footer}>
-            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN.{"\n"}ALL RIGHTS RESERVED.
+            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN.{"\n"}ALL RIGHTS
+            RESERVED.
           </Text>
         </View>
       </ScrollView>
@@ -212,13 +248,16 @@ const styles = StyleSheet.create({
   heroBanner: { width: "100%", height: 256 },
   heroGradient: {
     position: "absolute",
-    left: 0, right: 0, bottom: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: 256,
   },
   backButton: {
     position: "absolute",
     left: 16,
-    width: 40, height: 40,
+    width: 40,
+    height: 40,
     borderRadius: 20,
     backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "center",
@@ -254,7 +293,7 @@ const styles = StyleSheet.create({
   clubTitle: {
     fontSize: 26,
     fontWeight: "800",
-    color: COLORS.primary,
+    color: COLORS.background,
     letterSpacing: 2,
     marginTop: 8,
     marginBottom: 4,
