@@ -10,22 +10,26 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  ImageBackground,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { useAuth } from "../contexts/AuthContext";
 
 const logo = require("../../assets/logo-square.png");
+const heroBg = require("../../assets/hero-bg.jpg");
 
 type TabKey = "login" | "register";
 
 export default function LoginRegisterScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { login } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("login");
 
-  const [loginEmail, setLoginEmail] = useState("");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginShowPassword, setLoginShowPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -46,15 +50,19 @@ export default function LoginRegisterScreen() {
   const regPasswordRef = useRef<TextInput>(null);
   const regConfirmPasswordRef = useRef<TextInput>(null);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoginError("");
-    if (!loginEmail.trim()) { setLoginError("Please enter your email"); return; }
+    if (!loginIdentifier.trim()) { setLoginError("Please enter your email or membership ID"); return; }
     if (!loginPassword) { setLoginError("Please enter your password"); return; }
     setLoginLoading(true);
-    setTimeout(() => {
+    try {
+      await login(loginIdentifier.trim(), loginPassword);
+      navigation.goBack();
+    } catch (e: any) {
+      setLoginError(e.message ?? "Login failed. Please try again.");
+    } finally {
       setLoginLoading(false);
-      setLoginError("Login is not available yet. Coming soon!");
-    }, 1500);
+    }
   };
 
   const handleRegister = () => {
@@ -78,26 +86,27 @@ export default function LoginRegisterScreen() {
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + SPACING.md }]}
+        contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        bounces={true}
+        bounces={false}
       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-          data-testid="btn-back"
-        >
-          <Ionicons name="arrow-back" size={22} color={COLORS.text} />
-        </TouchableOpacity>
-
-        <View style={styles.logoSection}>
-          <Image source={logo} style={styles.logo} resizeMode="contain" />
+        {/* ── Logo Section ── */}
+        <View style={[styles.logoSection, { paddingTop: insets.top + 24 }]}>
+          <View style={styles.logoCircle}>
+            <Image source={logo} style={styles.logoImg} resizeMode="contain" />
+          </View>
           <Text style={styles.appTitle}>GSDCP</Text>
-          <Text style={styles.appSubtitle}>German Shepherd Dog Club of Pakistan</Text>
+          <Text style={styles.appSubtitle}>GERMAN SHEPHERD DOG CLUB OF PAKISTAN</Text>
         </View>
 
+        {/* ── Hero Image ── */}
+        <ImageBackground source={heroBg} style={styles.heroImage} resizeMode="cover">
+          <View style={styles.heroDimmer} />
+          <Text style={styles.heroText}>Preserving the standard of the breed since 1978</Text>
+        </ImageBackground>
+
+        {/* ── Tabs ── */}
         <View style={styles.tabRow}>
           <TouchableOpacity
             style={[styles.tab, activeTab === "login" && styles.tabActive]}
@@ -105,9 +114,7 @@ export default function LoginRegisterScreen() {
             activeOpacity={0.7}
             data-testid="tab-login"
           >
-            <Text style={[styles.tabText, activeTab === "login" && styles.tabTextActive]}>
-              Sign In
-            </Text>
+            <Text style={[styles.tabText, activeTab === "login" && styles.tabTextActive]}>LOGIN</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === "register" && styles.tabActive]}
@@ -115,334 +122,373 @@ export default function LoginRegisterScreen() {
             activeOpacity={0.7}
             data-testid="tab-register"
           >
-            <Text style={[styles.tabText, activeTab === "register" && styles.tabTextActive]}>
-              Register
-            </Text>
+            <Text style={[styles.tabText, activeTab === "register" && styles.tabTextActive]}>REGISTER</Text>
           </TouchableOpacity>
         </View>
 
-        {activeTab === "login" ? (
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Welcome Back</Text>
-            <Text style={styles.formSubtitle}>Sign in to your GSDCP account</Text>
+        {/* ── Form area ── */}
+        <View style={styles.formArea}>
+          {activeTab === "login" ? (
+            <>
+              <Text style={styles.formTitle}>Welcome Back</Text>
+              <Text style={styles.formSubtitle}>Sign in to manage your kennel and pedigrees.</Text>
 
-            {loginError ? (
-              <View style={styles.errorBox}>
-                <Ionicons name="alert-circle" size={16} color={COLORS.error} />
-                <Text style={styles.errorText}>{loginError}</Text>
-              </View>
-            ) : null}
+              {loginError ? (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+                  <Text style={styles.errorText}>{loginError}</Text>
+                </View>
+              ) : null}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="mail-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor={COLORS.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={loginEmail}
-                  onChangeText={setLoginEmail}
-                  returnKeyType="next"
-                  onSubmitEditing={() => loginPasswordRef.current?.focus()}
-                  data-testid="input-login-email"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  ref={loginPasswordRef}
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor={COLORS.textMuted}
-                  secureTextEntry={!loginShowPassword}
-                  value={loginPassword}
-                  onChangeText={setLoginPassword}
-                  returnKeyType="done"
-                  onSubmitEditing={handleLogin}
-                  data-testid="input-login-password"
-                />
-                <TouchableOpacity
-                  onPress={() => setLoginShowPassword(!loginShowPassword)}
-                  style={styles.eyeButton}
-                  data-testid="btn-toggle-login-password"
-                >
-                  <Ionicons
-                    name={loginShowPassword ? "eye-off-outline" : "eye-outline"}
-                    size={18}
-                    color={COLORS.textMuted}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>EMAIL OR MEMBERSHIP ID</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="GSDCP-XXXX-2024"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={loginIdentifier}
+                    onChangeText={setLoginIdentifier}
+                    returnKeyType="next"
+                    onSubmitEditing={() => loginPasswordRef.current?.focus()}
+                    data-testid="input-login-identifier"
                   />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>PASSWORD</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    ref={loginPasswordRef}
+                    style={styles.input}
+                    placeholder="••••••••"
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry={!loginShowPassword}
+                    value={loginPassword}
+                    onChangeText={setLoginPassword}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
+                    data-testid="input-login-password"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setLoginShowPassword(!loginShowPassword)}
+                    style={styles.eyeButton}
+                    data-testid="btn-toggle-login-password"
+                  >
+                    <Ionicons
+                      name={loginShowPassword ? "eye-off-outline" : "eye-outline"}
+                      size={18}
+                      color={COLORS.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.forgotPassword} data-testid="btn-forgot-password">
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.signInButton, loginLoading && styles.buttonDisabled]}
+                onPress={handleLogin}
+                disabled={loginLoading}
+                activeOpacity={0.85}
+                data-testid="btn-login"
+              >
+                {loginLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.signInButtonText}>SIGN IN</Text>
+                    <Ionicons name="log-in-outline" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.switchRow}>
+                <Text style={styles.switchText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => setActiveTab("register")} data-testid="btn-switch-to-register">
+                  <Text style={styles.switchLink}>Register</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.formTitle}>Create Account</Text>
+              <Text style={styles.formSubtitle}>Join the German Shepherd Dog Club of Pakistan.</Text>
 
-            <TouchableOpacity style={styles.forgotPassword} data-testid="btn-forgot-password">
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
+              {regError ? (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+                  <Text style={styles.errorText}>{regError}</Text>
+                </View>
+              ) : null}
 
-            <TouchableOpacity
-              style={[styles.primaryButton, loginLoading && styles.primaryButtonDisabled]}
-              onPress={handleLogin}
-              disabled={loginLoading}
-              activeOpacity={0.8}
-              data-testid="btn-login"
-            >
-              {loginLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchText}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => setActiveTab("register")} data-testid="btn-switch-to-register">
-                <Text style={styles.switchLink}>Register</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Create Account</Text>
-            <Text style={styles.formSubtitle}>Join the German Shepherd Dog Club of Pakistan</Text>
-
-            {regError ? (
-              <View style={styles.errorBox}>
-                <Ionicons name="alert-circle" size={16} color={COLORS.error} />
-                <Text style={styles.errorText}>{regError}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Full Name</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="person-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your full name"
-                  placeholderTextColor={COLORS.textMuted}
-                  autoCapitalize="words"
-                  value={regName}
-                  onChangeText={setRegName}
-                  returnKeyType="next"
-                  onSubmitEditing={() => regEmailRef.current?.focus()}
-                  data-testid="input-reg-name"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="mail-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  ref={regEmailRef}
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor={COLORS.textMuted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={regEmail}
-                  onChangeText={setRegEmail}
-                  returnKeyType="next"
-                  onSubmitEditing={() => regPhoneRef.current?.focus()}
-                  data-testid="input-reg-email"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Phone Number</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="call-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  ref={regPhoneRef}
-                  style={styles.input}
-                  placeholder="Enter your phone number"
-                  placeholderTextColor={COLORS.textMuted}
-                  keyboardType="phone-pad"
-                  value={regPhone}
-                  onChangeText={setRegPhone}
-                  returnKeyType="next"
-                  onSubmitEditing={() => regPasswordRef.current?.focus()}
-                  data-testid="input-reg-phone"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  ref={regPasswordRef}
-                  style={styles.input}
-                  placeholder="Create a password"
-                  placeholderTextColor={COLORS.textMuted}
-                  secureTextEntry={!regShowPassword}
-                  value={regPassword}
-                  onChangeText={setRegPassword}
-                  returnKeyType="next"
-                  onSubmitEditing={() => regConfirmPasswordRef.current?.focus()}
-                  data-testid="input-reg-password"
-                />
-                <TouchableOpacity
-                  onPress={() => setRegShowPassword(!regShowPassword)}
-                  style={styles.eyeButton}
-                  data-testid="btn-toggle-reg-password"
-                >
-                  <Ionicons
-                    name={regShowPassword ? "eye-off-outline" : "eye-outline"}
-                    size={18}
-                    color={COLORS.textMuted}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>FULL NAME</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your full name"
+                    placeholderTextColor={COLORS.textMuted}
+                    autoCapitalize="words"
+                    value={regName}
+                    onChangeText={setRegName}
+                    returnKeyType="next"
+                    onSubmitEditing={() => regEmailRef.current?.focus()}
+                    data-testid="input-reg-name"
                   />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>EMAIL</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="mail-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    ref={regEmailRef}
+                    style={styles.input}
+                    placeholder="Enter your email"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={regEmail}
+                    onChangeText={setRegEmail}
+                    returnKeyType="next"
+                    onSubmitEditing={() => regPhoneRef.current?.focus()}
+                    data-testid="input-reg-email"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>PHONE NUMBER</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="call-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    ref={regPhoneRef}
+                    style={styles.input}
+                    placeholder="Enter your phone number"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="phone-pad"
+                    value={regPhone}
+                    onChangeText={setRegPhone}
+                    returnKeyType="next"
+                    onSubmitEditing={() => regPasswordRef.current?.focus()}
+                    data-testid="input-reg-phone"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>PASSWORD</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    ref={regPasswordRef}
+                    style={styles.input}
+                    placeholder="Create a password"
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry={!regShowPassword}
+                    value={regPassword}
+                    onChangeText={setRegPassword}
+                    returnKeyType="next"
+                    onSubmitEditing={() => regConfirmPasswordRef.current?.focus()}
+                    data-testid="input-reg-password"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setRegShowPassword(!regShowPassword)}
+                    style={styles.eyeButton}
+                    data-testid="btn-toggle-reg-password"
+                  >
+                    <Ionicons
+                      name={regShowPassword ? "eye-off-outline" : "eye-outline"}
+                      size={18}
+                      color={COLORS.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
+                  <TextInput
+                    ref={regConfirmPasswordRef}
+                    style={styles.input}
+                    placeholder="Confirm your password"
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry={!regShowPassword}
+                    value={regConfirmPassword}
+                    onChangeText={setRegConfirmPassword}
+                    returnKeyType="done"
+                    onSubmitEditing={handleRegister}
+                    data-testid="input-reg-confirm-password"
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.signInButton, regLoading && styles.buttonDisabled]}
+                onPress={handleRegister}
+                disabled={regLoading}
+                activeOpacity={0.85}
+                data-testid="btn-register"
+              >
+                {regLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.signInButtonText}>CREATE ACCOUNT</Text>
+                    <Ionicons name="person-add-outline" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.switchRow}>
+                <Text style={styles.switchText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => setActiveTab("login")} data-testid="btn-switch-to-login">
+                  <Text style={styles.switchLink}>Sign In</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </>
+          )}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Confirm Password</Text>
-              <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.inputIcon} />
-                <TextInput
-                  ref={regConfirmPasswordRef}
-                  style={styles.input}
-                  placeholder="Confirm your password"
-                  placeholderTextColor={COLORS.textMuted}
-                  secureTextEntry={!regShowPassword}
-                  value={regConfirmPassword}
-                  onChangeText={setRegConfirmPassword}
-                  returnKeyType="done"
-                  onSubmitEditing={handleRegister}
-                  data-testid="input-reg-confirm-password"
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.primaryButton, regLoading && styles.primaryButtonDisabled]}
-              onPress={handleRegister}
-              disabled={regLoading}
-              activeOpacity={0.8}
-              data-testid="btn-register"
-            >
-              {regLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => setActiveTab("login")} data-testid="btn-switch-to-login">
-                <Text style={styles.switchLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
+          {/* ── WUSV Affiliate divider ── */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>WUSV AFFILIATE</Text>
+            <View style={styles.dividerLine} />
           </View>
-        )}
 
-        <View style={{ height: 40 }} />
+          {/* ── Contact Support ── */}
+          <View style={styles.supportSection}>
+            <Text style={styles.supportQuestion}>Need assistance with your registration?</Text>
+            <TouchableOpacity style={styles.supportBtn} data-testid="btn-contact-support">
+              <Ionicons name="paw" size={14} color={COLORS.accent} />
+              <Text style={styles.supportBtnText}>CONTACT SUPPORT</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Footer ── */}
+          <Text style={styles.footer}>
+            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN. ALL RIGHTS RESERVED.
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollContent: {
-    paddingHorizontal: SPACING.lg,
-    flexGrow: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BORDER_RADIUS.full,
-    backgroundColor: COLORS.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: SPACING.md,
-  },
+  flex: { flex: 1 },
+  container: { flex: 1, backgroundColor: COLORS.background },
+
   logoSection: {
     alignItems: "center",
-    marginBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xl,
   },
-  logo: {
-    width: 72,
-    height: 72,
-    marginBottom: SPACING.sm,
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: SPACING.md,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: COLORS.accent,
   },
+  logoImg: { width: 56, height: 56 },
   appTitle: {
     fontSize: 28,
     fontWeight: "800",
     color: COLORS.primary,
-    letterSpacing: 1,
+    letterSpacing: 2,
   },
   appSubtitle: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+    fontSize: 10,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+    marginTop: 4,
+    textAlign: "center",
   },
+
+  heroImage: {
+    marginHorizontal: SPACING.lg,
+    height: 180,
+    borderRadius: 16,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+    marginBottom: SPACING.xl,
+  },
+  heroDimmer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  heroText: {
+    color: "#fff",
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
+    padding: SPACING.lg,
+    lineHeight: 22,
+  },
+
   tabRow: {
     flexDirection: "row",
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: 4,
+    marginHorizontal: SPACING.lg,
     marginBottom: SPACING.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: "center",
-    borderRadius: BORDER_RADIUS.md,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
   },
   tabActive: {
-    backgroundColor: COLORS.primary,
+    borderBottomColor: COLORS.primary,
   },
   tabText: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "600",
-    color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    letterSpacing: 1,
   },
   tabTextActive: {
-    color: "#fff",
+    color: COLORS.primary,
   },
-  formCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+
+  formArea: {
+    paddingHorizontal: SPACING.lg,
   },
   formTitle: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "800",
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   formSubtitle: {
     fontSize: FONT_SIZES.md,
     color: COLORS.textSecondary,
     marginBottom: SPACING.xl,
+    lineHeight: 22,
   },
+
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -460,36 +506,33 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     fontWeight: "500",
   },
-  inputGroup: {
-    marginBottom: SPACING.lg,
-  },
+
+  inputGroup: { marginBottom: SPACING.lg },
   inputLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginBottom: 6,
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingHorizontal: SPACING.md,
   },
-  inputIcon: {
-    marginRight: SPACING.sm,
-  },
+  inputIcon: { marginRight: SPACING.sm },
   input: {
     flex: 1,
-    height: 48,
+    height: 50,
     fontSize: FONT_SIZES.lg,
     color: COLORS.text,
   },
-  eyeButton: {
-    padding: SPACING.sm,
-  },
+  eyeButton: { padding: SPACING.sm },
+
   forgotPassword: {
     alignSelf: "flex-end",
     marginBottom: SPACING.xl,
@@ -497,38 +540,79 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: FONT_SIZES.sm,
-    color: COLORS.primary,
-    fontWeight: "600",
+    color: COLORS.accent,
+    fontWeight: "700",
   },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
+
+  signInButton: {
+    backgroundColor: COLORS.primaryDark,
     borderRadius: BORDER_RADIUS.md,
-    height: 50,
+    height: 54,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
-  primaryButtonDisabled: {
-    opacity: 0.7,
-  },
-  primaryButtonText: {
+  buttonDisabled: { opacity: 0.65 },
+  signInButtonText: {
     fontSize: FONT_SIZES.lg,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#fff",
+    letterSpacing: 1,
   },
+
   switchRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: SPACING.xl,
+    marginBottom: SPACING.xl,
   },
-  switchText: {
-    fontSize: FONT_SIZES.md,
+  switchText: { fontSize: FONT_SIZES.md, color: COLORS.textSecondary },
+  switchLink: { fontSize: FONT_SIZES.md, color: COLORS.primary, fontWeight: "700" },
+
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.lg,
+    gap: SPACING.md,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  dividerLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
+  },
+
+  supportSection: {
+    alignItems: "center",
+    gap: 8,
+    marginBottom: SPACING.xl,
+  },
+  supportQuestion: {
+    fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
   },
-  switchLink: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.primary,
-    fontWeight: "700",
+  supportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  supportBtnText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "800",
+    color: COLORS.accent,
+    letterSpacing: 0.8,
+  },
+
+  footer: {
+    fontSize: 9,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    letterSpacing: 0.5,
+    lineHeight: 16,
+    marginTop: SPACING.md,
   },
 });

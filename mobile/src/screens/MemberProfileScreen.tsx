@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
+import { useAuth } from "../contexts/AuthContext";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -251,6 +252,7 @@ export default function MemberProfileScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("detail");
 
   const { id, member: passedMember } = route.params as { id: string; member?: Member };
@@ -288,6 +290,7 @@ export default function MemberProfileScreen() {
   const memberName = member.member_name.trim() || "GSDCP Member";
   const initials = getInitials(memberName);
   const mType = getMembershipType(member.membership_no);
+  const isOwnProfile = !!user && user.member_id === id;
 
   return (
     <ScrollView
@@ -330,6 +333,23 @@ export default function MemberProfileScreen() {
           <Text style={[styles.typeBadgeText, { color: mType.color }]}>{mType.label}</Text>
         </View>
         <Text style={styles.memberNo}>Membership No: {member.membership_no}</Text>
+
+        {isOwnProfile && (
+          <View style={styles.ownerActions}>
+            <TouchableOpacity style={styles.ownerActionBtn} activeOpacity={0.8} data-testid="btn-edit-profile">
+              <Ionicons name="pencil-outline" size={15} color="#fff" />
+              <Text style={styles.ownerActionBtnText}>Edit Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.ownerActionBtnOutline} activeOpacity={0.8} data-testid="btn-edit-kennel">
+              <Ionicons name="home-outline" size={15} color={COLORS.primary} />
+              <Text style={styles.ownerActionBtnOutlineText}>Edit Kennel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.ownerActionBtnOutline} activeOpacity={0.8} onPress={logout} data-testid="btn-logout">
+              <Ionicons name="log-out-outline" size={15} color={COLORS.error} />
+              <Text style={[styles.ownerActionBtnOutlineText, { color: COLORS.error }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* ── Pill Tab Bar — matches DogProfileScreen ── */}
@@ -425,6 +445,44 @@ const styles = StyleSheet.create({
   },
   typeBadgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   memberNo: { fontSize: 14, fontWeight: "500", color: "#64748B" },
+
+  ownerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+  },
+  ownerActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.primary,
+  },
+  ownerActionBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  ownerActionBtnOutline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: "#fff",
+  },
+  ownerActionBtnOutlineText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
 
   /* Pill tabs — matches DogProfileScreen */
   tabBar: {
