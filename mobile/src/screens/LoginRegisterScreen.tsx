@@ -22,38 +22,116 @@ import { useAuth } from "../contexts/AuthContext";
 const logo = require("../../assets/logo-square.png");
 const heroBg = require("../../assets/hero-bg.jpg");
 
+type SignInMode = "membership" | "username" | "otp";
+
+const MODES: { id: SignInMode; label: string; icon: string }[] = [
+  { id: "membership", label: "Membership No.", icon: "card-outline" },
+  { id: "username",   label: "Username",        icon: "person-outline" },
+  { id: "otp",        label: "Phone OTP",        icon: "phone-portrait-outline" },
+];
+
+/** Auto-formats membership input → uppercase letter + hyphen + digits.
+ *  e.g. "p123" → "P-123", "P-456" stays as-is */
+function formatMembershipNo(raw: string): string {
+  const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (cleaned.length === 0) return "";
+  const letter = cleaned[0];
+  if (!/[A-Z]/.test(letter)) return letter;
+  const digits = cleaned.slice(1).replace(/[^0-9]/g, "");
+  if (digits.length === 0) return letter;
+  return `${letter}-${digits}`;
+}
+
+/** Validates membership number: single uppercase letter, hyphen, 1+ digits */
+function isValidMembershipNo(value: string): boolean {
+  return /^[A-Z]-\d+$/.test(value);
+}
+
 export default function LoginRegisterScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { login } = useAuth();
 
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [mode, setMode] = useState<SignInMode>("membership");
+
+  // Mode 1 — membership
+  const [memberNo, setMemberNo] = useState("");
+  const [memberPassword, setMemberPassword] = useState("");
+  const [showMemberPassword, setShowMemberPassword] = useState(false);
+
+  // Mode 2 — username
+  const [username, setUsername] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [showUserPassword, setShowUserPassword] = useState(false);
+
+  // Mode 3 — phone OTP
+  const [phone, setPhone] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const passwordRef = useRef<TextInput>(null);
+  const memberPasswordRef = useRef<TextInput>(null);
+  const userPasswordRef   = useRef<TextInput>(null);
+  const otpRef            = useRef<TextInput>(null);
+
+  const handleMemberNoChange = (raw: string) => {
+    setMemberNo(formatMembershipNo(raw));
+  };
+
+  const handleSendOtp = () => {
+    if (!phone.trim()) { setError("Please enter your phone number"); return; }
+    setError("");
+    setSendingOtp(true);
+    setTimeout(() => {
+      setSendingOtp(false);
+      setOtpSent(true);
+      otpRef.current?.focus();
+    }, 1500);
+  };
 
   const handleLogin = async () => {
     setError("");
-    if (!identifier.trim()) {
-      setError("Please enter your email or membership ID");
-      return;
+
+    if (mode === "membership") {
+      if (!memberNo) { setError("Please enter your membership number"); return; }
+      if (!isValidMembershipNo(memberNo)) {
+        setError("Format: one uppercase letter, hyphen, then numbers (e.g. P-1234)");
+        return;
+      }
+      if (!memberPassword) { setError("Please enter your password"); return; }
+    } else if (mode === "username") {
+      if (!username.trim()) { setError("Please enter your username"); return; }
+      if (!userPassword) { setError("Please enter your password"); return; }
+    } else {
+      if (!phone.trim()) { setError("Please enter your phone number"); return; }
+      if (!otpSent) { setError("Please request an OTP first"); return; }
+      if (!otpCode.trim()) { setError("Please enter the OTP"); return; }
     }
-    if (!password) {
-      setError("Please enter your password");
-      return;
-    }
+
     setLoading(true);
     try {
-      await login(identifier.trim(), password);
+      const identifier =
+        mode === "membership" ? memberNo :
+        mode === "username"   ? username.trim() :
+        phone.trim();
+      const credential = mode === "otp" ? otpCode.trim() : (mode === "membership" ? memberPassword : userPassword);
+      await login(identifier, credential);
       navigation.goBack();
     } catch (e: any) {
-      setError(e.message ?? "Login failed. Please try again.");
+      setError(e.message ?? "Sign in failed. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const switchMode = (m: SignInMode) => {
+    setMode(m);
+    setError("");
+    setOtpSent(false);
+    setOtpCode("");
   };
 
   return (
@@ -68,12 +146,8 @@ export default function LoginRegisterScreen() {
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
-        {/* ── Hero — exact same pattern as DogProfile / MemberProfile ── */}
-        <ImageBackground
-          source={heroBg}
-          style={styles.heroBanner}
-          resizeMode="cover"
-        >
+        {/* ── Hero ── */}
+        <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
           <LinearGradient
             colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
             style={styles.heroGradient}
@@ -89,25 +163,47 @@ export default function LoginRegisterScreen() {
           </TouchableOpacity>
         </ImageBackground>
 
-        {/* ── Brand — sits at marginTop:-80, matching the avatar/profileSection pattern ── */}
+        {/* ── Brand ── */}
         <View style={styles.brandSection}>
           <View style={styles.logoOuter}>
-            <Image
-              source={logo}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
+            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
           </View>
           <Text style={styles.clubTitle}>Member Sign In</Text>
+          <Text style={styles.clubSubtitle}>
+            Access your kennel, pedigrees & show records.
+          </Text>
         </View>
 
         {/* ── Form ── */}
         <View style={styles.formArea}>
-          <Text style={styles.formTitle}>Member Sign In</Text>
-          <Text style={styles.formSub}>
-            Access your kennel, pedigrees & show records.
-          </Text>
 
+          {/* ── Mode selector ── */}
+          <View style={styles.modeBar}>
+            {MODES.map((m) => {
+              const active = m.id === mode;
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[styles.modeTab, active && styles.modeTabActive]}
+                  onPress={() => switchMode(m.id)}
+                  activeOpacity={0.75}
+                  data-testid={`tab-mode-${m.id}`}
+                >
+                  <Ionicons
+                    name={m.icon as any}
+                    size={14}
+                    color={active ? "#fff" : COLORS.textMuted}
+                    style={{ marginBottom: 3 }}
+                  />
+                  <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
+                    {m.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* ── Error box ── */}
           {error ? (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle" size={16} color={COLORS.error} />
@@ -115,77 +211,172 @@ export default function LoginRegisterScreen() {
             </View>
           ) : null}
 
-          {/* Email / Membership ID */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>EMAIL OR MEMBERSHIP ID</Text>
-            <View style={styles.fieldRow}>
-              <Ionicons
-                name="person-outline"
-                size={18}
-                color={COLORS.textMuted}
-                style={styles.fieldIcon}
-              />
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="GSDCP-XXXX-2024"
-                placeholderTextColor={COLORS.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={identifier}
-                onChangeText={setIdentifier}
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                data-testid="input-identifier"
-              />
-            </View>
-          </View>
+          {/* ── MODE 1: Membership Number + Password ── */}
+          {mode === "membership" && (
+            <>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>MEMBERSHIP NUMBER</Text>
+                <View style={styles.fieldHint}>
+                  <Text style={styles.hintText}>Format: one letter · hyphen · digits  (e.g. P-1234)</Text>
+                </View>
+                <View style={styles.fieldRow}>
+                  <Ionicons name="card-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="P-1234"
+                    placeholderTextColor={COLORS.textMuted}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    value={memberNo}
+                    onChangeText={handleMemberNoChange}
+                    returnKeyType="next"
+                    maxLength={10}
+                    onSubmitEditing={() => memberPasswordRef.current?.focus()}
+                    data-testid="input-membership-no"
+                  />
+                </View>
+              </View>
 
-          {/* Password */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>PASSWORD</Text>
-            <View style={styles.fieldRow}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={18}
-                color={COLORS.textMuted}
-                style={styles.fieldIcon}
-              />
-              <TextInput
-                ref={passwordRef}
-                style={styles.fieldInput}
-                placeholder="••••••••"
-                placeholderTextColor={COLORS.textMuted}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-                data-testid="input-password"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeBtn}
-                data-testid="btn-toggle-password"
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={COLORS.textMuted}
-                />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>PASSWORD</Text>
+                <View style={styles.fieldRow}>
+                  <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <TextInput
+                    ref={memberPasswordRef}
+                    style={styles.fieldInput}
+                    placeholder="••••••••"
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry={!showMemberPassword}
+                    value={memberPassword}
+                    onChangeText={setMemberPassword}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
+                    data-testid="input-member-password"
+                  />
+                  <TouchableOpacity onPress={() => setShowMemberPassword(!showMemberPassword)} style={styles.eyeBtn} data-testid="btn-toggle-member-pw">
+                    <Ionicons name={showMemberPassword ? "eye-off-outline" : "eye-outline"} size={18} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.forgotRow} data-testid="btn-forgot-password">
+                <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </>
+          )}
 
-          {/* Forgot */}
-          <TouchableOpacity
-            style={styles.forgotRow}
-            data-testid="btn-forgot-password"
-          >
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
+          {/* ── MODE 2: Username + Password ── */}
+          {mode === "username" && (
+            <>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>USERNAME</Text>
+                <View style={styles.fieldRow}>
+                  <Ionicons name="person-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="Enter your username"
+                    placeholderTextColor={COLORS.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={username}
+                    onChangeText={setUsername}
+                    returnKeyType="next"
+                    onSubmitEditing={() => userPasswordRef.current?.focus()}
+                    data-testid="input-username"
+                  />
+                </View>
+              </View>
 
-          {/* Sign In button */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>PASSWORD</Text>
+                <View style={styles.fieldRow}>
+                  <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <TextInput
+                    ref={userPasswordRef}
+                    style={styles.fieldInput}
+                    placeholder="••••••••"
+                    placeholderTextColor={COLORS.textMuted}
+                    secureTextEntry={!showUserPassword}
+                    value={userPassword}
+                    onChangeText={setUserPassword}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
+                    data-testid="input-user-password"
+                  />
+                  <TouchableOpacity onPress={() => setShowUserPassword(!showUserPassword)} style={styles.eyeBtn} data-testid="btn-toggle-user-pw">
+                    <Ionicons name={showUserPassword ? "eye-off-outline" : "eye-outline"} size={18} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.forgotRow} data-testid="btn-forgot-password-user">
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* ── MODE 3: Phone OTP ── */}
+          {mode === "otp" && (
+            <>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>REGISTERED PHONE NUMBER</Text>
+                <View style={styles.fieldRow}>
+                  <Ionicons name="call-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <TextInput
+                    style={styles.fieldInput}
+                    placeholder="+92 300 0000000"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="phone-pad"
+                    value={phone}
+                    onChangeText={(v) => { setPhone(v); setOtpSent(false); setOtpCode(""); }}
+                    returnKeyType={otpSent ? "next" : "done"}
+                    onSubmitEditing={otpSent ? () => otpRef.current?.focus() : handleSendOtp}
+                    data-testid="input-phone"
+                  />
+                  <TouchableOpacity
+                    style={[styles.otpSendBtn, (!phone.trim() || sendingOtp) && { opacity: 0.5 }]}
+                    onPress={handleSendOtp}
+                    disabled={!phone.trim() || sendingOtp}
+                    activeOpacity={0.8}
+                    data-testid="btn-send-otp"
+                  >
+                    {sendingOtp
+                      ? <ActivityIndicator size="small" color={COLORS.primary} />
+                      : <Text style={styles.otpSendBtnText}>{otpSent ? "Resend" : "Send OTP"}</Text>
+                    }
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {otpSent && (
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>ONE-TIME PASSWORD (OTP)</Text>
+                  <View style={styles.fieldHint}>
+                    <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
+                    <Text style={[styles.hintText, { color: "#16A34A" }]}>OTP sent to {phone}</Text>
+                  </View>
+                  <View style={styles.fieldRow}>
+                    <Ionicons name="keypad-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                    <TextInput
+                      ref={otpRef}
+                      style={[styles.fieldInput, styles.otpInput]}
+                      placeholder="• • • • • •"
+                      placeholderTextColor={COLORS.textMuted}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      value={otpCode}
+                      onChangeText={setOtpCode}
+                      returnKeyType="done"
+                      onSubmitEditing={handleLogin}
+                      data-testid="input-otp"
+                    />
+                  </View>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* ── Sign In button ── */}
           <TouchableOpacity
             style={[styles.signInBtn, loading && { opacity: 0.65 }]}
             onPress={handleLogin}
@@ -197,9 +388,11 @@ export default function LoginRegisterScreen() {
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <>
-                <Text style={styles.signInBtnText}>SIGN IN</Text>
+                <Text style={styles.signInBtnText}>
+                  {mode === "otp" && !otpSent ? "CONTINUE" : "SIGN IN"}
+                </Text>
                 <Ionicons
-                  name="log-in-outline"
+                  name={mode === "otp" && !otpSent ? "arrow-forward" : "log-in-outline"}
                   size={20}
                   color="#fff"
                   style={{ marginLeft: 8 }}
@@ -208,31 +401,24 @@ export default function LoginRegisterScreen() {
             )}
           </TouchableOpacity>
 
-          {/* WUSV divider */}
+          {/* ── WUSV divider ── */}
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerLabel}>WUSV AFFILIATE</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Support */}
+          {/* ── Support ── */}
           <View style={styles.supportRow}>
-            <Text style={styles.supportQuestion}>
-              Need assistance with your account?
-            </Text>
-            <TouchableOpacity
-              style={styles.supportBtn}
-              data-testid="btn-contact-support"
-            >
+            <Text style={styles.supportQuestion}>Need assistance with your account?</Text>
+            <TouchableOpacity style={styles.supportBtn} data-testid="btn-contact-support">
               <Ionicons name="paw" size={13} color={COLORS.accent} />
               <Text style={styles.supportBtnText}>CONTACT SUPPORT</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Footer */}
           <Text style={styles.footer}>
-            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN.{"\n"}ALL RIGHTS
-            RESERVED.
+            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN.{"\n"}ALL RIGHTS RESERVED.
           </Text>
         </View>
       </ScrollView>
@@ -244,28 +430,15 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: "#f6f8f7" },
 
-  /* ── Hero — exact match to DogProfileScreen / MemberProfileScreen ── */
   heroBanner: { width: "100%", height: 256 },
-  heroGradient: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 256,
-  },
+  heroGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: 256 },
   backButton: {
-    position: "absolute",
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    position: "absolute", left: 16,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10,
+    justifyContent: "center", alignItems: "center", zIndex: 10,
   },
 
-  /* ── Brand section — sits at marginTop:-80 like profileSection ── */
   brandSection: {
     alignItems: "center",
     marginTop: -80,
@@ -273,186 +446,154 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   logoOuter: {
-    width: 136,
-    height: 136,
-    borderRadius: 68,
-    borderWidth: 4,
-    borderColor: COLORS.accent,
+    width: 136, height: 136, borderRadius: 68,
+    borderWidth: 4, borderColor: COLORS.accent,
     backgroundColor: COLORS.primary,
     overflow: "hidden",
     marginBottom: SPACING.md,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center", alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.15, shadowRadius: 10, elevation: 8,
   },
   logoImage: { width: 100, height: 100 },
   clubTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: COLORS.background,
-    letterSpacing: 2,
-    marginTop: 8,
-    marginBottom: 4,
+    fontSize: 22, fontWeight: "800", color: COLORS.primary,
+    letterSpacing: 0.5, marginTop: 8, marginBottom: 4,
   },
   clubSubtitle: {
+    fontSize: FONT_SIZES.sm, color: COLORS.textSecondary,
+    textAlign: "center", lineHeight: 20,
+  },
+
+  formArea: { paddingHorizontal: 16 },
+
+  /* ── Mode selector ── */
+  modeBar: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 4,
+    marginBottom: 24,
+    gap: 4,
+  },
+  modeTab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  modeTabActive: {
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modeTabText: {
     fontSize: 10,
     fontWeight: "700",
     color: COLORS.textMuted,
-    letterSpacing: 1.5,
     textAlign: "center",
-    marginBottom: 8,
+    letterSpacing: 0.2,
   },
-  clubTagline: {
-    fontSize: 13,
-    fontStyle: "italic",
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 24,
-  },
-
-  /* ── Form area ── */
-  formArea: {
-    paddingHorizontal: 16,
-  },
-  formTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginBottom: 6,
-  },
-  formSub: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-    marginBottom: 24,
-    lineHeight: 22,
-  },
+  modeTabTextActive: { color: "#fff" },
 
   errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: "#FEF2F2",
-    borderWidth: 1,
-    borderColor: "#FECACA",
+    borderWidth: 1, borderColor: "#FECACA",
     borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.lg,
+    padding: SPACING.md, marginBottom: SPACING.lg,
   },
   errorText: {
-    flex: 1,
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.error,
-    fontWeight: "500",
+    flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.error, fontWeight: "500",
   },
 
   fieldGroup: { marginBottom: 18 },
   fieldLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: COLORS.textSecondary,
-    letterSpacing: 0.8,
-    marginBottom: 8,
+    fontSize: 11, fontWeight: "700",
+    color: COLORS.textSecondary, letterSpacing: 0.8, marginBottom: 4,
+  },
+  fieldHint: {
+    flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8,
+  },
+  hintText: {
+    fontSize: 11, color: COLORS.textMuted, fontStyle: "italic",
   },
   fieldRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row", alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderWidth: 1, borderColor: COLORS.border,
     paddingHorizontal: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
   fieldIcon: { marginRight: 10 },
   fieldInput: {
-    flex: 1,
-    height: 52,
-    fontSize: FONT_SIZES.lg,
-    color: COLORS.text,
+    flex: 1, height: 52, fontSize: FONT_SIZES.lg, color: COLORS.text,
+  },
+  otpInput: {
+    letterSpacing: 6, fontWeight: "700", textAlign: "center",
   },
   eyeBtn: { padding: 8 },
 
+  otpSendBtn: {
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: "rgba(15,92,58,0.1)",
+    marginLeft: 6,
+    minWidth: 72,
+    alignItems: "center",
+  },
+  otpSendBtnText: {
+    fontSize: 12, fontWeight: "700", color: COLORS.primary,
+  },
+
   forgotRow: {
-    alignSelf: "flex-end",
-    marginTop: -6,
-    marginBottom: 24,
+    alignSelf: "flex-end", marginTop: -6, marginBottom: 24,
   },
   forgotText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "700",
-    color: COLORS.accent,
+    fontSize: FONT_SIZES.sm, fontWeight: "700", color: COLORS.accent,
   },
 
   signInBtn: {
     backgroundColor: COLORS.primaryDark,
     borderRadius: BORDER_RADIUS.md,
-    height: 56,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    height: 56, flexDirection: "row",
+    justifyContent: "center", alignItems: "center",
     marginBottom: 28,
     shadowColor: COLORS.primaryDark,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   signInBtnText: {
-    fontSize: FONT_SIZES.lg,
-    fontWeight: "800",
-    color: "#fff",
-    letterSpacing: 1.5,
+    fontSize: FONT_SIZES.lg, fontWeight: "800", color: "#fff", letterSpacing: 1.5,
   },
 
   dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 20,
+    flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20,
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
   dividerLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: COLORS.textMuted,
-    letterSpacing: 1.5,
+    fontSize: 10, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 1.5,
   },
 
-  supportRow: {
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 28,
-  },
-  supportQuestion: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-  },
-  supportBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  supportRow: { alignItems: "center", gap: 8, marginBottom: 28 },
+  supportQuestion: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
+  supportBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
   supportBtnText: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "800",
-    color: COLORS.accent,
-    letterSpacing: 0.8,
+    fontSize: FONT_SIZES.sm, fontWeight: "800", color: COLORS.accent, letterSpacing: 0.8,
   },
 
   footer: {
-    fontSize: 9,
-    color: COLORS.textMuted,
-    textAlign: "center",
-    letterSpacing: 0.5,
-    lineHeight: 16,
+    fontSize: 9, color: COLORS.textMuted,
+    textAlign: "center", letterSpacing: 0.5, lineHeight: 16,
   },
 });
