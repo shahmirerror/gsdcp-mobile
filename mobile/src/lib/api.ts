@@ -33,6 +33,15 @@ export async function fetchDog(id: string): Promise<DogDetail> {
   return json.data;
 }
 
+export type DogOwner = {
+  member_id: string;
+  name: string;
+  membership_no: string;
+  city: string | null;
+  country: string | null;
+  imageUrl: string | null;
+};
+
 export type Dog = {
   id: string;
   dog_name: string;
@@ -42,7 +51,7 @@ export type Dog = {
   dob: string | null;
   color: string | null;
   imageUrl: string | null;
-  owner: string | null;
+  owner: DogOwner[] | null;
   breeder: string | null;
   sire: string | null;
   sire_id: string | null;

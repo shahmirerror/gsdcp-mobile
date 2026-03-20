@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { fetchDog, DogDetail, Pedigree, Dog, LineBreedingEntry, ProgenyEntry, ProgenyPuppy, HereditaryData, HereditaryGrades } from "../lib/api";
+import { fetchDog, DogDetail, Pedigree, Dog, DogOwner, LineBreedingEntry, ProgenyEntry, ProgenyPuppy, HereditaryData, HereditaryGrades } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 
@@ -60,6 +60,139 @@ function DetailItem({
           </TouchableOpacity>
         ) : (
           <Text style={styles.detailValue}>{value}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function isValidOwnerImage(url: string | null | undefined) {
+  if (!url) return false;
+  if (url.includes("user-not-found")) return false;
+  if (url.startsWith("https::")) return false;
+  return url.startsWith("http");
+}
+
+function ownerInitials(name: string) {
+  return name.trim().split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+/* Module-level — safe to use in JSX without violating Rules of Hooks */
+function OwnerRow({
+  o, isLast, onPress,
+}: {
+  o: DogOwner;
+  isLast: boolean;
+  onPress: () => void;
+}) {
+  const hasImg = isValidOwnerImage(o.imageUrl);
+  return (
+    <TouchableOpacity
+      style={[styles.ownerRow, !isLast && styles.ownerRowBorder]}
+      onPress={onPress}
+      activeOpacity={0.7}
+      data-testid={`btn-owner-${o.member_id}`}
+    >
+      {hasImg ? (
+        <Image source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
+      ) : (
+        <View style={[styles.ownerAvatar, styles.ownerAvatarPlaceholder]}>
+          <Text style={styles.ownerAvatarInitials}>{ownerInitials(o.name)}</Text>
+        </View>
+      )}
+      <View style={{ flex: 1 }}>
+        <Text style={styles.ownerName}>{o.name}</Text>
+        <Text style={styles.ownerSub}>{o.membership_no}{o.city ? ` · ${o.city}` : ""}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+    </TouchableOpacity>
+  );
+}
+
+function OwnerSection({ owners, navigation }: { owners: DogOwner[] | null; navigation: any }) {
+  const [expanded, setExpanded] = useState(false);
+
+  /* deduplicate by member_id */
+  const unique = owners
+    ? Array.from(new Map(owners.map((o) => [o.member_id, o])).values())
+    : [];
+
+  const goToMember = (o: DogOwner) =>
+    navigation.push("MemberProfile", {
+      id: o.member_id,
+      member: { id: o.member_id, member_name: o.name, membership_no: o.membership_no, city: o.city, country: o.country, imageUrl: o.imageUrl },
+    });
+
+  if (unique.length === 0) {
+    return <DetailItem icon="person" label="Owner" value="-" />;
+  }
+
+  if (unique.length === 1) {
+    const o = unique[0];
+    const hasImg = isValidOwnerImage(o.imageUrl);
+    return (
+      <TouchableOpacity
+        style={styles.detailItem}
+        onPress={() => goToMember(o)}
+        activeOpacity={0.7}
+        data-testid={`btn-owner-${o.member_id}`}
+      >
+        <View style={styles.detailIconWrap}>
+          <Ionicons name="person" size={18} color={COLORS.primary} />
+        </View>
+        <View style={styles.detailTextWrap}>
+          <Text style={styles.detailLabel}>Owner</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 }}>
+            {hasImg ? (
+              <Image source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
+            ) : (
+              <View style={[styles.ownerAvatar, styles.ownerAvatarPlaceholder]}>
+                <Text style={styles.ownerAvatarInitials}>{ownerInitials(o.name)}</Text>
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.detailValue, { color: COLORS.primary }]}>{o.name}</Text>
+              <Text style={styles.ownerSub}>{o.membership_no}{o.city ? ` · ${o.city}` : ""}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  /* Multiple owners — collapsible dropdown */
+  return (
+    <View style={styles.detailItem}>
+      <View style={styles.detailIconWrap}>
+        <Ionicons name="people" size={18} color={COLORS.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.detailLabel}>Owners</Text>
+        <TouchableOpacity
+          style={styles.ownersToggle}
+          onPress={() => setExpanded((v) => !v)}
+          activeOpacity={0.7}
+          data-testid="btn-owners-toggle"
+        >
+          <Text style={styles.detailValue}>{unique.length} Owners</Text>
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={COLORS.primary}
+          />
+        </TouchableOpacity>
+        {expanded && (
+          <View style={styles.ownersList}>
+            {unique.map((o, i) => (
+              <OwnerRow
+                key={o.member_id}
+                o={o}
+                isLast={i === unique.length - 1}
+                onPress={() => goToMember(o)}
+              />
+            ))}
+          </View>
         )}
       </View>
     </View>
@@ -281,7 +414,7 @@ export default function DogProfileScreen() {
                   value={dog.KP && dog.KP !== "0" ? `KP ${dog.KP}` : dog.foreign_reg_no ? dog.foreign_reg_no : "-"}
                 />
                 <DetailItem icon="hardware-chip" label="Microchip" value={dog.microchip || "-"} />
-                <DetailItem icon="person" label="Owner" value={dog.owner || "-"} />
+                <OwnerSection owners={dog.owner} navigation={navigation} />
                 <DetailItem icon="build" label="Breeder" value={dog.breeder || "-"} />
                 <DetailItem
                   icon="arrow-up-circle"
@@ -945,6 +1078,60 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     textDecorationLine: "underline",
   },
+
+  /* Owner section */
+  ownersToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
+  ownersList: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,59,0.08)",
+    overflow: "hidden",
+  },
+  ownerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(15,92,59,0.03)",
+  },
+  ownerRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.08)",
+  },
+  ownerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: "hidden",
+  },
+  ownerAvatarPlaceholder: {
+    backgroundColor: "rgba(15,92,59,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  ownerAvatarInitials: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  ownerName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  ownerSub: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
