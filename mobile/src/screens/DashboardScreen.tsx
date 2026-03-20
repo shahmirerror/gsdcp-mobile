@@ -50,7 +50,7 @@ export default function DashboardScreen() {
       icon: "paw" as const,
     },
     {
-      label: "Active Breeders",
+      label: "Registered Kennels",
       value: dashboard ? `${dashboard.totalBreeders}` : "—",
       icon: "people" as const,
     },
