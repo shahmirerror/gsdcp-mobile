@@ -310,7 +310,7 @@ export async function fetchRecentMatings(): Promise<RecentMating[]> {
 
 export type DashboardData = {
   totalDogs: number;
-  totalBreeders: number;
+  totalKennels: number;
   totalShows: number;
   upcomingShows: Show[];
   recentMatings: RecentMating[];
