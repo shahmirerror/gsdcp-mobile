@@ -144,7 +144,9 @@ function ShowsStackNavigator() {
 }
 
 function ProfileStackNavigator() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isLoading } = useAuth();
+  // Wait for session restore before deciding the initial route
+  if (isLoading) return null;
   return (
     <ProfileStack.Navigator
       key={isLoggedIn ? "auth" : "guest"}

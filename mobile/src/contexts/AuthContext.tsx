@@ -1,14 +1,16 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AUTHORIZE_URL = "https://gsdcp.org/api/mobile/authorize";
+const STORAGE_KEY = "gsdcp_auth_user";
 
 export type AuthUser = {
   id: number;
-  member_id: string;       // string version of id for compatibility
+  member_id: string;
   username: string;
   first_name: string;
   last_name: string;
-  name: string;            // first_name + last_name
+  name: string;
   membership_no: string | null;
   membership_type: string | null;
   photo: string | null;
@@ -25,6 +27,7 @@ export type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   isLoggedIn: boolean;
+  isLoading: boolean;
   login: (identifier: string, credential: string, mode?: "membership" | "username" | "otp") => Promise<void>;
   logout: () => void;
 };
@@ -33,6 +36,18 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Restore session on app start
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          try { setUser(JSON.parse(raw)); } catch { /* ignore corrupt data */ }
+        }
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const login = async (
     identifier: string,
@@ -51,10 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const res = await fetch(AUTHORIZE_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify(body),
     });
 
@@ -94,13 +106,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       myKennel:        json.data?.myKennel ?? null,
     };
 
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
     setUser(authUser);
   };
 
-  const logout = () => setUser(null);
+  const logout = async () => {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    setUser(null);
+  };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
