@@ -3,9 +3,23 @@ import { createContext, useContext, useState, ReactNode } from "react";
 const AUTHORIZE_URL = "https://gsdcp.org/api/mobile/authorize";
 
 export type AuthUser = {
-  member_id: string;
-  name: string;
-  membership_no: string;
+  id: number;
+  member_id: string;       // string version of id for compatibility
+  username: string;
+  first_name: string;
+  last_name: string;
+  name: string;            // first_name + last_name
+  membership_no: string | null;
+  membership_type: string | null;
+  photo: string | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  country: string | null;
+  role: string | null;
+  role_id: string | null;
+  myDogs: any[];
+  myKennel: any | null;
 };
 
 type AuthContextType = {
@@ -28,10 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let body: Record<string, string>;
 
     if (mode === "otp") {
-      body = { phone: identifier, otp: credential };
+      body = { login_type: "otp", phone: identifier, otp: credential };
     } else {
-      // membership_no and username both go in as "username"; backend can resolve either
-      body = { username: identifier, password: credential };
+      // Both membership_no and username go via login_type:"username"
+      // (membership number can be used as username field on the backend)
+      body = { login_type: "username", username: identifier, password: credential };
     }
 
     const res = await fetch(AUTHORIZE_URL, {
@@ -51,20 +66,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!res.ok || json?.success === false) {
-      // Surface the server's own message when available
       throw new Error(
-        json?.message ?? json?.error ?? "Sign in failed. Please check your credentials.",
+        json?.error?.message ?? json?.message ?? "Sign in failed. Please check your credentials.",
       );
     }
 
-    // Expect: { success: true, data: { member_id, name, membership_no, ... } }
-    const userData: AuthUser = {
-      member_id:    json.data?.member_id    ?? json.data?.id ?? "",
-      name:         json.data?.name         ?? "",
-      membership_no: json.data?.membership_no ?? identifier,
+    const p = json.data?.myProfile ?? {};
+
+    const authUser: AuthUser = {
+      id:              p.id,
+      member_id:       String(p.id ?? ""),
+      username:        p.username ?? identifier,
+      first_name:      p.first_name ?? "",
+      last_name:       p.last_name ?? "",
+      name:            [p.first_name, p.last_name].filter(Boolean).join(" "),
+      membership_no:   p.membership_no ?? null,
+      membership_type: p.membership_type ?? null,
+      photo:           p.photo ?? null,
+      email:           p.email ?? null,
+      phone:           p.phone ?? null,
+      city:            p.city ?? p.user_city?.city ?? null,
+      country:         p.country ?? p.user_city?.country ?? null,
+      role:            p.role ?? p.user_role?.name ?? null,
+      role_id:         p.role_id ?? null,
+      myDogs:          json.data?.myDogs ?? [],
+      myKennel:        json.data?.myKennel ?? null,
     };
 
-    setUser(userData);
+    setUser(authUser);
   };
 
   const logout = () => setUser(null);

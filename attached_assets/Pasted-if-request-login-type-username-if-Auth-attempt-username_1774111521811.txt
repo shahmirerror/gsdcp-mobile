@@ -1,0 +1,51 @@
+if($request->login_type == 'username')
+            {
+                if(Auth::attempt(['username' => $request->username, 'password' => $request->password, 'status' => 'Active']))
+                {
+                    if(in_array(Auth::user()->role_id, array(3, 8)))
+                    {
+                        Auth::user()->city = Auth::user()->user_city->city ?? NULL;
+                        Auth::user()->country = Auth::user()->user_city->country ?? NULL;
+                        Auth::user()->role = Auth::user()->user_role->name ?? NULL;
+                        
+                        return response()->json([
+                            'success' => true,
+                            'data' => [
+                                'myProfile' => Auth::user(),
+                                'myDogs' => User::myDogs(Auth::user()->id) ?? NULL,
+                                'myKennel' => User::myKennel(Auth::user()->id) ?? NULL
+                            ],
+                        ], 200);
+                    }
+                    else
+                    {
+                        return response()->json([
+                            'success' => false,
+                            'error' => [
+                                'code' => 'SERVER_ERROR',
+                                'message' => 'An error occurred while fetching about data',
+                            ],
+                        ], 500);
+                    }
+                }
+                else
+                {
+                    return response()->json([
+                        'success' => false,
+                        'error' => [
+                            'code' => 'SERVER_ERROR',
+                            'message' => 'An error occurred while fetching about data',
+                        ],
+                    ], 500);
+                }
+            }
+            else
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'SERVER_ERROR',
+                        'message' => 'An error occurred while fetching about data',
+                    ],
+                ], 500);
+            }
