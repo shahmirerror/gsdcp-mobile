@@ -309,6 +309,9 @@ export default function LoginRegisterScreen() {
                     placeholder="••••••••"
                     placeholderTextColor={COLORS.textMuted}
                     secureTextEntry={!showMemberPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
                     value={memberPassword}
                     onChangeText={setMemberPassword}
                     returnKeyType="done"
@@ -359,6 +362,9 @@ export default function LoginRegisterScreen() {
                     placeholder="••••••••"
                     placeholderTextColor={COLORS.textMuted}
                     secureTextEntry={!showUserPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
                     value={userPassword}
                     onChangeText={setUserPassword}
                     returnKeyType="done"
