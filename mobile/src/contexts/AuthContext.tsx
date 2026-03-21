@@ -43,9 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (mode === "otp") {
       body = { login_type: "otp", phone: identifier, otp: credential };
+    } else if (mode === "membership") {
+      body = { login_type: "membership", membership_no: identifier, password: credential };
     } else {
-      // Both membership_no and username go via login_type:"username"
-      // (membership number can be used as username field on the backend)
       body = { login_type: "username", username: identifier, password: credential };
     }
 
