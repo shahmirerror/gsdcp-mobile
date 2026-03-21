@@ -49,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body = { login_type: "username", username: identifier, password: credential };
     }
 
+    console.log("[Auth] Sending payload:", JSON.stringify(body));
+
     const res = await fetch(AUTHORIZE_URL, {
       method: "POST",
       headers: {
@@ -58,17 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify(body),
     });
 
+    console.log("[Auth] HTTP status:", res.status);
+
     let json: any;
     try {
-      json = await res.json();
-    } catch {
+      const raw = await res.text();
+      console.log("[Auth] Raw response:", raw);
+      json = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.log("[Auth] Parse error:", e);
       throw new Error("Unexpected server response. Please try again.");
     }
 
+    console.log("[Auth] Parsed JSON:", JSON.stringify(json));
+
     if (!res.ok || json?.success === false) {
-      throw new Error(
-        json?.error?.message ?? json?.message ?? "Sign in failed. Please check your credentials.",
-      );
+      const serverMsg = json?.error?.message ?? json?.message ?? "";
+      const debugInfo = `[HTTP ${res.status}] ${serverMsg || "(empty response)"} — payload: ${JSON.stringify(body)}`;
+      throw new Error(debugInfo);
     }
 
     const p = json.data?.myProfile ?? {};
