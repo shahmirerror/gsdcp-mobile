@@ -149,7 +149,7 @@ export default function LoginRegisterScreen() {
         mode === "username"   ? username.trim() :
         phone.trim();
       const credential = mode === "otp" ? otpCode.trim() : (mode === "membership" ? memberPassword : userPassword);
-      await login(identifier, credential);
+      await login(identifier, credential, mode);
       // If we arrived here directly (Profile tab, not logged in), the navigator
       // will re-mount automatically with ProfileHome. If we navigated here from
       // inside the app, go back to wherever the user came from.
