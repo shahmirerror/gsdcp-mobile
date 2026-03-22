@@ -302,26 +302,15 @@ export default function ProfileScreen() {
         </View>
         <Text style={styles.memberNo}>Membership No: {member.membership_no}</Text>
 
-        {/* Edit actions — always shown since this is always own profile */}
-        <View style={styles.ownerActions}>
-          <TouchableOpacity style={styles.ownerActionBtn} activeOpacity={0.8} data-testid="btn-edit-profile">
-            <Ionicons name="pencil-outline" size={15} color="#fff" />
-            <Text style={styles.ownerActionBtnText}>Edit Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ownerActionBtnOutline} activeOpacity={0.8} data-testid="btn-edit-kennel">
-            <Ionicons name="home-outline" size={15} color={COLORS.primary} />
-            <Text style={styles.ownerActionBtnOutlineText}>Edit Kennel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.ownerActionBtnOutline}
-            activeOpacity={0.8}
-            onPress={logout}
-            data-testid="btn-sign-out"
-          >
-            <Ionicons name="log-out-outline" size={15} color={COLORS.error} />
-            <Text style={[styles.ownerActionBtnOutlineText, { color: COLORS.error }]}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.signOutBtn}
+          activeOpacity={0.8}
+          onPress={logout}
+          data-testid="btn-sign-out"
+        >
+          <Ionicons name="log-out-outline" size={14} color={COLORS.error} />
+          <Text style={styles.signOutBtnText}>Sign Out</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Pill Tab Bar ── */}
@@ -409,6 +398,14 @@ const styles = StyleSheet.create({
   },
   typeBadgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   memberNo: { fontSize: 14, fontWeight: "500", color: "#64748B" },
+
+  signOutBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    marginTop: 12, paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 20, borderWidth: 1.5, borderColor: "#FECACA",
+    backgroundColor: "#FEF2F2",
+  },
+  signOutBtnText: { fontSize: 13, fontWeight: "700", color: COLORS.error },
 
   ownerActions: {
     flexDirection: "row", flexWrap: "wrap",
