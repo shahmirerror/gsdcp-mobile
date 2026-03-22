@@ -240,103 +240,166 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
   );
 }
 
+/* ── Reusable: list header with "+ New" button ────────── */
+function ListHeader({ title, onNew }: { title: string; onNew: () => void }) {
+  return (
+    <View style={tStyles.listHeader}>
+      <Text style={tStyles.listTitle}>{title}</Text>
+      <TouchableOpacity style={tStyles.newBtn} onPress={onNew} activeOpacity={0.8} data-testid="btn-new-record">
+        <Ionicons name="add" size={15} color="#fff" />
+        <Text style={tStyles.newBtnText}>New</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function TableRow({ cols }: { cols: { label: string; value: string; flex?: number }[] }) {
+  return (
+    <View style={tStyles.tableRow}>
+      {cols.map((c, i) => (
+        <Text key={i} style={[tStyles.tableCell, { flex: c.flex ?? 1 }]} numberOfLines={1}>{c.value}</Text>
+      ))}
+    </View>
+  );
+}
+
+function TableHead({ cols }: { cols: { label: string; flex?: number }[] }) {
+  return (
+    <View style={[tStyles.tableRow, tStyles.tableHeadRow]}>
+      {cols.map((c, i) => (
+        <Text key={i} style={[tStyles.tableHeadCell, { flex: c.flex ?? 1 }]}>{c.label}</Text>
+      ))}
+    </View>
+  );
+}
+
+function EmptyTable({ icon, message }: { icon: keyof typeof Ionicons.glyphMap; message: string }) {
+  return (
+    <View style={tStyles.emptyRow}>
+      <Ionicons name={icon} size={20} color={COLORS.textMuted} />
+      <Text style={tStyles.emptyRowText}>{message}</Text>
+    </View>
+  );
+}
+
+function FormBackBtn({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity style={tStyles.backBtn} onPress={onPress} activeOpacity={0.7} data-testid="btn-back-to-list">
+      <Ionicons name="arrow-back" size={15} color={COLORS.primary} />
+      <Text style={tStyles.backBtnText}>Back to list</Text>
+    </TouchableOpacity>
+  );
+}
+
 /* ── Tab: Stud Certificate ──────────────────────────── */
 function StudCertTab() {
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     studName: "", studKP: "",
-    damName: "", damKP: "",
-    damOwner: "",
-    dateOfMating: "", noOfMatings: "", expectedWhelping: "",
-    remarks: "",
+    damName: "", damKP: "", damOwner: "",
+    dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "",
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
+  if (showForm) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setShowForm(false)} />
+        <Text style={styles.cardHeading}>New Stud Certificate</Text>
+
+        <FormSection title="STUD (SIRE)" />
+        <FormField label="Stud Dog Name"        value={form.studName} onChangeText={set("studName")} placeholder="Enter stud dog name"  required />
+        <FormField label="Stud Dog KP / Reg No" value={form.studKP}   onChangeText={set("studKP")}   placeholder="e.g. KP-12345" />
+
+        <View style={styles.divider} />
+        <FormSection title="DAM (BITCH)" />
+        <FormField label="Dam Name"        value={form.damName}  onChangeText={set("damName")}  placeholder="Enter dam name"        required />
+        <FormField label="Dam KP / Reg No" value={form.damKP}    onChangeText={set("damKP")}    placeholder="e.g. KP-67890" />
+        <FormField label="Dam Owner Name"  value={form.damOwner} onChangeText={set("damOwner")} placeholder="Full name of dam owner" required />
+
+        <View style={styles.divider} />
+        <FormSection title="MATING DETAILS" />
+        <FormField label="Date of Mating"    value={form.dateOfMating}     onChangeText={set("dateOfMating")}     placeholder="DD/MM/YYYY" required />
+        <FormField label="Number of Matings" value={form.noOfMatings}      onChangeText={set("noOfMatings")}      placeholder="e.g. 2" keyboardType="numeric" />
+        <FormField label="Expected Whelping" value={form.expectedWhelping} onChangeText={set("expectedWhelping")} placeholder="DD/MM/YYYY" />
+        <FormField label="Remarks"           value={form.remarks}          onChangeText={set("remarks")}          placeholder="Any additional notes…" multiline />
+
+        <SubmitBtn label="Submit Stud Certificate" onPress={() => { Alert.alert("Submitted", "Stud certificate submitted."); setShowForm(false); }} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
-      <Text style={styles.cardHeading}>New Stud Certificate</Text>
-
-      <FormSection title="STUD (SIRE)" />
-      <FormField label="Stud Dog Name"   value={form.studName} onChangeText={set("studName")} placeholder="Enter stud dog name"  required />
-      <FormField label="Stud Dog KP / Reg No" value={form.studKP} onChangeText={set("studKP")} placeholder="e.g. KP-12345" />
-
-      <View style={styles.divider} />
-      <FormSection title="DAM (BITCH)" />
-      <FormField label="Dam Name"        value={form.damName}  onChangeText={set("damName")}  placeholder="Enter dam name"        required />
-      <FormField label="Dam KP / Reg No" value={form.damKP}    onChangeText={set("damKP")}    placeholder="e.g. KP-67890" />
-      <FormField label="Dam Owner Name"  value={form.damOwner} onChangeText={set("damOwner")} placeholder="Full name of dam owner" required />
-
-      <View style={styles.divider} />
-      <FormSection title="MATING DETAILS" />
-      <FormField label="Date of Mating"     value={form.dateOfMating}     onChangeText={set("dateOfMating")}     placeholder="DD/MM/YYYY" required />
-      <FormField label="Number of Matings"  value={form.noOfMatings}      onChangeText={set("noOfMatings")}      placeholder="e.g. 2" keyboardType="numeric" />
-      <FormField label="Expected Whelping"  value={form.expectedWhelping} onChangeText={set("expectedWhelping")} placeholder="DD/MM/YYYY" />
-      <FormField label="Remarks"            value={form.remarks}          onChangeText={set("remarks")}          placeholder="Any additional notes…" multiline />
-
-      <SubmitBtn
-        label="Submit Stud Certificate"
-        onPress={() => Alert.alert("Submitted", "Stud certificate request submitted successfully.")}
-      />
+      <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
+      <View style={tStyles.table}>
+        <TableHead cols={[{ label: "STUD DOG", flex: 2 }, { label: "DAM", flex: 2 }, { label: "MATING DATE" }, { label: "STATUS" }]} />
+        <EmptyTable icon="ribbon-outline" message="No stud certificates yet" />
+      </View>
     </View>
   );
 }
 
 /* ── Tab: Litter Inspection ─────────────────────────── */
 function LitterInspectionTab() {
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     sireName: "", sireKP: "",
     damName: "", damKP: "",
     dateOfWhelping: "", dateOfInspection: "",
     malePups: "", femalePups: "", deadPups: "",
-    inspectorName: "",
-    remarks: "",
+    inspectorName: "", remarks: "",
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
+  if (showForm) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setShowForm(false)} />
+        <Text style={styles.cardHeading}>New Litter Inspection</Text>
+
+        <FormSection title="SIRE" />
+        <FormField label="Sire Name"        value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
+        <FormField label="Sire KP / Reg No" value={form.sireKP}   onChangeText={set("sireKP")}   placeholder="e.g. KP-12345" />
+
+        <View style={styles.divider} />
+        <FormSection title="DAM" />
+        <FormField label="Dam Name"         value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
+        <FormField label="Dam KP / Reg No"  value={form.damKP}   onChangeText={set("damKP")}   placeholder="e.g. KP-67890" />
+
+        <View style={styles.divider} />
+        <FormSection title="LITTER DETAILS" />
+        <FormField label="Date of Whelping"   value={form.dateOfWhelping}   onChangeText={set("dateOfWhelping")}   placeholder="DD/MM/YYYY" required />
+        <FormField label="Date of Inspection" value={form.dateOfInspection} onChangeText={set("dateOfInspection")} placeholder="DD/MM/YYYY" required />
+        <View style={fStyles.row}>
+          <View style={{ flex: 1 }}><FormField label="Male Pups"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ width: 12 }} />
+          <View style={{ flex: 1 }}><FormField label="Female Pups" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ width: 12 }} />
+          <View style={{ flex: 1 }}><FormField label="Dead"        value={form.deadPups}   onChangeText={set("deadPups")}   placeholder="0" keyboardType="numeric" /></View>
+        </View>
+        <FormField label="Inspector Name" value={form.inspectorName} onChangeText={set("inspectorName")} placeholder="Full name" required />
+        <FormField label="Remarks"        value={form.remarks}       onChangeText={set("remarks")}       placeholder="Any additional notes…" multiline />
+
+        <SubmitBtn label="Submit Litter Inspection" onPress={() => { Alert.alert("Submitted", "Litter inspection submitted."); setShowForm(false); }} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
-      <Text style={styles.cardHeading}>New Litter Inspection</Text>
-
-      <FormSection title="SIRE" />
-      <FormField label="Sire Name"   value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
-      <FormField label="Sire KP / Reg No" value={form.sireKP} onChangeText={set("sireKP")} placeholder="e.g. KP-12345" />
-
-      <View style={styles.divider} />
-      <FormSection title="DAM" />
-      <FormField label="Dam Name"   value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
-      <FormField label="Dam KP / Reg No" value={form.damKP} onChangeText={set("damKP")} placeholder="e.g. KP-67890" />
-
-      <View style={styles.divider} />
-      <FormSection title="LITTER DETAILS" />
-      <FormField label="Date of Whelping"    value={form.dateOfWhelping}    onChangeText={set("dateOfWhelping")}    placeholder="DD/MM/YYYY" required />
-      <FormField label="Date of Inspection"  value={form.dateOfInspection}  onChangeText={set("dateOfInspection")}  placeholder="DD/MM/YYYY" required />
-
-      <View style={fStyles.row}>
-        <View style={{ flex: 1 }}>
-          <FormField label="Male Pups"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required />
-        </View>
-        <View style={{ width: 12 }} />
-        <View style={{ flex: 1 }}>
-          <FormField label="Female Pups" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required />
-        </View>
-        <View style={{ width: 12 }} />
-        <View style={{ flex: 1 }}>
-          <FormField label="Dead"        value={form.deadPups}   onChangeText={set("deadPups")}   placeholder="0" keyboardType="numeric" />
-        </View>
+      <ListHeader title="Litter Inspections" onNew={() => setShowForm(true)} />
+      <View style={tStyles.table}>
+        <TableHead cols={[{ label: "SIRE", flex: 2 }, { label: "DAM", flex: 2 }, { label: "WHELPED" }, { label: "PUPS" }]} />
+        <EmptyTable icon="search-outline" message="No litter inspections yet" />
       </View>
-
-      <FormField label="Inspector Name" value={form.inspectorName} onChangeText={set("inspectorName")} placeholder="Full name" required />
-      <FormField label="Remarks"        value={form.remarks}       onChangeText={set("remarks")}       placeholder="Any additional notes…" multiline />
-
-      <SubmitBtn
-        label="Submit Litter Inspection"
-        onPress={() => Alert.alert("Submitted", "Litter inspection request submitted successfully.")}
-      />
     </View>
   );
 }
 
 /* ── Tab: Litter Registration ───────────────────────── */
 function LitterRegistrationTab() {
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     sireName: "", sireKP: "",
     damName: "", damKP: "",
@@ -346,43 +409,45 @@ function LitterRegistrationTab() {
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
+  if (showForm) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setShowForm(false)} />
+        <Text style={styles.cardHeading}>New Litter Registration</Text>
+
+        <FormSection title="SIRE" />
+        <FormField label="Sire Name"        value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
+        <FormField label="Sire KP / Reg No" value={form.sireKP}   onChangeText={set("sireKP")}   placeholder="e.g. KP-12345" />
+
+        <View style={styles.divider} />
+        <FormSection title="DAM" />
+        <FormField label="Dam Name"         value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
+        <FormField label="Dam KP / Reg No"  value={form.damKP}   onChangeText={set("damKP")}   placeholder="e.g. KP-67890" />
+
+        <View style={styles.divider} />
+        <FormSection title="LITTER DETAILS" />
+        <FormField label="Date of Whelping" value={form.dateOfWhelping} onChangeText={set("dateOfWhelping")} placeholder="DD/MM/YYYY" required />
+        <View style={fStyles.row}>
+          <View style={{ flex: 1 }}><FormField label="Total Pups" value={form.totalPups}  onChangeText={set("totalPups")}  placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ width: 12 }} />
+          <View style={{ flex: 1 }}><FormField label="Male"       value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ width: 12 }} />
+          <View style={{ flex: 1 }}><FormField label="Female"     value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
+        </View>
+        <FormField label="Remarks" value={form.remarks} onChangeText={set("remarks")} placeholder="Any additional notes…" multiline />
+
+        <SubmitBtn label="Submit Litter Registration" onPress={() => { Alert.alert("Submitted", "Litter registration submitted."); setShowForm(false); }} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
-      <Text style={styles.cardHeading}>New Litter Registration</Text>
-
-      <FormSection title="SIRE" />
-      <FormField label="Sire Name"        value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
-      <FormField label="Sire KP / Reg No" value={form.sireKP}   onChangeText={set("sireKP")}   placeholder="e.g. KP-12345" />
-
-      <View style={styles.divider} />
-      <FormSection title="DAM" />
-      <FormField label="Dam Name"         value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
-      <FormField label="Dam KP / Reg No"  value={form.damKP}   onChangeText={set("damKP")}   placeholder="e.g. KP-67890" />
-
-      <View style={styles.divider} />
-      <FormSection title="LITTER DETAILS" />
-      <FormField label="Date of Whelping" value={form.dateOfWhelping} onChangeText={set("dateOfWhelping")} placeholder="DD/MM/YYYY" required />
-
-      <View style={fStyles.row}>
-        <View style={{ flex: 1 }}>
-          <FormField label="Total Pups"  value={form.totalPups}  onChangeText={set("totalPups")}  placeholder="0" keyboardType="numeric" required />
-        </View>
-        <View style={{ width: 12 }} />
-        <View style={{ flex: 1 }}>
-          <FormField label="Male"        value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required />
-        </View>
-        <View style={{ width: 12 }} />
-        <View style={{ flex: 1 }}>
-          <FormField label="Female"      value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required />
-        </View>
+      <ListHeader title="Litter Registrations" onNew={() => setShowForm(true)} />
+      <View style={tStyles.table}>
+        <TableHead cols={[{ label: "SIRE", flex: 2 }, { label: "DAM", flex: 2 }, { label: "WHELPED" }, { label: "PUPS" }]} />
+        <EmptyTable icon="document-text-outline" message="No litter registrations yet" />
       </View>
-
-      <FormField label="Remarks" value={form.remarks} onChangeText={set("remarks")} placeholder="Any additional notes…" multiline />
-
-      <SubmitBtn
-        label="Submit Litter Registration"
-        onPress={() => Alert.alert("Submitted", "Litter registration request submitted successfully.")}
-      />
     </View>
   );
 }
@@ -511,6 +576,46 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
+
+/* ── Table / list styles ────────────────────────────── */
+const tStyles = StyleSheet.create({
+  listHeader: {
+    flexDirection: "row", alignItems: "center",
+    marginBottom: 16,
+  },
+  listTitle: { flex: 1, fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  newBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 20, backgroundColor: COLORS.primary,
+  },
+  newBtnText: { fontSize: 13, fontWeight: "700", color: "#fff" },
+
+  table: {
+    borderWidth: 1, borderColor: "#E2E8F0",
+    borderRadius: 10, overflow: "hidden",
+  },
+  tableHeadRow: { backgroundColor: "#F1F5F9" },
+  tableRow: {
+    flexDirection: "row",
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: "#E2E8F0",
+  },
+  tableHeadCell: { fontSize: 10, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 0.5 },
+  tableCell:     { fontSize: 13, fontWeight: "500", color: "#0F172A" },
+
+  emptyRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    justifyContent: "center", paddingVertical: 28,
+  },
+  emptyRowText: { fontSize: 13, color: COLORS.textMuted },
+
+  backBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginBottom: 16,
+  },
+  backBtnText: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
+});
 
 /* ── Form styles ────────────────────────────────────── */
 const fStyles = StyleSheet.create({
