@@ -113,7 +113,13 @@ function DetailTab({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardHeading}>Membership Details</Text>
+      <View style={styles.cardHeadingRow}>
+        <Text style={styles.cardHeading}>Membership Details</Text>
+        <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} data-testid="btn-edit-details">
+          <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
+          <Text style={styles.cardEditBtnText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.detailsGrid}>
         <DetailItem icon="card"              label="Membership Number" value={member.membership_no} />
         <DetailItem icon="checkmark-circle"  label="Status"           value={statusLabel} valueColor={statusColor} />
@@ -165,7 +171,13 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
 
       <View style={styles.divider} />
 
-      <Text style={styles.cardHeading}>Kennel Details</Text>
+      <View style={styles.cardHeadingRow}>
+        <Text style={styles.cardHeading}>Kennel Details</Text>
+        <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} data-testid="btn-edit-kennel-card">
+          <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
+          <Text style={styles.cardEditBtnText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.detailsGrid}>
         {kennel.prefix   ? <DetailItem icon="text-outline"     label="Prefix"       value={kennel.prefix}   /> : null}
         {phone           ? <DetailItem icon="call-outline"     label="Phone"        value={phone}           /> : null}
@@ -448,7 +460,14 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
   },
-  cardHeading: { fontSize: 18, fontWeight: "700", color: "#0F172A", marginBottom: 20 },
+  cardHeadingRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  cardHeading: { flex: 1, fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  cardEditBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1, borderColor: COLORS.primary,
+  },
+  cardEditBtnText: { fontSize: 12, fontWeight: "700", color: COLORS.primary },
 
   detailsGrid: { gap: 20 },
   detailItem: { flexDirection: "row", alignItems: "center", gap: 16 },
