@@ -9,6 +9,8 @@ import {
   ImageBackground,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -22,14 +24,18 @@ import { useAuth } from "../contexts/AuthContext";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
-type TabId = "detail" | "kennel" | "dogs";
+type TabId = "detail" | "kennel" | "dogs" | "stud" | "litter-inspection" | "litter-registration";
 
 const TABS: { id: TabId; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: "detail", label: "Detail",  icon: "person-outline" },
-  { id: "kennel", label: "Kennel",  icon: "home-outline"   },
-  { id: "dogs",   label: "Dogs",    icon: "paw-outline"    },
+  { id: "detail",               label: "Detail",             icon: "person-outline"       },
+  { id: "kennel",               label: "Kennel",             icon: "home-outline"         },
+  { id: "dogs",                 label: "Dogs",               icon: "paw-outline"          },
+  { id: "stud",                 label: "Stud Certificates",  icon: "ribbon-outline"       },
+  { id: "litter-inspection",    label: "Litter Inspections", icon: "search-outline"       },
+  { id: "litter-registration",  label: "Litter Registrations", icon: "document-text-outline" },
 ];
 
+/* ── helpers ──────────────────────────────────────────── */
 function getInitials(name: string): string {
   const t = name.trim();
   if (!t) return "?";
@@ -52,35 +58,62 @@ function getMembershipType(no: string): { label: string; color: string; bg: stri
 
 function toListDog(d: MemberOwnedDog): Dog {
   return {
-    id: d.id,
-    dog_name: d.dog_name,
-    KP: d.KP || null,
-    breed: d.breed,
-    sex: d.sex,
-    dob: d.dob,
-    color: d.color || null,
-    imageUrl: d.imageUrl,
-    owner: d.owner || null,
-    breeder: d.breeder || null,
-    sire: d.sire || null,
-    sire_id: null,
-    dam: d.dam || null,
-    dam_id: null,
-    titles: d.titles,
-    microchip: d.microchip,
-    foreign_reg_no: d.foreign_reg_no || null,
-    hair: d.hair || null,
+    id: d.id, dog_name: d.dog_name, KP: d.KP || null, breed: d.breed,
+    sex: d.sex, dob: d.dob, color: d.color || null, imageUrl: d.imageUrl,
+    owner: d.owner || null, breeder: d.breeder || null,
+    sire: d.sire || null, sire_id: null, dam: d.dam || null, dam_id: null,
+    titles: d.titles, microchip: d.microchip,
+    foreign_reg_no: d.foreign_reg_no || null, hair: d.hair || null,
     hd: null, ed: null, working_title: null, dna_status: null,
     breed_survey_period: null, show_rating: null,
   };
 }
 
-/* ── DetailItem ─────────────────────────────────────── */
-function DetailItem({
-  icon, label, value, valueColor,
+/* ── FormField ──────────────────────────────────────────── */
+function FormField({
+  label, value, onChangeText, placeholder, multiline, keyboardType, required,
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string; value: string; valueColor?: string;
+  label: string; value: string; onChangeText: (v: string) => void;
+  placeholder?: string; multiline?: boolean; keyboardType?: any; required?: boolean;
+}) {
+  return (
+    <View style={fStyles.field}>
+      <Text style={fStyles.label}>
+        {label}
+        {required ? <Text style={fStyles.required}> *</Text> : null}
+      </Text>
+      <TextInput
+        style={[fStyles.input, multiline && fStyles.inputMulti]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder ?? ""}
+        placeholderTextColor="#94A3B8"
+        multiline={multiline}
+        numberOfLines={multiline ? 4 : 1}
+        keyboardType={keyboardType ?? "default"}
+        autoCapitalize="sentences"
+        autoCorrect={false}
+      />
+    </View>
+  );
+}
+
+function FormSection({ title }: { title: string }) {
+  return <Text style={fStyles.section}>{title}</Text>;
+}
+
+function SubmitBtn({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={fStyles.submitBtn} activeOpacity={0.8} onPress={onPress}>
+      <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+      <Text style={fStyles.submitBtnText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/* ── DetailItem ─────────────────────────────────────── */
+function DetailItem({ icon, label, value, valueColor }: {
+  icon: keyof typeof Ionicons.glyphMap; label: string; value: string; valueColor?: string;
 }) {
   return (
     <View style={styles.detailItem}>
@@ -96,20 +129,15 @@ function DetailItem({
 }
 
 /* ── Tab: Detail ────────────────────────────────────── */
-function DetailTab({
-  detail, fallbackMember, email, phone,
-}: {
-  detail: MemberDetail | undefined;
-  fallbackMember?: Member;
-  email: string | null;
-  phone: string | null;
+function DetailTab({ detail, fallbackMember, email, phone }: {
+  detail: MemberDetail | undefined; fallbackMember?: Member;
+  email: string | null; phone: string | null;
 }) {
   const member = detail?.member ?? fallbackMember;
   if (!member) return null;
-
   const statusLabel = member.membership_no.startsWith("P-") || member.membership_no.startsWith("D-") ? "Active" : "Temporary";
   const statusColor = statusLabel === "Active" ? COLORS.primary : "#F59E0B";
-  const address     = (detail?.member as any)?.address;
+  const address = (detail?.member as any)?.address;
 
   return (
     <View style={styles.card}>
@@ -121,13 +149,13 @@ function DetailTab({
         </TouchableOpacity>
       </View>
       <View style={styles.detailsGrid}>
-        <DetailItem icon="card"              label="Membership Number" value={member.membership_no} />
-        <DetailItem icon="checkmark-circle"  label="Status"           value={statusLabel} valueColor={statusColor} />
-        {member.city    ? <DetailItem icon="location"   label="City"    value={member.city!} />    : null}
-        {member.country ? <DetailItem icon="flag"       label="Country" value={member.country!} /> : null}
-        {address        ? <DetailItem icon="home"       label="Address" value={address} />          : null}
-        {email          ? <DetailItem icon="mail"       label="Email"   value={email} />            : null}
-        {phone          ? <DetailItem icon="call"       label="Phone"   value={phone} />            : null}
+        <DetailItem icon="card"             label="Membership Number" value={member.membership_no} />
+        <DetailItem icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
+        {member.city    ? <DetailItem icon="location" label="City"    value={member.city!} />    : null}
+        {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} /> : null}
+        {address        ? <DetailItem icon="home"     label="Address" value={address} />          : null}
+        {email          ? <DetailItem icon="mail"     label="Email"   value={email} />            : null}
+        {phone          ? <DetailItem icon="call"     label="Phone"   value={phone} />            : null}
       </View>
     </View>
   );
@@ -138,15 +166,12 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
   if (!kennel) {
     return (
       <View style={styles.emptyState}>
-        <View style={styles.emptyIconWrap}>
-          <Ionicons name="home-outline" size={32} color={COLORS.primary} />
-        </View>
+        <View style={styles.emptyIconWrap}><Ionicons name="home-outline" size={32} color={COLORS.primary} /></View>
         <Text style={styles.emptyTitle}>No Kennel Registered</Text>
         <Text style={styles.emptyDesc}>You have not registered a kennel with GSDCP yet.</Text>
       </View>
     );
   }
-
   const hasImage = kennel.imageUrl && !kennel.imageUrl.includes("user-not-found") && !kennel.imageUrl.startsWith("https::");
   const initials = kennel.kennelName.trim().split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const phone = kennel.phone && kennel.phone !== "+00-000-000-0000" ? kennel.phone : null;
@@ -164,13 +189,11 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
         )}
         <View style={{ flex: 1, marginLeft: 14 }}>
           <Text style={styles.kennelName}>{kennel.kennelName}</Text>
-          {kennel.suffix  ? <Text style={styles.kennelSuffix}>"{kennel.suffix}"</Text> : null}
-          {kennel.city    ? <Text style={styles.kennelCity}>{kennel.city}{kennel.country ? `, ${kennel.country}` : ""}</Text> : null}
+          {kennel.suffix ? <Text style={styles.kennelSuffix}>"{kennel.suffix}"</Text> : null}
+          {kennel.city   ? <Text style={styles.kennelCity}>{kennel.city}{kennel.country ? `, ${kennel.country}` : ""}</Text> : null}
         </View>
       </View>
-
       <View style={styles.divider} />
-
       <View style={styles.cardHeadingRow}>
         <Text style={styles.cardHeading}>Kennel Details</Text>
         <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} data-testid="btn-edit-kennel-card">
@@ -185,10 +208,8 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
         {kennel.location ? <DetailItem icon="location-outline" label="Location"     value={kennel.location} /> : null}
         {activeSince     ? <DetailItem icon="calendar-outline" label="Active Since" value={activeSince}     /> : null}
       </View>
-
       <TouchableOpacity
-        style={styles.kennelViewBtn}
-        activeOpacity={0.8}
+        style={styles.kennelViewBtn} activeOpacity={0.8}
         onPress={() => navigation.push("KennelProfile", { id: kennel.kennel_id, name: kennel.kennelName })}
         data-testid="btn-view-kennel"
       >
@@ -204,15 +225,12 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
   if (dogs.length === 0) {
     return (
       <View style={styles.emptyState}>
-        <View style={styles.emptyIconWrap}>
-          <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
-        </View>
+        <View style={styles.emptyIconWrap}><Ionicons name="paw-outline" size={32} color={COLORS.primary} /></View>
         <Text style={styles.emptyTitle}>No Dogs Registered</Text>
         <Text style={styles.emptyDesc}>You have no dogs registered under your account yet.</Text>
       </View>
     );
   }
-
   return (
     <View>
       {dogs.map((dog) => (
@@ -222,10 +240,157 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
   );
 }
 
+/* ── Tab: Stud Certificate ──────────────────────────── */
+function StudCertTab() {
+  const [form, setForm] = useState({
+    studName: "", studKP: "",
+    damName: "", damKP: "",
+    damOwner: "",
+    dateOfMating: "", noOfMatings: "", expectedWhelping: "",
+    remarks: "",
+  });
+  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardHeading}>New Stud Certificate</Text>
+
+      <FormSection title="STUD (SIRE)" />
+      <FormField label="Stud Dog Name"   value={form.studName} onChangeText={set("studName")} placeholder="Enter stud dog name"  required />
+      <FormField label="Stud Dog KP / Reg No" value={form.studKP} onChangeText={set("studKP")} placeholder="e.g. KP-12345" />
+
+      <View style={styles.divider} />
+      <FormSection title="DAM (BITCH)" />
+      <FormField label="Dam Name"        value={form.damName}  onChangeText={set("damName")}  placeholder="Enter dam name"        required />
+      <FormField label="Dam KP / Reg No" value={form.damKP}    onChangeText={set("damKP")}    placeholder="e.g. KP-67890" />
+      <FormField label="Dam Owner Name"  value={form.damOwner} onChangeText={set("damOwner")} placeholder="Full name of dam owner" required />
+
+      <View style={styles.divider} />
+      <FormSection title="MATING DETAILS" />
+      <FormField label="Date of Mating"     value={form.dateOfMating}     onChangeText={set("dateOfMating")}     placeholder="DD/MM/YYYY" required />
+      <FormField label="Number of Matings"  value={form.noOfMatings}      onChangeText={set("noOfMatings")}      placeholder="e.g. 2" keyboardType="numeric" />
+      <FormField label="Expected Whelping"  value={form.expectedWhelping} onChangeText={set("expectedWhelping")} placeholder="DD/MM/YYYY" />
+      <FormField label="Remarks"            value={form.remarks}          onChangeText={set("remarks")}          placeholder="Any additional notes…" multiline />
+
+      <SubmitBtn
+        label="Submit Stud Certificate"
+        onPress={() => Alert.alert("Submitted", "Stud certificate request submitted successfully.")}
+      />
+    </View>
+  );
+}
+
+/* ── Tab: Litter Inspection ─────────────────────────── */
+function LitterInspectionTab() {
+  const [form, setForm] = useState({
+    sireName: "", sireKP: "",
+    damName: "", damKP: "",
+    dateOfWhelping: "", dateOfInspection: "",
+    malePups: "", femalePups: "", deadPups: "",
+    inspectorName: "",
+    remarks: "",
+  });
+  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardHeading}>New Litter Inspection</Text>
+
+      <FormSection title="SIRE" />
+      <FormField label="Sire Name"   value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
+      <FormField label="Sire KP / Reg No" value={form.sireKP} onChangeText={set("sireKP")} placeholder="e.g. KP-12345" />
+
+      <View style={styles.divider} />
+      <FormSection title="DAM" />
+      <FormField label="Dam Name"   value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
+      <FormField label="Dam KP / Reg No" value={form.damKP} onChangeText={set("damKP")} placeholder="e.g. KP-67890" />
+
+      <View style={styles.divider} />
+      <FormSection title="LITTER DETAILS" />
+      <FormField label="Date of Whelping"    value={form.dateOfWhelping}    onChangeText={set("dateOfWhelping")}    placeholder="DD/MM/YYYY" required />
+      <FormField label="Date of Inspection"  value={form.dateOfInspection}  onChangeText={set("dateOfInspection")}  placeholder="DD/MM/YYYY" required />
+
+      <View style={fStyles.row}>
+        <View style={{ flex: 1 }}>
+          <FormField label="Male Pups"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required />
+        </View>
+        <View style={{ width: 12 }} />
+        <View style={{ flex: 1 }}>
+          <FormField label="Female Pups" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required />
+        </View>
+        <View style={{ width: 12 }} />
+        <View style={{ flex: 1 }}>
+          <FormField label="Dead"        value={form.deadPups}   onChangeText={set("deadPups")}   placeholder="0" keyboardType="numeric" />
+        </View>
+      </View>
+
+      <FormField label="Inspector Name" value={form.inspectorName} onChangeText={set("inspectorName")} placeholder="Full name" required />
+      <FormField label="Remarks"        value={form.remarks}       onChangeText={set("remarks")}       placeholder="Any additional notes…" multiline />
+
+      <SubmitBtn
+        label="Submit Litter Inspection"
+        onPress={() => Alert.alert("Submitted", "Litter inspection request submitted successfully.")}
+      />
+    </View>
+  );
+}
+
+/* ── Tab: Litter Registration ───────────────────────── */
+function LitterRegistrationTab() {
+  const [form, setForm] = useState({
+    sireName: "", sireKP: "",
+    damName: "", damKP: "",
+    dateOfWhelping: "",
+    totalPups: "", malePups: "", femalePups: "",
+    remarks: "",
+  });
+  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardHeading}>New Litter Registration</Text>
+
+      <FormSection title="SIRE" />
+      <FormField label="Sire Name"        value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
+      <FormField label="Sire KP / Reg No" value={form.sireKP}   onChangeText={set("sireKP")}   placeholder="e.g. KP-12345" />
+
+      <View style={styles.divider} />
+      <FormSection title="DAM" />
+      <FormField label="Dam Name"         value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
+      <FormField label="Dam KP / Reg No"  value={form.damKP}   onChangeText={set("damKP")}   placeholder="e.g. KP-67890" />
+
+      <View style={styles.divider} />
+      <FormSection title="LITTER DETAILS" />
+      <FormField label="Date of Whelping" value={form.dateOfWhelping} onChangeText={set("dateOfWhelping")} placeholder="DD/MM/YYYY" required />
+
+      <View style={fStyles.row}>
+        <View style={{ flex: 1 }}>
+          <FormField label="Total Pups"  value={form.totalPups}  onChangeText={set("totalPups")}  placeholder="0" keyboardType="numeric" required />
+        </View>
+        <View style={{ width: 12 }} />
+        <View style={{ flex: 1 }}>
+          <FormField label="Male"        value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required />
+        </View>
+        <View style={{ width: 12 }} />
+        <View style={{ flex: 1 }}>
+          <FormField label="Female"      value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required />
+        </View>
+      </View>
+
+      <FormField label="Remarks" value={form.remarks} onChangeText={set("remarks")} placeholder="Any additional notes…" multiline />
+
+      <SubmitBtn
+        label="Submit Litter Registration"
+        onPress={() => Alert.alert("Submitted", "Litter registration request submitted successfully.")}
+      />
+    </View>
+  );
+}
+
 /* ── Screen ─────────────────────────────────────────── */
 export default function ProfileScreen() {
-  const navigation  = useNavigation<any>();
-  const insets      = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const insets     = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("detail");
 
@@ -244,44 +409,46 @@ export default function ProfileScreen() {
     );
   }
 
-  // Build a Member-compatible fallback from AuthUser so the UI is instant
   const fallbackMember: Member = {
-    id:           user.member_id,
-    member_name:  user.name,
+    id:            user.member_id,
+    member_name:   user.name,
     membership_no: user.membership_no ?? "",
-    imageUrl:     user.photo ? `https://gsdcp.org/storage/photos/${user.photo}` : null,
-    city:         user.city,
-    country:      user.country,
+    imageUrl:      user.photo ? `https://gsdcp.org/storage/photos/${user.photo}` : null,
+    city:          user.city,
+    country:       user.country,
   };
 
-  const member       = detail?.member ?? fallbackMember;
-  const ownedDogs    = detail?.ownedDogs ?? (user.myDogs as MemberOwnedDog[]) ?? [];
-  const kennel       = detail?.kennel ?? (user.myKennel as MemberKennel | null);
-  const memberName   = member.member_name.trim() || "GSDCP Member";
-  const initials     = getInitials(memberName);
-  const hasPhoto     = isValidImage(member.imageUrl);
-  const mType        = getMembershipType(member.membership_no);
+  const member     = detail?.member ?? fallbackMember;
+  const ownedDogs  = detail?.ownedDogs ?? (user.myDogs as MemberOwnedDog[]) ?? [];
+  const kennel     = detail?.kennel ?? (user.myKennel as MemberKennel | null);
+  const memberName = member.member_name.trim() || "GSDCP Member";
+  const initials   = getInitials(memberName);
+  const hasPhoto   = isValidImage(member.imageUrl);
+  const mType      = getMembershipType(member.membership_no);
+
+  function renderTabContent() {
+    if (isLoading && activeTab !== "detail") {
+      return <View style={styles.loadingWrap}><ActivityIndicator size="small" color={COLORS.primary} /></View>;
+    }
+    switch (activeTab) {
+      case "detail":               return <DetailTab detail={detail} fallbackMember={fallbackMember} email={user.email} phone={user.phone} />;
+      case "kennel":               return <KennelTab kennel={kennel} navigation={navigation} />;
+      case "dogs":                 return <DogsTab dogs={ownedDogs} onDogPress={(dog) => navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })} />;
+      case "stud":                 return <StudCertTab />;
+      case "litter-inspection":    return <LitterInspectionTab />;
+      case "litter-registration":  return <LitterRegistrationTab />;
+    }
+  }
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={isRefetching}
-          onRefresh={refetch}
-          tintColor={COLORS.primary}
-          colors={[COLORS.primary]}
-        />
-      }
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
     >
       {/* ── Hero ── */}
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
-        <LinearGradient
-          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
-        />
+        <LinearGradient colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]} style={styles.heroGradient} pointerEvents="none" />
       </ImageBackground>
 
       {/* ── Avatar & Identity ── */}
@@ -295,26 +462,23 @@ export default function ProfileScreen() {
             </View>
           )}
         </View>
-
         <Text style={styles.memberName}>{memberName}</Text>
         <View style={[styles.typeBadge, { backgroundColor: mType.bg }]}>
           <Text style={[styles.typeBadgeText, { color: mType.color }]}>{mType.label}</Text>
         </View>
         <Text style={styles.memberNo}>Membership No: {member.membership_no}</Text>
-
-        <TouchableOpacity
-          style={styles.signOutBtn}
-          activeOpacity={0.8}
-          onPress={logout}
-          data-testid="btn-sign-out"
-        >
+        <TouchableOpacity style={styles.signOutBtn} activeOpacity={0.8} onPress={logout} data-testid="btn-sign-out">
           <Ionicons name="log-out-outline" size={14} color={COLORS.error} />
           <Text style={styles.signOutBtnText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 
-      {/* ── Pill Tab Bar ── */}
-      <View style={styles.tabBar}>
+      {/* ── Horizontally scrollable pill tab bar ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.tabBar}
+      >
         {TABS.map((t) => {
           const active = t.id === activeTab;
           const count  = t.id === "dogs" && !isLoading ? ownedDogs.length : null;
@@ -336,29 +500,11 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* ── Tab Content ── */}
       <View style={styles.contentArea}>
-        {isLoading && activeTab !== "detail" ? (
-          <View style={styles.loadingWrap}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
-          </View>
-        ) : activeTab === "detail" ? (
-          <DetailTab
-            detail={detail}
-            fallbackMember={fallbackMember}
-            email={user.email}
-            phone={user.phone}
-          />
-        ) : activeTab === "kennel" ? (
-          <KennelTab kennel={kennel} navigation={navigation} />
-        ) : (
-          <DogsTab
-            dogs={ownedDogs}
-            onDogPress={(dog) => navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })}
-          />
-        )}
+        {renderTabContent()}
       </View>
 
       <View style={{ height: 48 }} />
@@ -366,6 +512,32 @@ export default function ProfileScreen() {
   );
 }
 
+/* ── Form styles ────────────────────────────────────── */
+const fStyles = StyleSheet.create({
+  section: {
+    fontSize: 11, fontWeight: "700", color: COLORS.textMuted,
+    letterSpacing: 1, marginBottom: 14, marginTop: 4,
+  },
+  field: { marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 6 },
+  required: { color: COLORS.error },
+  input: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1, borderColor: "#E2E8F0",
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11,
+    fontSize: 14, color: "#0F172A",
+  },
+  inputMulti: { height: 96, textAlignVertical: "top", paddingTop: 11 },
+  row: { flexDirection: "row", marginBottom: 0 },
+  submitBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, marginTop: 24, paddingVertical: 14,
+    borderRadius: 12, backgroundColor: COLORS.primary,
+  },
+  submitBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+});
+
+/* ── Screen styles ──────────────────────────────────── */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f6f8f7" },
 
@@ -381,10 +553,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15, shadowRadius: 10, elevation: 8,
   },
-  avatarInner: {
-    flex: 1, backgroundColor: "rgba(15,92,59,0.08)",
-    justifyContent: "center", alignItems: "center",
-  },
+  avatarInner: { flex: 1, backgroundColor: "rgba(15,92,59,0.08)", justifyContent: "center", alignItems: "center" },
   avatarImage: { width: "100%", height: "100%" },
   avatarInitials: { fontSize: 42, fontWeight: "800", color: COLORS.primary },
   memberName: {
@@ -392,10 +561,7 @@ const styles = StyleSheet.create({
     textAlign: "center", paddingHorizontal: SPACING.lg,
     marginTop: 12, marginBottom: 8, lineHeight: 32,
   },
-  typeBadge: {
-    paddingHorizontal: 14, paddingVertical: 5,
-    borderRadius: BORDER_RADIUS.full, marginBottom: 6,
-  },
+  typeBadge: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: BORDER_RADIUS.full, marginBottom: 6 },
   typeBadgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   memberNo: { fontSize: 14, fontWeight: "500", color: "#64748B" },
 
@@ -407,28 +573,7 @@ const styles = StyleSheet.create({
   },
   signOutBtnText: { fontSize: 13, fontWeight: "700", color: COLORS.error },
 
-  ownerActions: {
-    flexDirection: "row", flexWrap: "wrap",
-    justifyContent: "center", gap: 8, marginTop: 16,
-  },
-  ownerActionBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 16, paddingVertical: 9,
-    borderRadius: BORDER_RADIUS.full, backgroundColor: COLORS.primary,
-  },
-  ownerActionBtnText: { fontSize: 13, fontWeight: "700", color: "#fff" },
-  ownerActionBtnOutline: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 16, paddingVertical: 9,
-    borderRadius: BORDER_RADIUS.full, borderWidth: 1.5,
-    borderColor: COLORS.border, backgroundColor: "#fff",
-  },
-  ownerActionBtnOutlineText: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
-
-  tabBar: {
-    flexDirection: "row", gap: 8,
-    paddingHorizontal: 16, paddingVertical: 4, marginBottom: 20,
-  },
+  tabBar: { paddingHorizontal: 16, paddingVertical: 4, gap: 8, marginBottom: 20 },
   tab: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 14, height: 38,
@@ -480,10 +625,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: "rgba(15,92,59,0.06)", marginVertical: 20 },
   kennelHeader: { flexDirection: "row", alignItems: "center" },
   kennelAvatar: { width: 64, height: 64, borderRadius: 12, overflow: "hidden" },
-  kennelAvatarPlaceholder: {
-    backgroundColor: "rgba(15,92,59,0.1)",
-    justifyContent: "center", alignItems: "center",
-  },
+  kennelAvatarPlaceholder: { backgroundColor: "rgba(15,92,59,0.1)", justifyContent: "center", alignItems: "center" },
   kennelAvatarInitials: { fontSize: 20, fontWeight: "700", color: COLORS.primary },
   kennelName: { fontSize: 17, fontWeight: "700", color: "#0F172A", marginBottom: 2 },
   kennelSuffix: { fontSize: 13, fontStyle: "italic", color: COLORS.textMuted, marginBottom: 2 },
@@ -504,7 +646,5 @@ const styles = StyleSheet.create({
   emptyDesc: { fontSize: 13, color: COLORS.textMuted, textAlign: "center", lineHeight: 20 },
 
   loadingWrap: { padding: SPACING.xl, alignItems: "center" },
-
   centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: SPACING.md },
-  errorText: { fontSize: FONT_SIZES.md, color: COLORS.textMuted },
 });
