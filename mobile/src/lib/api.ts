@@ -605,7 +605,7 @@ export type StudCertPayload = {
   user_id: number;
   sire_id: string;
   dam_id: string;
-  date_of_mating: string;
+  mating_date: string;
 };
 
 export async function fetchStudCertificates(

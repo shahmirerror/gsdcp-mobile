@@ -620,7 +620,7 @@ function StudCertTab() {
         user_id:        user!.id,
         sire_id:        selectedSire.id.replace(/^dog-/, ""),
         dam_id:         selectedDam.id.replace(/^dog-/, ""),
-        date_of_mating: form.dateOfMating.trim(),
+        mating_date: form.dateOfMating.trim(),
       });
       setSelectedSire(null);
       setSelectedDam(null);
