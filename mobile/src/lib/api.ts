@@ -758,9 +758,17 @@ export type LitterRegistrationPayload = {
   remarks: string;
 };
 
+export type LitterRegStats = {
+  total: number;
+  microchipped: number;
+  submitted: number;
+  approved: number;
+  rejected: number;
+};
+
 export async function fetchLitterRegistrations(
   userId: number, page = 1, perPage = 10
-): Promise<{ registrations: LitterRegistration[]; total: number }> {
+): Promise<{ registrations: LitterRegistration[]; total: number; stats: LitterRegStats }> {
   const res = await fetch(`${BASE_URL}/litter-registrations`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -771,6 +779,13 @@ export async function fetchLitterRegistrations(
   return {
     registrations: Array.isArray(json.data?.registrations) ? json.data.registrations : [],
     total: json.data?.total ?? 0,
+    stats: {
+      total:       json.data?.total        ?? 0,
+      microchipped: json.data?.microchipped ?? 0,
+      submitted:   json.data?.submitted    ?? 0,
+      approved:    json.data?.approved     ?? 0,
+      rejected:    json.data?.rejected     ?? 0,
+    },
   };
 }
 

@@ -25,7 +25,7 @@ import {
   fetchLitterInspections, fetchLitterInspectionDetail, submitLitterInspection,
   LitterInspection, LitterInspectionDetail,
   fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
-  LitterRegistration, LitterRegistrationDetail,
+  LitterRegistration, LitterRegistrationDetail, LitterRegStats,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -799,10 +799,11 @@ function LitterRegistrationTab() {
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
   const REG_PER_PAGE = 10;
-  const [allRegs, setAllRegs]       = useState<LitterRegistration[]>([]);
-  const [regTotal, setRegTotal]     = useState(0);
-  const [regPage, setRegPage]       = useState(1);
+  const [allRegs, setAllRegs]             = useState<LitterRegistration[]>([]);
+  const [regTotal, setRegTotal]           = useState(0);
+  const [regPage, setRegPage]             = useState(1);
   const [loadingMoreReg, setLoadingMoreReg] = useState(false);
+  const [regStats, setRegStats]           = useState<LitterRegStats | null>(null);
 
   const { data: page1Regs, isLoading, error: listError, refetch } = useQuery({
     queryKey: ["litter-registrations", user?.id],
@@ -816,6 +817,7 @@ function LitterRegistrationTab() {
       setAllRegs(page1Regs.registrations);
       setRegTotal(page1Regs.total);
       setRegPage(1);
+      setRegStats(page1Regs.stats);
     }
   }, [page1Regs]);
 
@@ -968,6 +970,22 @@ function LitterRegistrationTab() {
   return (
     <View style={styles.card}>
       <ListHeader title="Litter Registrations" onNew={() => setShowForm(true)} />
+
+      {regStats && (
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          {[
+            { label: "Submitted",    value: regStats.submitted,   bg: "#EFF6FF", text: "#1D4ED8" },
+            { label: "Approved",     value: regStats.approved,    bg: "#F0FDF4", text: "#166534" },
+            { label: "Rejected",     value: regStats.rejected,    bg: "#FEF2F2", text: "#991B1B" },
+            { label: "Microchipped", value: regStats.microchipped, bg: "#FEF9C3", text: "#854D0E" },
+          ].map(({ label, value, bg, text }) => (
+            <View key={label} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: bg }}>
+              <Text style={{ fontSize: 12, fontWeight: "600", color: text }}>{value} {label}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {isLoading ? (
         <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
       ) : listError ? (
