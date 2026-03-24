@@ -875,13 +875,18 @@ function LitterRegistrationTab() {
         <FormBackBtn onPress={() => setSelectedId(null)} />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <Text style={styles.cardHeading}>Litter Registration</Text>
-          {detail && (
-            <View style={[tStyles.statusPill, { backgroundColor: detail.status === "Approved" ? "#DCFCE7" : "#FEF9C3" }]}>
-              <Text style={[tStyles.statusPillText, { color: detail.status === "Approved" ? "#166534" : "#854D0E" }]}>
-                {detail.status ?? "Pending"}
-              </Text>
-            </View>
-          )}
+          {detail && (() => {
+            const dApproved = detail.status === "Approved";
+            const dGranted  = detail.status === "Permission Granted";
+            const dRejected = detail.status === "Rejected";
+            const dBg   = dApproved ? "#DCFCE7" : dRejected ? "#FEE2E2" : dGranted ? "#EFF6FF" : "#FEF9C3";
+            const dTxt  = dApproved ? "#166534" : dRejected ? "#991B1B" : dGranted ? "#1D4ED8" : "#854D0E";
+            return (
+              <View style={[tStyles.statusPill, { backgroundColor: dBg }]}>
+                <Text style={[tStyles.statusPillText, { color: dTxt }]}>{detail.status ?? "Pending"}</Text>
+              </View>
+            );
+          })()}
         </View>
 
         {detailLoading ? (
@@ -911,7 +916,7 @@ function LitterRegistrationTab() {
               {[
                 { label: "Male",   value: detail.male_puppies,   color: COLORS.primary },
                 { label: "Female", value: detail.female_puppies, color: "#9333EA" },
-                { label: "Total",  value: String(detail.total_puppies ?? "—"), color: COLORS.accent },
+                { label: "Total",  value: detail.puppy_count,    color: COLORS.accent },
               ].map(({ label, value, color }) => (
                 <View key={label} style={tStyles.pupCountBox}>
                   <Text style={[tStyles.pupCountNum, { color }]}>{value ?? "—"}</Text>
@@ -1001,7 +1006,12 @@ function LitterRegistrationTab() {
       ) : (
         <View style={tStyles.certList}>
           {allRegs.map((item, i) => {
-            const totalPups = item.total_puppies ?? ((Number(item.male_puppies) || 0) + (Number(item.female_puppies) || 0));
+            const totalPups = item.puppy_count ?? ((item.male_puppies || 0) + (item.female_puppies || 0));
+            const isApproved = item.status === "Approved";
+            const isGranted  = item.status === "Permission Granted";
+            const isRejected = item.status === "Rejected";
+            const pillBg   = isApproved ? "#DCFCE7" : isRejected ? "#FEE2E2" : isGranted ? "#EFF6FF" : "#FEF9C3";
+            const pillText = isApproved ? "#166534" : isRejected ? "#991B1B" : isGranted ? "#1D4ED8" : "#854D0E";
             return (
               <TouchableOpacity
                 key={item.id}
@@ -1022,10 +1032,8 @@ function LitterRegistrationTab() {
                   <Text style={tStyles.certKP} numberOfLines={1}>KP {item.dam.KP}</Text>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
-                  <View style={[tStyles.statusPill, { backgroundColor: item.status === "Approved" ? "#DCFCE7" : "#FEF9C3" }]}>
-                    <Text style={[tStyles.statusPillText, { color: item.status === "Approved" ? "#166534" : "#854D0E" }]}>
-                      {item.status ?? "Pending"}
-                    </Text>
+                  <View style={[tStyles.statusPill, { backgroundColor: pillBg }]}>
+                    <Text style={[tStyles.statusPillText, { color: pillText }]}>{item.status ?? "Pending"}</Text>
                   </View>
                   {item.whelping_date && <Text style={tStyles.certDate}>{item.whelping_date}</Text>}
                   <Text style={tStyles.certKP}>{totalPups} pups</Text>

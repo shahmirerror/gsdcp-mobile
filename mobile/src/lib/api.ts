@@ -727,9 +727,9 @@ export type LitterRegistration = {
   sire: { id: string; name: string; KP: string; foreign_reg_no: string | null };
   dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null };
   whelping_date: string | null;
-  male_puppies: string | null;
-  female_puppies: string | null;
-  total_puppies: number | null;
+  male_puppies: number | null;
+  female_puppies: number | null;
+  puppy_count: number | null;
   status: string | null;
   registration_no: string | null;
 };
@@ -739,9 +739,9 @@ export type LitterRegistrationDetail = {
   sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
   dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
   whelping_date: string | null;
-  male_puppies: string | null;
-  female_puppies: string | null;
-  total_puppies: number | null;
+  male_puppies: number | null;
+  female_puppies: number | null;
+  puppy_count: number | null;
   status: string | null;
   registration_no: string | null;
 };
@@ -790,7 +790,7 @@ export async function fetchLitterRegistrations(
 }
 
 export async function fetchLitterRegistrationDetail(id: string, userId: number): Promise<LitterRegistrationDetail> {
-  const numericId = id.replace(/^reg-/, "");
+  const numericId = id.replace(/^litt-/, "");
   const res = await fetch(`${BASE_URL}/litter-registrations/${numericId}?user_id=${userId}`, {
     headers: { Accept: "application/json" },
   });
