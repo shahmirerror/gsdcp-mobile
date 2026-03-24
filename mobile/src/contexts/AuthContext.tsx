@@ -22,6 +22,7 @@ export type AuthUser = {
   role_id: string | null;
   myDogs: any[];
   myKennel: any | null;
+  token: string | null;
 };
 
 type AuthContextType = {
@@ -104,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role_id:         p.role_id ?? null,
       myDogs:          json.data?.myDogs ?? [],
       myKennel:        json.data?.myKennel ?? null,
+      token:           json.data?.token ?? json.data?.access_token ?? json.token ?? json.access_token ?? null,
     };
 
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));

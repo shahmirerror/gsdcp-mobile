@@ -624,10 +624,12 @@ export async function fetchStudCertificates(
   };
 }
 
-export async function submitStudCertificate(payload: StudCertPayload): Promise<void> {
+export async function submitStudCertificate(payload: StudCertPayload, token?: string | null): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${BASE_URL}/stud-certificates/new-stud-certificate`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers,
     body: JSON.stringify(payload),
   });
   const json = await res.json();
