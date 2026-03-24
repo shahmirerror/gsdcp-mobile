@@ -27,7 +27,7 @@ import {
   fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
   searchDogs, DogSearchResult,
-  verifySire, SireVerification,
+  verifySire, verifyDam, SireVerification,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -470,9 +470,11 @@ function StudCertTab() {
   const [sireVerifying, setSireVerifying]       = useState(false);
   const [sireVerification, setSireVerification] = useState<SireVerification | null>(null);
   const [sireVerifyError, setSireVerifyError]   = useState<string | null>(null);
+  const [damVerifying, setDamVerifying]         = useState(false);
+  const [damVerification, setDamVerification]   = useState<SireVerification | null>(null);
+  const [damVerifyError, setDamVerifyError]     = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    damOwner: "",
     dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "",
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
@@ -503,6 +505,23 @@ function StudCertTab() {
       .finally(()  => { if (!cancelled) setSireVerifying(false); });
     return () => { cancelled = true; };
   }, [selectedSire?.id]);
+
+  useEffect(() => {
+    if (!selectedDam || !user) {
+      setDamVerification(null);
+      setDamVerifyError(null);
+      return;
+    }
+    let cancelled = false;
+    setDamVerifying(true);
+    setDamVerification(null);
+    setDamVerifyError(null);
+    verifyDam(selectedDam.id, user.id)
+      .then(result => { if (!cancelled) setDamVerification(result); })
+      .catch(err  => { if (!cancelled) setDamVerifyError(err?.message ?? "Verification unavailable"); })
+      .finally(()  => { if (!cancelled) setDamVerifying(false); });
+    return () => { cancelled = true; };
+  }, [selectedDam?.id]);
 
   const CERT_PER_PAGE = 10;
   const [allCerts, setAllCerts]     = useState<StudCertificate[]>([]);
@@ -547,7 +566,7 @@ function StudCertTab() {
     if (!selectedSire)                                   { setSubmitError("Stud (sire) dog is required."); return; }
     if (sireVerification && !sireVerification.eligible) { setSubmitError(`Sire not eligible: ${sireVerification.message}`); return; }
     if (!selectedDam)                                   { setSubmitError("Dam dog is required."); return; }
-    if (!form.damOwner.trim())                          { setSubmitError("Dam owner name is required."); return; }
+    if (damVerification && !damVerification.eligible)   { setSubmitError(`Dam not eligible: ${damVerification.message}`); return; }
     if (!form.dateOfMating.trim()) { setSubmitError("Date of mating is required."); return; }
     setSubmitError("");
     setSubmitting(true);
@@ -558,7 +577,6 @@ function StudCertTab() {
         stud_kp:           selectedSire.KP,
         dam_name:          selectedDam.name,
         dam_kp:            selectedDam.KP,
-        dam_owner:         form.damOwner.trim(),
         date_of_mating:    form.dateOfMating.trim(),
         no_of_matings:     form.noOfMatings.trim(),
         expected_whelping: form.expectedWhelping.trim(),
@@ -568,7 +586,9 @@ function StudCertTab() {
       setSelectedDam(null);
       setSireVerification(null);
       setSireVerifyError(null);
-      setForm({ damOwner: "", dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
+      setDamVerification(null);
+      setDamVerifyError(null);
+      setForm({ dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
       setShowForm(false);
       refetch();
       Alert.alert("Submitted", "Stud certificate submitted successfully.");
@@ -631,6 +651,7 @@ function StudCertTab() {
           setShowForm(false); setSubmitError("");
           setSelectedSire(null); setSelectedDam(null);
           setSireVerification(null); setSireVerifyError(null);
+          setDamVerification(null); setDamVerifyError(null);
         }} />
         <Text style={styles.cardHeading}>New Stud Certificate</Text>
 
@@ -683,15 +704,40 @@ function StudCertTab() {
           required
           mode="remote"
           selected={selectedDam}
-          onSelect={(dog) => {
-            setSelectedDam(dog);
-            if (dog.owner && !form.damOwner) {
-              setForm(f => ({ ...f, damOwner: dog.owner! }));
-            }
-          }}
-          onClear={() => setSelectedDam(null)}
+          onSelect={setSelectedDam}
+          onClear={() => { setSelectedDam(null); setDamVerification(null); setDamVerifyError(null); }}
         />
-        <FormField label="Dam Owner Name" value={form.damOwner} onChangeText={set("damOwner")} placeholder="Full name of dam owner" required />
+
+        {/* Dam verification status */}
+        {selectedDam && (
+          damVerifying ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, marginTop: -4 }}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Verifying dam eligibility…</Text>
+            </View>
+          ) : damVerification ? (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 8,
+              marginBottom: 10, marginTop: -4,
+              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+              backgroundColor: damVerification.eligible ? "#DCFCE7" : "#FEE2E2",
+            }}>
+              <Ionicons
+                name={damVerification.eligible ? "checkmark-circle" : "close-circle"}
+                size={16}
+                color={damVerification.eligible ? "#16A34A" : "#DC2626"}
+              />
+              <Text style={{ fontSize: 12, fontWeight: "600", color: damVerification.eligible ? "#166534" : "#991B1B", flex: 1 }}>
+                {damVerification.eligible ? "Eligible" : "Not Eligible"}{damVerification.message ? ` — ${damVerification.message}` : ""}
+              </Text>
+            </View>
+          ) : damVerifyError ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, marginTop: -4 }}>
+              <Ionicons name="warning-outline" size={14} color="#D97706" />
+              <Text style={{ fontSize: 12, color: "#92400E" }}>Verification unavailable</Text>
+            </View>
+          ) : null
+        )}
 
         <View style={styles.divider} />
         <FormSection title="MATING DETAILS" />

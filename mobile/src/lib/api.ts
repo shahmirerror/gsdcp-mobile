@@ -607,7 +607,6 @@ export type StudCertPayload = {
   stud_kp: string;
   dam_name: string;
   dam_kp: string;
-  dam_owner: string;
   date_of_mating: string;
   no_of_matings: string;
   expected_whelping: string;
@@ -856,6 +855,22 @@ export async function verifySire(dogId: string, userId: number): Promise<SireVer
   if (json.success === false) return { eligible: false, message: errorMsg ?? "Not eligible" };
   if (json.success === true)  return { eligible: true,  message: json.data?.message ?? json.message ?? "" };
   // Unexpected shape — treat as eligible so we don't silently block submission
+  return { eligible: true, message: "" };
+}
+
+export async function verifyDam(dogId: string, userId: number): Promise<SireVerification> {
+  const numericId = dogId.replace(/^dog-/, "");
+  const res = await fetch(`${BASE_URL}/stud-certificates/verify_dam`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ dam_id: numericId, user_id: userId }),
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
+  const errorMsg = json.error?.message ?? json.message ?? null;
+  if (json.success === false) return { eligible: false, message: errorMsg ?? "Not eligible" };
+  if (json.success === true)  return { eligible: true,  message: json.data?.message ?? json.message ?? "" };
   return { eligible: true, message: "" };
 }
 
