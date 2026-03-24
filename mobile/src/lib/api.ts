@@ -597,7 +597,11 @@ export type StudCertPayload = {
 };
 
 export async function fetchStudCertificates(userId: number): Promise<StudCertificate[]> {
-  const res = await fetch(`${BASE_URL}/stud-certificates?user_id=${userId}`);
+  const res = await fetch(`${BASE_URL}/stud-certificates`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ user_id: userId }),
+  });
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? "Failed to fetch stud certificates");
   return Array.isArray(json.data) ? json.data : [];
