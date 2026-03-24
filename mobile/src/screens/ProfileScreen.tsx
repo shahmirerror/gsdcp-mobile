@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -339,17 +339,20 @@ function StudCertTab() {
   const [certPage, setCertPage]     = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const { isLoading: certsLoading, refetch } = useQuery({
+  const { data: page1Certs, isLoading: certsLoading, refetch } = useQuery({
     queryKey: ["stud-certificates", user?.id],
-    queryFn: async () => {
-      const res = await fetchStudCertificates(user!.id, 1, CERT_PER_PAGE);
-      setAllCerts(res.certificates);
-      setCertTotal(res.total);
-      setCertPage(1);
-      return res;
-    },
+    queryFn: () => fetchStudCertificates(user!.id, 1, CERT_PER_PAGE),
     enabled: !!user,
+    staleTime: 30_000,
   });
+
+  useEffect(() => {
+    if (page1Certs) {
+      setAllCerts(page1Certs.certificates);
+      setCertTotal(page1Certs.total);
+      setCertPage(1);
+    }
+  }, [page1Certs]);
 
   const loadMoreCerts = async () => {
     if (loadingMore || allCerts.length >= certTotal) return;
@@ -547,17 +550,20 @@ function LitterInspectionTab() {
   const [inspPage, setInspPage]             = useState(1);
   const [loadingMoreInsp, setLoadingMoreInsp] = useState(false);
 
-  const { isLoading, error: listError, refetch } = useQuery({
+  const { data: page1Insp, isLoading, error: listError, refetch } = useQuery({
     queryKey: ["litter-inspections", user?.id],
-    queryFn: async () => {
-      const res = await fetchLitterInspections(user!.id, 1, INSP_PER_PAGE);
-      setAllInspections(res.inspections);
-      setInspTotal(res.total);
-      setInspPage(1);
-      return res;
-    },
+    queryFn: () => fetchLitterInspections(user!.id, 1, INSP_PER_PAGE),
     enabled: !!user,
+    staleTime: 30_000,
   });
+
+  useEffect(() => {
+    if (page1Insp) {
+      setAllInspections(page1Insp.inspections);
+      setInspTotal(page1Insp.total);
+      setInspPage(1);
+    }
+  }, [page1Insp]);
 
   const loadMoreInspections = async () => {
     if (loadingMoreInsp || allInspections.length >= inspTotal) return;
