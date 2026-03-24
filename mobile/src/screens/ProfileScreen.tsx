@@ -18,7 +18,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog } from "../lib/api";
+import {
+  fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog,
+  fetchStudCertificates, submitStudCertificate, StudCertificate,
+} from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -293,7 +296,10 @@ function FormBackBtn({ onPress }: { onPress: () => void }) {
 
 /* ── Tab: Stud Certificate ──────────────────────────── */
 function StudCertTab() {
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState({
     studName: "", studKP: "",
     damName: "", damKP: "", damOwner: "",
@@ -301,10 +307,47 @@ function StudCertTab() {
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
+  const { data: certs = [], isLoading: certsLoading, refetch } = useQuery<StudCertificate[]>({
+    queryKey: ["stud-certificates", user?.id],
+    queryFn: () => fetchStudCertificates(user!.id),
+    enabled: !!user,
+  });
+
+  const handleSubmit = async () => {
+    if (!form.studName.trim()) { setSubmitError("Stud dog name is required."); return; }
+    if (!form.damName.trim())  { setSubmitError("Dam name is required."); return; }
+    if (!form.damOwner.trim()) { setSubmitError("Dam owner name is required."); return; }
+    if (!form.dateOfMating.trim()) { setSubmitError("Date of mating is required."); return; }
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await submitStudCertificate({
+        user_id:          user!.id,
+        stud_name:        form.studName.trim(),
+        stud_kp:          form.studKP.trim(),
+        dam_name:         form.damName.trim(),
+        dam_kp:           form.damKP.trim(),
+        dam_owner:        form.damOwner.trim(),
+        date_of_mating:   form.dateOfMating.trim(),
+        no_of_matings:    form.noOfMatings.trim(),
+        expected_whelping: form.expectedWhelping.trim(),
+        remarks:          form.remarks.trim(),
+      });
+      setForm({ studName: "", studKP: "", damName: "", damKP: "", damOwner: "", dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
+      setShowForm(false);
+      refetch();
+      Alert.alert("Submitted", "Stud certificate submitted successfully.");
+    } catch (e: any) {
+      setSubmitError(e.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (showForm) {
     return (
       <View style={styles.card}>
-        <FormBackBtn onPress={() => setShowForm(false)} />
+        <FormBackBtn onPress={() => { setShowForm(false); setSubmitError(""); }} />
         <Text style={styles.cardHeading}>New Stud Certificate</Text>
 
         <FormSection title="STUD (SIRE)" />
@@ -324,7 +367,11 @@ function StudCertTab() {
         <FormField label="Expected Whelping" value={form.expectedWhelping} onChangeText={set("expectedWhelping")} placeholder="DD/MM/YYYY" />
         <FormField label="Remarks"           value={form.remarks}          onChangeText={set("remarks")}          placeholder="Any additional notes…" multiline />
 
-        <SubmitBtn label="Submit Stud Certificate" onPress={() => { Alert.alert("Submitted", "Stud certificate submitted."); setShowForm(false); }} />
+        {!!submitError && (
+          <Text style={tStyles.errorText}>{submitError}</Text>
+        )}
+
+        <SubmitBtn label={submitting ? "Submitting…" : "Submit Stud Certificate"} onPress={handleSubmit} />
       </View>
     );
   }
@@ -334,7 +381,20 @@ function StudCertTab() {
       <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
       <View style={tStyles.table}>
         <TableHead cols={[{ label: "STUD DOG", flex: 2 }, { label: "DAM", flex: 2 }, { label: "MATING DATE" }, { label: "STATUS" }]} />
-        <EmptyTable icon="ribbon-outline" message="No stud certificates yet" />
+        {certsLoading ? (
+          <ActivityIndicator style={{ margin: 16 }} color={COLORS.primary} />
+        ) : certs.length === 0 ? (
+          <EmptyTable icon="ribbon-outline" message="No stud certificates yet" />
+        ) : (
+          certs.map((c) => (
+            <View key={c.id} style={tStyles.tableRow}>
+              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.stud_name}</Text>
+              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.dam_name}</Text>
+              <Text style={tStyles.tableCell} numberOfLines={1}>{c.date_of_mating}</Text>
+              <Text style={[tStyles.tableCell, { color: COLORS.accent }]} numberOfLines={1}>{c.status ?? "—"}</Text>
+            </View>
+          ))
+        )}
       </View>
     </View>
   );
@@ -615,6 +675,12 @@ const tStyles = StyleSheet.create({
     marginBottom: 16,
   },
   backBtnText: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
+
+  errorText: {
+    fontSize: 13, color: "#DC2626",
+    marginTop: 8, marginBottom: 4,
+    fontWeight: "500",
+  },
 });
 
 /* ── Form styles ────────────────────────────────────── */

@@ -573,6 +573,48 @@ export async function fetchMembersPage(
   };
 }
 
+/* ── Stud Certificates ─────────────────────────────────── */
+
+export type StudCertificate = {
+  id: number | string;
+  stud_name: string;
+  dam_name: string;
+  date_of_mating: string;
+  status: string | null;
+};
+
+export type StudCertPayload = {
+  user_id: number;
+  stud_name: string;
+  stud_kp: string;
+  dam_name: string;
+  dam_kp: string;
+  dam_owner: string;
+  date_of_mating: string;
+  no_of_matings: string;
+  expected_whelping: string;
+  remarks: string;
+};
+
+export async function fetchStudCertificates(userId: number): Promise<StudCertificate[]> {
+  const res = await fetch(`${BASE_URL}/stud-certificates?user_id=${userId}`);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message ?? "Failed to fetch stud certificates");
+  return Array.isArray(json.data) ? json.data : [];
+}
+
+export async function submitStudCertificate(payload: StudCertPayload): Promise<void> {
+  const res = await fetch(`${BASE_URL}/stud-certificates`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok || json.success === false) {
+    throw new Error(json.message ?? json.error?.message ?? "Submission failed. Please try again.");
+  }
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";
