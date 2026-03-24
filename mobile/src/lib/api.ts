@@ -839,7 +839,7 @@ export type SireVerification = {
 };
 
 export async function verifySire(dogId: string, userId: number): Promise<SireVerification> {
-  const numericId = dogId.replace(/^dog-/, "");
+  const numericId = parseInt(dogId.replace(/^dog-/, ""), 10);
   const res = await fetch(`${BASE_URL}/stud-certificates/verify_sire`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -848,15 +848,15 @@ export async function verifySire(dogId: string, userId: number): Promise<SireVer
   const text = await res.text();
   let json: any;
   try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
+  if (!res.ok && json.success == null) throw new Error(json.message ?? "Server error");
   const errorMsg = json.error?.message ?? json.message ?? null;
   if (json.success === false) return { eligible: false, message: errorMsg ?? "Not eligible" };
   if (json.success === true)  return { eligible: true,  message: json.data?.message ?? json.message ?? "" };
-  // Unexpected shape — treat as eligible so we don't silently block submission
   return { eligible: true, message: "" };
 }
 
 export async function verifyDam(dogId: string, userId: number): Promise<SireVerification> {
-  const numericId = dogId.replace(/^dog-/, "");
+  const numericId = parseInt(dogId.replace(/^dog-/, ""), 10);
   const res = await fetch(`${BASE_URL}/stud-certificates/verify_dam`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -865,6 +865,7 @@ export async function verifyDam(dogId: string, userId: number): Promise<SireVeri
   const text = await res.text();
   let json: any;
   try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
+  if (!res.ok && json.success == null) throw new Error(json.message ?? "Server error");
   const errorMsg = json.error?.message ?? json.message ?? null;
   if (json.success === false) return { eligible: false, message: errorMsg ?? "Not eligible" };
   if (json.success === true)  return { eligible: true,  message: json.data?.message ?? json.message ?? "" };
