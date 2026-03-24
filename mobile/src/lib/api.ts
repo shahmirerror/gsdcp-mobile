@@ -641,13 +641,13 @@ export async function submitStudCertificate(payload: StudCertPayload): Promise<v
 /* ── Litter Inspections ─────────────────────────────── */
 export type LitterInspection = {
   id: string;
-  sire: { name: string; KP: string };
-  dam:  { name: string; KP: string };
-  date_of_whelping: string | null;
-  date_of_inspection: string | null;
-  male_pups: number | null;
-  female_pups: number | null;
-  dead_pups: number | null;
+  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null };
+  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null };
+  male_puppies: string | null;
+  female_puppies: string | null;
+  expired_puppies: string | null;
+  total_puppies: number | null;
+  whelping_date: string | null;
   status: string | null;
 };
 
@@ -655,13 +655,11 @@ export type LitterInspectionDetail = {
   id: string;
   sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
   dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
-  date_of_whelping: string | null;
-  date_of_inspection: string | null;
-  male_pups: number | null;
-  female_pups: number | null;
-  dead_pups: number | null;
-  inspector_name: string | null;
-  remarks: string | null;
+  male_puppies: string | null;
+  female_puppies: string | null;
+  expired_puppies: string | null;
+  total_puppies: number | null;
+  whelping_date: string | null;
   status: string | null;
 };
 
@@ -692,11 +690,13 @@ export async function fetchLitterInspections(userId: number): Promise<LitterInsp
 }
 
 export async function fetchLitterInspectionDetail(id: string, userId: number): Promise<LitterInspectionDetail> {
-  const res = await fetch(`${BASE_URL}/litter-inspections/${id}?user_id=${userId}`, {
+  // List returns IDs like "inspect-170"; detail URL needs just the number "170"
+  const numericId = id.replace(/^inspect-/, "");
+  const res = await fetch(`${BASE_URL}/litter-inspections/${numericId}?user_id=${userId}`, {
     headers: { Accept: "application/json" },
   });
   const json = await res.json();
-  if (!json.success) throw new Error(json.message ?? "Failed to fetch litter inspection detail");
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch litter inspection detail");
   return json.data;
 }
 

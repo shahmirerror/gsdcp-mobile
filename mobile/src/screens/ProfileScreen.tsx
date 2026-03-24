@@ -593,9 +593,9 @@ function LitterInspectionTab() {
             {/* Pup counts */}
             <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
               {[
-                { label: "Male", value: detail.male_pups, color: COLORS.primary },
-                { label: "Female", value: detail.female_pups, color: "#9333EA" },
-                { label: "Dead", value: detail.dead_pups, color: "#EF4444" },
+                { label: "Male", value: detail.male_puppies, color: COLORS.primary },
+                { label: "Female", value: detail.female_puppies, color: "#9333EA" },
+                { label: "Expired", value: detail.expired_puppies, color: "#EF4444" },
               ].map(({ label, value, color }) => (
                 <View key={label} style={tStyles.pupCountBox}>
                   <Text style={[tStyles.pupCountNum, { color }]}>{value ?? "—"}</Text>
@@ -604,22 +604,10 @@ function LitterInspectionTab() {
               ))}
             </View>
 
-            {detail.date_of_whelping && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Whelped: {detail.date_of_whelping}</Text>
-              </View>
-            )}
-            {detail.date_of_inspection && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <Ionicons name="search-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Inspected: {detail.date_of_inspection}</Text>
-              </View>
-            )}
-            {detail.inspector_name && (
+            {detail.whelping_date && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="person-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Inspector: {detail.inspector_name}</Text>
+                <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
+                <Text style={tStyles.certDate}>Whelped: {detail.whelping_date}</Text>
               </View>
             )}
           </>
@@ -685,7 +673,7 @@ function LitterInspectionTab() {
       ) : (
         <View style={tStyles.certList}>
           {inspections.map((item, i) => {
-            const totalPups = (item.male_pups ?? 0) + (item.female_pups ?? 0);
+            const totalPups = item.total_puppies ?? ((Number(item.male_puppies) || 0) + (Number(item.female_puppies) || 0));
             return (
               <TouchableOpacity
                 key={item.id}
@@ -711,7 +699,7 @@ function LitterInspectionTab() {
                       {item.status ?? "Pending"}
                     </Text>
                   </View>
-                  {item.date_of_whelping && <Text style={tStyles.certDate}>{item.date_of_whelping}</Text>}
+                  {item.whelping_date && <Text style={tStyles.certDate}>{item.whelping_date}</Text>}
                   <Text style={tStyles.certKP}>{totalPups} pups</Text>
                   <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
                 </View>
