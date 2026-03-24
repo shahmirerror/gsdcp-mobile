@@ -85,6 +85,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
     }
 
+    console.log("[AUTH] login response top-level keys:", Object.keys(json ?? {}));
+    console.log("[AUTH] login response data keys:", Object.keys(json?.data ?? {}));
+    console.log("[AUTH] token candidates:", {
+      "data.token": json.data?.token,
+      "data.access_token": json.data?.access_token,
+      "data.api_token": json.data?.api_token,
+      "token": json.token,
+      "access_token": json.access_token,
+    });
+
     const p = json.data?.myProfile ?? {};
 
     const authUser: AuthUser = {

@@ -627,12 +627,17 @@ export async function fetchStudCertificates(
 export async function submitStudCertificate(payload: StudCertPayload, token?: string | null): Promise<void> {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  console.log("[STUD_CERT] submitting payload:", JSON.stringify(payload));
+  console.log("[STUD_CERT] has token:", !!token, "token value:", token ?? "none");
   const res = await fetch(`${BASE_URL}/stud-certificates/new-stud-certificate`, {
     method: "PUT",
     headers,
     body: JSON.stringify(payload),
   });
-  const json = await res.json();
+  const text = await res.text();
+  console.log("[STUD_CERT] response status:", res.status, "body:", text);
+  let json: any;
+  try { json = text ? JSON.parse(text) : {}; } catch { json = {}; }
   if (!res.ok || json.success === false) {
     throw new Error(json.message ?? json.error?.message ?? "Submission failed. Please try again.");
   }
