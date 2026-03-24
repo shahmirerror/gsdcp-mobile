@@ -847,7 +847,7 @@ export async function verifySire(dogId: string, userId: number): Promise<SireVer
   const res = await fetch(`${BASE_URL}/stud-certificates/verify_sire`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ dog_id: numericId, user_id: userId }),
+    body: JSON.stringify({ sire_id: numericId, user_id: userId }),
   });
   const text = await res.text();
   let json: any;
