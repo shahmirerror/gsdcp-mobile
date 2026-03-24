@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, createElement } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   TextInput,
+  Platform,
   Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -104,6 +105,45 @@ function FormField({
         autoCapitalize="sentences"
         autoCorrect={false}
       />
+    </View>
+  );
+}
+
+function DateField({
+  label, value, onChange, required,
+}: {
+  label: string; value: string; onChange: (v: string) => void; required?: boolean;
+}) {
+  const today = new Date().toISOString().split("T")[0];
+  return (
+    <View style={fStyles.field}>
+      <Text style={fStyles.label}>
+        {label}
+        {required ? <Text style={fStyles.required}> *</Text> : null}
+      </Text>
+      {Platform.OS === "web"
+        ? createElement("input", {
+            type: "date",
+            value: value,
+            max: today,
+            onChange: (e: any) => onChange(e.target.value),
+            style: {
+              width: "100%", height: 42, borderWidth: 1, borderStyle: "solid",
+              borderColor: "#CBD5E1", borderRadius: 10, paddingLeft: 12, paddingRight: 12,
+              fontSize: 13, color: "#1E293B", backgroundColor: "#fff",
+              fontFamily: "inherit", boxSizing: "border-box", outline: "none",
+            },
+          })
+        : <TextInput
+            style={fStyles.input}
+            value={value}
+            onChangeText={onChange}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor="#94A3B8"
+            autoCorrect={false}
+            keyboardType="numbers-and-punctuation"
+          />
+      }
     </View>
   );
 }
@@ -742,7 +782,7 @@ function StudCertTab() {
 
         <View style={styles.divider} />
         <FormSection title="MATING DETAILS" />
-        <FormField label="Date of Mating" value={form.dateOfMating} onChangeText={set("dateOfMating")} placeholder="DD/MM/YYYY" required />
+        <DateField label="Date of Mating" value={form.dateOfMating} onChange={set("dateOfMating")} required />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn
