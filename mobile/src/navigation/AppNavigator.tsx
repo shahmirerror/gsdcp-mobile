@@ -56,6 +56,8 @@ export type ShowsStackParamList = {
 export type ProfileStackParamList = {
   ProfileHome: undefined;
   LoginRegister: undefined;
+  KennelProfile: { id: string; name?: string };
+  DogProfile: { id: string; name?: string };
 };
 
 export type RecentMatingsStackParamList = {
@@ -145,16 +147,22 @@ function ShowsStackNavigator() {
 
 function ProfileStackNavigator() {
   const { isLoggedIn, isLoading } = useAuth();
-  // Wait for session restore before deciding the initial route
+  // Wait for the stored session to restore before rendering
   if (isLoading) return null;
+  // Conditional screen rendering is the recommended React Navigation auth pattern.
+  // The navigator automatically animates to whichever screen is in the stack,
+  // so no goBack() / key tricks are needed.
   return (
-    <ProfileStack.Navigator
-      key={isLoggedIn ? "auth" : "guest"}
-      initialRouteName={isLoggedIn ? "ProfileHome" : "LoginRegister"}
-      screenOptions={{ headerShown: false }}
-    >
-      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
-      <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      {isLoggedIn ? (
+        <>
+          <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+          <ProfileStack.Screen name="KennelProfile" component={KennelProfileScreen} />
+          <ProfileStack.Screen name="DogProfile" component={DogProfileScreen} />
+        </>
+      ) : (
+        <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+      )}
     </ProfileStack.Navigator>
   );
 }

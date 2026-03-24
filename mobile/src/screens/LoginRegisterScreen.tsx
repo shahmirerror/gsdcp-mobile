@@ -150,10 +150,8 @@ export default function LoginRegisterScreen() {
         phone.trim();
       const credential = mode === "otp" ? otpCode.trim() : (mode === "membership" ? memberPassword : userPassword);
       await login(identifier, credential, mode);
-      // If we arrived here directly (Profile tab, not logged in), the navigator
-      // will re-mount automatically with ProfileHome. If we navigated here from
-      // inside the app, go back to wherever the user came from.
-      if (navigation.canGoBack()) navigation.goBack();
+      // Auth state drives navigation — when isLoggedIn becomes true the
+      // ProfileStackNavigator automatically shows ProfileHome instead of LoginRegister.
     } catch (e: any) {
       setError(e.message ?? "Sign in failed. Please try again.");
     } finally {
