@@ -112,9 +112,13 @@ function FormSection({ title }: { title: string }) {
   return <Text style={fStyles.section}>{title}</Text>;
 }
 
-function SubmitBtn({ label, onPress }: { label: string; onPress: () => void }) {
+function SubmitBtn({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
   return (
-    <TouchableOpacity style={fStyles.submitBtn} activeOpacity={0.8} onPress={onPress}>
+    <TouchableOpacity
+      style={[fStyles.submitBtn, disabled && { opacity: 0.4 }]}
+      activeOpacity={disabled ? 1 : 0.8}
+      onPress={disabled ? undefined : onPress}
+    >
       <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
       <Text style={fStyles.submitBtnText}>{label}</Text>
     </TouchableOpacity>
@@ -741,7 +745,15 @@ function StudCertTab() {
         <FormField label="Date of Mating" value={form.dateOfMating} onChangeText={set("dateOfMating")} placeholder="DD/MM/YYYY" required />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
-        <SubmitBtn label={submitting ? "Submitting…" : "Submit Stud Certificate"} onPress={handleSubmit} />
+        <SubmitBtn
+          label={submitting ? "Submitting…" : "Submit Stud Certificate"}
+          onPress={handleSubmit}
+          disabled={
+            submitting ||
+            !sireVerification?.eligible ||
+            !damVerification?.eligible
+          }
+        />
       </View>
     );
   }
