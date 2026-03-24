@@ -852,10 +852,9 @@ export async function verifySire(dogId: string, userId: number): Promise<SireVer
   const text = await res.text();
   let json: any;
   try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
-  // 5xx with a message field = intentional ineligibility response from the backend
-  if (res.status >= 500 && json.message) return { eligible: false, message: json.message };
-  if (json.success === false) return { eligible: false, message: json.message ?? "Not eligible" };
-  if (json.success === true)  return { eligible: true,  message: json.message ?? "Eligible" };
+  const errorMsg = json.error?.message ?? json.message ?? null;
+  if (json.success === false) return { eligible: false, message: errorMsg ?? "Not eligible" };
+  if (json.success === true)  return { eligible: true,  message: json.data?.message ?? json.message ?? "" };
   // Unexpected shape — treat as eligible so we don't silently block submission
   return { eligible: true, message: "" };
 }
