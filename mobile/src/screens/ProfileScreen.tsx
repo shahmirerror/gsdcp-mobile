@@ -27,6 +27,7 @@ import {
   fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
   searchDogs, DogSearchResult,
+  verifySire, SireVerification,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -464,8 +465,11 @@ function StudCertTab() {
   const [submitting, setSubmitting]     = useState(false);
   const [submitError, setSubmitError]   = useState("");
 
-  const [selectedSire, setSelectedSire] = useState<DogOption | null>(null);
-  const [selectedDam,  setSelectedDam]  = useState<DogOption | null>(null);
+  const [selectedSire, setSelectedSire]         = useState<DogOption | null>(null);
+  const [selectedDam,  setSelectedDam]          = useState<DogOption | null>(null);
+  const [sireVerifying, setSireVerifying]       = useState(false);
+  const [sireVerification, setSireVerification] = useState<SireVerification | null>(null);
+  const [sireVerifyError, setSireVerifyError]   = useState<string | null>(null);
 
   const [form, setForm] = useState({
     damOwner: "",
@@ -482,6 +486,23 @@ function StudCertTab() {
   const sireOptions: DogOption[] = (memberDetail?.ownedDogs ?? [])
     .filter(d => d.sex === "Male")
     .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+
+  useEffect(() => {
+    if (!selectedSire || !user) {
+      setSireVerification(null);
+      setSireVerifyError(null);
+      return;
+    }
+    let cancelled = false;
+    setSireVerifying(true);
+    setSireVerification(null);
+    setSireVerifyError(null);
+    verifySire(selectedSire.id, user.id)
+      .then(result => { if (!cancelled) setSireVerification(result); })
+      .catch(err  => { if (!cancelled) setSireVerifyError(err?.message ?? "Verification unavailable"); })
+      .finally(()  => { if (!cancelled) setSireVerifying(false); });
+    return () => { cancelled = true; };
+  }, [selectedSire?.id]);
 
   const CERT_PER_PAGE = 10;
   const [allCerts, setAllCerts]     = useState<StudCertificate[]>([]);
@@ -523,9 +544,10 @@ function StudCertTab() {
   });
 
   const handleSubmit = async () => {
-    if (!selectedSire)             { setSubmitError("Stud (sire) dog is required."); return; }
-    if (!selectedDam)              { setSubmitError("Dam dog is required."); return; }
-    if (!form.damOwner.trim())     { setSubmitError("Dam owner name is required."); return; }
+    if (!selectedSire)                                   { setSubmitError("Stud (sire) dog is required."); return; }
+    if (sireVerification && !sireVerification.eligible) { setSubmitError(`Sire not eligible: ${sireVerification.message}`); return; }
+    if (!selectedDam)                                   { setSubmitError("Dam dog is required."); return; }
+    if (!form.damOwner.trim())                          { setSubmitError("Dam owner name is required."); return; }
     if (!form.dateOfMating.trim()) { setSubmitError("Date of mating is required."); return; }
     setSubmitError("");
     setSubmitting(true);
@@ -544,6 +566,8 @@ function StudCertTab() {
       });
       setSelectedSire(null);
       setSelectedDam(null);
+      setSireVerification(null);
+      setSireVerifyError(null);
       setForm({ damOwner: "", dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
       setShowForm(false);
       refetch();
@@ -606,6 +630,7 @@ function StudCertTab() {
         <FormBackBtn onPress={() => {
           setShowForm(false); setSubmitError("");
           setSelectedSire(null); setSelectedDam(null);
+          setSireVerification(null); setSireVerifyError(null);
         }} />
         <Text style={styles.cardHeading}>New Stud Certificate</Text>
 
@@ -617,8 +642,39 @@ function StudCertTab() {
           localOptions={sireOptions}
           selected={selectedSire}
           onSelect={setSelectedSire}
-          onClear={() => setSelectedSire(null)}
+          onClear={() => { setSelectedSire(null); setSireVerification(null); setSireVerifyError(null); }}
         />
+
+        {/* Sire verification status */}
+        {selectedSire && (
+          sireVerifying ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, marginTop: -4 }}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Verifying sire eligibility…</Text>
+            </View>
+          ) : sireVerification ? (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 8,
+              marginBottom: 10, marginTop: -4,
+              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+              backgroundColor: sireVerification.eligible ? "#DCFCE7" : "#FEE2E2",
+            }}>
+              <Ionicons
+                name={sireVerification.eligible ? "checkmark-circle" : "close-circle"}
+                size={16}
+                color={sireVerification.eligible ? "#16A34A" : "#DC2626"}
+              />
+              <Text style={{ fontSize: 12, fontWeight: "600", color: sireVerification.eligible ? "#166534" : "#991B1B", flex: 1 }}>
+                {sireVerification.eligible ? "Eligible" : "Not Eligible"}{sireVerification.message ? ` — ${sireVerification.message}` : ""}
+              </Text>
+            </View>
+          ) : sireVerifyError ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, marginTop: -4 }}>
+              <Ionicons name="warning-outline" size={14} color="#D97706" />
+              <Text style={{ fontSize: 12, color: "#92400E" }}>Verification unavailable</Text>
+            </View>
+          ) : null
+        )}
 
         <View style={styles.divider} />
         <FormSection title="DAM (BITCH)" />

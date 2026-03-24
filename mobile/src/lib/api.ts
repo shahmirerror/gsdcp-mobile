@@ -837,6 +837,26 @@ export function getAncestorId(ancestor: PedigreeAncestor): string | null {
   return `dog-${ancestor.id}`;
 }
 
+export type SireVerification = {
+  eligible: boolean;
+  message: string;
+};
+
+export async function verifySire(dogId: string, userId: number): Promise<SireVerification> {
+  const numericId = dogId.replace(/^dog-/, "");
+  const res = await fetch(`${BASE_URL}/stud-certificates/verify_sire`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ dog_id: numericId, user_id: userId }),
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
+  if (json.success === false) return { eligible: false, message: json.message ?? "Not eligible" };
+  if (json.success === true)  return { eligible: true,  message: json.message ?? "Eligible" };
+  throw new Error(json.message ?? "Verification failed");
+}
+
 export type DogSearchResult = {
   id: string;
   dog_name: string;
