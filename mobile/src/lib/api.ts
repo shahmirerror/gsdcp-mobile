@@ -734,11 +734,25 @@ export type LitterRegistration = {
   registration_no: string | null;
 };
 
+export type LitterPuppy = {
+  id: number;
+  name: string;
+  puppy_full_name: string | null;
+  sex: string | null;
+  color: string | null;
+  hair: string | null;
+  microchip: string | null;
+  DNA_taken: string | null;
+  dead_check: string | null;
+  dog_id: number | null;
+};
+
 export type LitterRegistrationDetail = {
   id: string;
-  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
-  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
-  whelping_date: string | null;
+  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null };
+  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null };
+  dob: string | null;
+  puppies: LitterPuppy[];
   male_puppies: number | null;
   female_puppies: number | null;
   puppy_count: number | null;

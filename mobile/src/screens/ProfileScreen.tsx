@@ -25,7 +25,7 @@ import {
   fetchLitterInspections, fetchLitterInspectionDetail, submitLitterInspection,
   LitterInspection, LitterInspectionDetail,
   fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
-  LitterRegistration, LitterRegistrationDetail, LitterRegStats,
+  LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -299,8 +299,9 @@ function FormBackBtn({ onPress }: { onPress: () => void }) {
   );
 }
 
-/* ── Map a cert sire/dam to the Dog shape DogListItem expects ── */
-function certDogToDog(d: StudCertificateDetail["sire"], sex: string): Dog {
+/* ── Map a cert/reg sire/dam to the Dog shape DogListItem expects ── */
+type DogCardShape = { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null; date_of_birth?: string | null };
+function certDogToDog(d: DogCardShape, sex: string): Dog {
   return {
     id: d.id,
     dog_name: d.name,
@@ -309,7 +310,7 @@ function certDogToDog(d: StudCertificateDetail["sire"], sex: string): Dog {
     color: d.color,
     imageUrl: d.imageUrl,
     sex,
-    dob: d.date_of_birth,
+    dob: d.date_of_birth ?? null,
     breed: "GSD",
     owner: null, breeder: null,
     sire: null, sire_id: null,
@@ -912,24 +913,76 @@ function LitterRegistrationTab() {
             />
             <View style={styles.divider} />
 
-            <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
-              {[
-                { label: "Male",   value: detail.male_puppies,   color: COLORS.primary },
-                { label: "Female", value: detail.female_puppies, color: "#9333EA" },
-                { label: "Total",  value: detail.puppy_count,    color: COLORS.accent },
-              ].map(({ label, value, color }) => (
-                <View key={label} style={tStyles.pupCountBox}>
-                  <Text style={[tStyles.pupCountNum, { color }]}>{value ?? "—"}</Text>
-                  <Text style={tStyles.pupCountLabel}>{label}</Text>
+            {/* Pup count boxes — derive from puppies array if counts are 0 */}
+            {(() => {
+              const pups = detail.puppies ?? [];
+              const males   = pups.filter(p => p.sex === "Male").length   || detail.male_puppies   || 0;
+              const females = pups.filter(p => p.sex === "Female").length || detail.female_puppies || 0;
+              const total   = pups.length || detail.puppy_count || 0;
+              return (
+                <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+                  {[
+                    { label: "Male",   value: males,   color: COLORS.primary },
+                    { label: "Female", value: females, color: "#9333EA" },
+                    { label: "Total",  value: total,   color: COLORS.accent },
+                  ].map(({ label, value, color }) => (
+                    <View key={label} style={tStyles.pupCountBox}>
+                      <Text style={[tStyles.pupCountNum, { color }]}>{value}</Text>
+                      <Text style={tStyles.pupCountLabel}>{label}</Text>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
+              );
+            })()}
 
-            {detail.whelping_date && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {detail.dob && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
                 <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Whelped: {detail.whelping_date}</Text>
+                <Text style={tStyles.certDate}>Whelped: {detail.dob}</Text>
               </View>
+            )}
+
+            {/* Puppies list */}
+            {detail.puppies && detail.puppies.length > 0 && (
+              <>
+                <View style={styles.divider} />
+                <FormSection title={`PUPPIES (${detail.puppies.length})`} />
+                {detail.puppies.map((pup, i) => (
+                  <View
+                    key={pup.id}
+                    style={[
+                      { flexDirection: "row", alignItems: "center", paddingVertical: 8, gap: 10 },
+                      i < detail.puppies.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+                    ]}
+                  >
+                    <View style={{
+                      width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
+                      backgroundColor: pup.sex === "Male" ? `${COLORS.primary}18` : "#F3E8FF",
+                    }}>
+                      <Ionicons
+                        name={pup.sex === "Male" ? "male" : "female"}
+                        size={14}
+                        color={pup.sex === "Male" ? COLORS.primary : "#9333EA"}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }}>{pup.name}</Text>
+                      {pup.color && <Text style={{ fontSize: 11, color: COLORS.textMuted }}>{pup.color}</Text>}
+                    </View>
+                    <View style={{ alignItems: "flex-end", gap: 3 }}>
+                      {pup.microchip
+                        ? <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                            <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
+                            <Text style={{ fontSize: 10, color: "#16A34A", fontWeight: "600" }}>Chipped</Text>
+                          </View>
+                        : <Text style={{ fontSize: 10, color: COLORS.textMuted }}>No chip</Text>}
+                      {pup.DNA_taken === "Yes" && (
+                        <Text style={{ fontSize: 10, color: COLORS.accent, fontWeight: "600" }}>DNA ✓</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </>
             )}
           </>
         ) : (
