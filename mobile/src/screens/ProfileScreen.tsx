@@ -379,23 +379,44 @@ function StudCertTab() {
   return (
     <View style={styles.card}>
       <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
-      <View style={tStyles.table}>
-        <TableHead cols={[{ label: "SIRE", flex: 2 }, { label: "DAM", flex: 2 }, { label: "MATING DATE" }, { label: "STATUS" }]} />
-        {certsLoading ? (
-          <ActivityIndicator style={{ margin: 16 }} color={COLORS.primary} />
-        ) : certs.length === 0 ? (
-          <EmptyTable icon="ribbon-outline" message="No stud certificates yet" />
-        ) : (
-          certs.map((c) => (
-            <View key={c.id} style={tStyles.tableRow}>
-              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.sire.name}</Text>
-              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.dam.name}</Text>
-              <Text style={tStyles.tableCell} numberOfLines={1}>{c.mating_date}</Text>
-              <Text style={[tStyles.tableCell, { color: COLORS.accent }]} numberOfLines={1}>{c.status ?? "—"}</Text>
+      {certsLoading ? (
+        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+      ) : certs.length === 0 ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons name="ribbon-outline" size={20} color={COLORS.textMuted} />
+          <Text style={tStyles.emptyRowText}>No stud certificates yet</Text>
+        </View>
+      ) : (
+        <View style={tStyles.certList}>
+          {certs.map((c, i) => (
+            <View key={c.id} style={[tStyles.certRow, i < certs.length - 1 && tStyles.certRowBorder]}>
+              {/* Left: sire / dam */}
+              <View style={{ flex: 1, gap: 2 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Ionicons name="male" size={12} color={COLORS.primary} />
+                  <Text style={tStyles.certSire} numberOfLines={1}>{c.sire.name}</Text>
+                </View>
+                <Text style={tStyles.certKP} numberOfLines={1}>KP {c.sire.KP}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                  <Ionicons name="female" size={12} color="#9333EA" />
+                  <Text style={tStyles.certDam} numberOfLines={1}>{c.dam.name}</Text>
+                </View>
+                <Text style={tStyles.certKP} numberOfLines={1}>KP {c.dam.KP}</Text>
+              </View>
+              {/* Right: date + status */}
+              <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
+                <View style={[tStyles.statusPill, { backgroundColor: c.status === "Used" ? "#DCFCE7" : "#FEF9C3" }]}>
+                  <Text style={[tStyles.statusPillText, { color: c.status === "Used" ? "#166534" : "#854D0E" }]}>
+                    {c.status ?? "Pending"}
+                  </Text>
+                </View>
+                <Text style={tStyles.certDate}>{c.mating_date}</Text>
+                <Text style={tStyles.certId}>{c.id}</Text>
+              </View>
             </View>
-          ))
-        )}
-      </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -680,6 +701,42 @@ const tStyles = StyleSheet.create({
     fontSize: 13, color: "#DC2626",
     marginTop: 8, marginBottom: 4,
     fontWeight: "500",
+  },
+
+  /* ── Cert card list ── */
+  certList: {
+    borderWidth: 1, borderColor: "#E2E8F0",
+    borderRadius: 10, overflow: "hidden",
+  },
+  certRow: {
+    flexDirection: "row", alignItems: "flex-start",
+    paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: "#fff",
+  },
+  certRowBorder: {
+    borderBottomWidth: 1, borderBottomColor: "#F1F5F9",
+  },
+  certSire: {
+    fontSize: 13, fontWeight: "700", color: "#0F172A", flex: 1,
+  },
+  certDam: {
+    fontSize: 13, fontWeight: "500", color: "#334155", flex: 1,
+  },
+  certKP: {
+    fontSize: 11, color: COLORS.textMuted, marginLeft: 18,
+  },
+  certDate: {
+    fontSize: 11, color: COLORS.textMuted, fontWeight: "500",
+  },
+  certId: {
+    fontSize: 10, color: "#CBD5E1", letterSpacing: 0.3,
+  },
+  statusPill: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 12,
+  },
+  statusPillText: {
+    fontSize: 11, fontWeight: "700", letterSpacing: 0.2,
   },
 });
 
