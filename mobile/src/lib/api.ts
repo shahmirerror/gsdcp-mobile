@@ -836,3 +836,20 @@ export function getAncestorId(ancestor: PedigreeAncestor): string | null {
   if (ancestor.id == null) return null;
   return `dog-${ancestor.id}`;
 }
+
+export type DogSearchResult = {
+  id: string;
+  dog_name: string;
+  KP: string;
+  sex: string;
+  color: string;
+  owner: string;
+};
+
+export async function searchDogs(query: string, page = 1, perPage = 10): Promise<DogSearchResult[]> {
+  const params = new URLSearchParams({ search: query, page: String(page), per_page: String(perPage) });
+  const res = await fetch(`${BASE_URL}/dogs?${params}`, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error("Failed to search dogs");
+  const json = await res.json();
+  return Array.isArray(json.data) ? json.data : [];
+}

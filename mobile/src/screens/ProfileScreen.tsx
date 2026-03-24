@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import {
   LitterInspection, LitterInspectionDetail,
   fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
+  searchDogs, DogSearchResult,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -321,6 +322,139 @@ function certDogToDog(d: DogCardShape, sex: string): Dog {
   };
 }
 
+/* ── Dog search dropdown (used in stud cert form) ──── */
+type DogOption = { id: string; name: string; KP: string; owner?: string; sex?: string; color?: string };
+
+function DogDropdown({
+  label, required, selected, onSelect, onClear, mode, localOptions,
+}: {
+  label: string; required?: boolean;
+  selected: DogOption | null;
+  onSelect: (d: DogOption) => void;
+  onClear: () => void;
+  mode: "local" | "remote";
+  localOptions?: DogOption[];
+}) {
+  const [query, setQuery]       = useState("");
+  const [results, setResults]   = useState<DogOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen]         = useState(false);
+  const debounceRef             = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (mode === "local") {
+      const opts = localOptions ?? [];
+      if (!query.trim()) { setResults(opts.slice(0, 30)); return; }
+      const q = query.toLowerCase();
+      setResults(opts.filter(d => d.name.toLowerCase().includes(q) || d.KP.toLowerCase().includes(q)).slice(0, 30));
+    } else {
+      if (!query.trim() || query.length < 2) { setResults([]); return; }
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(async () => {
+        setSearching(true);
+        try {
+          const dogs = await searchDogs(query, 1, 12);
+          setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, owner: d.owner, sex: d.sex, color: d.color })));
+        } catch { setResults([]); }
+        finally { setSearching(false); }
+      }, 400);
+    }
+  }, [query, mode, localOptions]);
+
+  if (selected) {
+    return (
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>{label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}</Text>
+        <View style={{
+          flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.primary,
+          borderRadius: 10, padding: 10, backgroundColor: `${COLORS.primary}08`, gap: 10,
+        }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.text }}>{selected.name}</Text>
+            <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>KP {selected.KP}</Text>
+            {selected.color ? <Text style={{ fontSize: 11, color: COLORS.textMuted }}>{selected.color}</Text> : null}
+          </View>
+          <TouchableOpacity onPress={onClear} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={22} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>{label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}</Text>
+      <View style={{
+        flexDirection: "row", alignItems: "center", borderWidth: 1,
+        borderColor: open ? COLORS.primary : COLORS.border,
+        borderRadius: 10, paddingHorizontal: 10, backgroundColor: "#fff",
+      }}>
+        <Ionicons name="search" size={15} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+        <TextInput
+          style={{ flex: 1, fontSize: 13, color: COLORS.text, paddingVertical: 10 }}
+          value={query}
+          onChangeText={setQuery}
+          onFocus={() => setOpen(true)}
+          placeholder={mode === "local" ? "Type to filter your dogs…" : "Type to search GSDCP database…"}
+          placeholderTextColor={COLORS.textMuted}
+        />
+        {searching
+          ? <ActivityIndicator size="small" color={COLORS.primary} />
+          : query.length > 0
+            ? <TouchableOpacity onPress={() => { setQuery(""); setResults([]); }} activeOpacity={0.7}>
+                <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            : null}
+      </View>
+      {open && results.length > 0 && (
+        <View style={{
+          borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, marginTop: 4,
+          backgroundColor: "#fff", overflow: "hidden",
+        }}>
+          {results.map((dog, i) => (
+            <TouchableOpacity
+              key={dog.id}
+              onPress={() => { onSelect(dog); setOpen(false); setQuery(""); setResults([]); }}
+              activeOpacity={0.7}
+              style={[
+                { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
+                i < results.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+              ]}
+            >
+              <View style={{
+                width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center",
+                backgroundColor: dog.sex === "Male" ? `${COLORS.primary}18` : dog.sex === "Female" ? "#F3E8FF" : "#F1F5F9",
+              }}>
+                <Ionicons
+                  name={dog.sex === "Male" ? "male" : dog.sex === "Female" ? "female" : "paw"}
+                  size={13}
+                  color={dog.sex === "Male" ? COLORS.primary : dog.sex === "Female" ? "#9333EA" : COLORS.textMuted}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }} numberOfLines={1}>{dog.name}</Text>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted }}>KP {dog.KP}{dog.color ? ` · ${dog.color}` : ""}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      {open && mode === "remote" && query.length > 0 && query.length < 2 && (
+        <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4, paddingHorizontal: 4 }}>
+          Keep typing to search…
+        </Text>
+      )}
+      {open && mode === "remote" && query.length >= 2 && !searching && results.length === 0 && (
+        <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4, paddingHorizontal: 4 }}>
+          No dogs found for "{query}"
+        </Text>
+      )}
+    </View>
+  );
+}
+
 /* ── Tab: Stud Certificate ──────────────────────────── */
 function StudCertTab() {
   const { user } = useAuth();
@@ -329,12 +463,25 @@ function StudCertTab() {
   const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
   const [submitting, setSubmitting]     = useState(false);
   const [submitError, setSubmitError]   = useState("");
+
+  const [selectedSire, setSelectedSire] = useState<DogOption | null>(null);
+  const [selectedDam,  setSelectedDam]  = useState<DogOption | null>(null);
+
   const [form, setForm] = useState({
-    studName: "", studKP: "",
-    damName: "", damKP: "", damOwner: "",
+    damOwner: "",
     dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "",
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+
+  const { data: memberDetail } = useQuery<MemberDetail>({
+    queryKey: ["member-detail", user ? `member-${user.id}` : null],
+    queryFn: () => fetchMemberDetail(`member-${user!.id}`),
+    enabled: !!user,
+    staleTime: 300_000,
+  });
+  const sireOptions: DogOption[] = (memberDetail?.ownedDogs ?? [])
+    .filter(d => d.sex === "Male")
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
   const CERT_PER_PAGE = 10;
   const [allCerts, setAllCerts]     = useState<StudCertificate[]>([]);
@@ -376,20 +523,28 @@ function StudCertTab() {
   });
 
   const handleSubmit = async () => {
-    if (!form.studName.trim()) { setSubmitError("Stud dog name is required."); return; }
-    if (!form.damName.trim())  { setSubmitError("Dam name is required."); return; }
-    if (!form.damOwner.trim()) { setSubmitError("Dam owner name is required."); return; }
+    if (!selectedSire)             { setSubmitError("Stud (sire) dog is required."); return; }
+    if (!selectedDam)              { setSubmitError("Dam dog is required."); return; }
+    if (!form.damOwner.trim())     { setSubmitError("Dam owner name is required."); return; }
     if (!form.dateOfMating.trim()) { setSubmitError("Date of mating is required."); return; }
     setSubmitError("");
     setSubmitting(true);
     try {
       await submitStudCertificate({
-        user_id: user!.id, stud_name: form.studName.trim(), stud_kp: form.studKP.trim(),
-        dam_name: form.damName.trim(), dam_kp: form.damKP.trim(), dam_owner: form.damOwner.trim(),
-        date_of_mating: form.dateOfMating.trim(), no_of_matings: form.noOfMatings.trim(),
-        expected_whelping: form.expectedWhelping.trim(), remarks: form.remarks.trim(),
+        user_id:           user!.id,
+        stud_name:         selectedSire.name,
+        stud_kp:           selectedSire.KP,
+        dam_name:          selectedDam.name,
+        dam_kp:            selectedDam.KP,
+        dam_owner:         form.damOwner.trim(),
+        date_of_mating:    form.dateOfMating.trim(),
+        no_of_matings:     form.noOfMatings.trim(),
+        expected_whelping: form.expectedWhelping.trim(),
+        remarks:           form.remarks.trim(),
       });
-      setForm({ studName: "", studKP: "", damName: "", damKP: "", damOwner: "", dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
+      setSelectedSire(null);
+      setSelectedDam(null);
+      setForm({ damOwner: "", dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
       setShowForm(false);
       refetch();
       Alert.alert("Submitted", "Stud certificate submitted successfully.");
@@ -448,18 +603,39 @@ function StudCertTab() {
   if (showForm) {
     return (
       <View style={styles.card}>
-        <FormBackBtn onPress={() => { setShowForm(false); setSubmitError(""); }} />
+        <FormBackBtn onPress={() => {
+          setShowForm(false); setSubmitError("");
+          setSelectedSire(null); setSelectedDam(null);
+        }} />
         <Text style={styles.cardHeading}>New Stud Certificate</Text>
 
         <FormSection title="STUD (SIRE)" />
-        <FormField label="Stud Dog Name"        value={form.studName} onChangeText={set("studName")} placeholder="Enter stud dog name" required />
-        <FormField label="Stud Dog KP / Reg No" value={form.studKP}   onChangeText={set("studKP")}   placeholder="e.g. KP-12345" />
+        <DogDropdown
+          label="Stud Dog"
+          required
+          mode="local"
+          localOptions={sireOptions}
+          selected={selectedSire}
+          onSelect={setSelectedSire}
+          onClear={() => setSelectedSire(null)}
+        />
 
         <View style={styles.divider} />
         <FormSection title="DAM (BITCH)" />
-        <FormField label="Dam Name"        value={form.damName}  onChangeText={set("damName")}  placeholder="Enter dam name"        required />
-        <FormField label="Dam KP / Reg No" value={form.damKP}    onChangeText={set("damKP")}    placeholder="e.g. KP-67890" />
-        <FormField label="Dam Owner Name"  value={form.damOwner} onChangeText={set("damOwner")} placeholder="Full name of dam owner" required />
+        <DogDropdown
+          label="Dam Dog"
+          required
+          mode="remote"
+          selected={selectedDam}
+          onSelect={(dog) => {
+            setSelectedDam(dog);
+            if (dog.owner && !form.damOwner) {
+              setForm(f => ({ ...f, damOwner: dog.owner! }));
+            }
+          }}
+          onClear={() => setSelectedDam(null)}
+        />
+        <FormField label="Dam Owner Name" value={form.damOwner} onChangeText={set("damOwner")} placeholder="Full name of dam owner" required />
 
         <View style={styles.divider} />
         <FormSection title="MATING DETAILS" />
