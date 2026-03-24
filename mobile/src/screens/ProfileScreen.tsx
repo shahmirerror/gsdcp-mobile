@@ -380,7 +380,7 @@ function StudCertTab() {
     <View style={styles.card}>
       <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
       <View style={tStyles.table}>
-        <TableHead cols={[{ label: "STUD DOG", flex: 2 }, { label: "DAM", flex: 2 }, { label: "MATING DATE" }, { label: "STATUS" }]} />
+        <TableHead cols={[{ label: "SIRE", flex: 2 }, { label: "DAM", flex: 2 }, { label: "MATING DATE" }, { label: "STATUS" }]} />
         {certsLoading ? (
           <ActivityIndicator style={{ margin: 16 }} color={COLORS.primary} />
         ) : certs.length === 0 ? (
@@ -388,9 +388,9 @@ function StudCertTab() {
         ) : (
           certs.map((c) => (
             <View key={c.id} style={tStyles.tableRow}>
-              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.stud_name}</Text>
-              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.dam_name}</Text>
-              <Text style={tStyles.tableCell} numberOfLines={1}>{c.date_of_mating}</Text>
+              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.sire.name}</Text>
+              <Text style={[tStyles.tableCell, { flex: 2 }]} numberOfLines={1}>{c.dam.name}</Text>
+              <Text style={tStyles.tableCell} numberOfLines={1}>{c.mating_date}</Text>
               <Text style={[tStyles.tableCell, { color: COLORS.accent }]} numberOfLines={1}>{c.status ?? "—"}</Text>
             </View>
           ))

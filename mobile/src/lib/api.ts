@@ -576,10 +576,10 @@ export async function fetchMembersPage(
 /* ── Stud Certificates ─────────────────────────────────── */
 
 export type StudCertificate = {
-  id: number | string;
-  stud_name: string;
-  dam_name: string;
-  date_of_mating: string;
+  id: string;
+  sire: { id: number; name: string; KP: string; foreign_reg_no: string | null };
+  dam:  { id: number; name: string; KP: string; foreign_reg_no: string | null };
+  mating_date: string;
   status: string | null;
 };
 
@@ -604,7 +604,8 @@ export async function fetchStudCertificates(userId: number): Promise<StudCertifi
   });
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? "Failed to fetch stud certificates");
-  return Array.isArray(json.data) ? json.data : [];
+  // Response: { success: true, data: { certificates: [...], total: N } }
+  return Array.isArray(json.data?.certificates) ? json.data.certificates : [];
 }
 
 export async function submitStudCertificate(payload: StudCertPayload): Promise<void> {
