@@ -603,10 +603,8 @@ export async function fetchStudCertificateDetail(certId: string, userId: number)
 
 export type StudCertPayload = {
   user_id: number;
-  stud_name: string;
-  stud_kp: string;
-  dam_name: string;
-  dam_kp: string;
+  sire_id: string;
+  dam_id: string;
   date_of_mating: string;
 };
 
@@ -627,8 +625,8 @@ export async function fetchStudCertificates(
 }
 
 export async function submitStudCertificate(payload: StudCertPayload): Promise<void> {
-  const res = await fetch(`${BASE_URL}/stud-certificates`, {
-    method: "POST",
+  const res = await fetch(`${BASE_URL}/stud-certificates/new-stud-certificate`, {
+    method: "PUT",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
   });

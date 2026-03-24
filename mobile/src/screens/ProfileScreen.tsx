@@ -577,12 +577,10 @@ function StudCertTab() {
     setSubmitting(true);
     try {
       await submitStudCertificate({
-        user_id:           user!.id,
-        stud_name:         selectedSire.name,
-        stud_kp:           selectedSire.KP,
-        dam_name:          selectedDam.name,
-        dam_kp:            selectedDam.KP,
-        date_of_mating:    form.dateOfMating.trim(),
+        user_id:        user!.id,
+        sire_id:        selectedSire.id.replace(/^dog-/, ""),
+        dam_id:         selectedDam.id.replace(/^dog-/, ""),
+        date_of_mating: form.dateOfMating.trim(),
       });
       setSelectedSire(null);
       setSelectedDam(null);
