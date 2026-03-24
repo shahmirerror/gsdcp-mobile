@@ -881,7 +881,7 @@ export type DogSearchResult = {
 };
 
 export async function searchDogs(query: string, page = 1, perPage = 10, sex?: string): Promise<DogSearchResult[]> {
-  const params: Record<string, string> = { search: query, page: String(page), per_page: String(perPage) };
+  const params: Record<string, string> = { q: query, page: String(page), per_page: String(perPage) };
   if (sex) params.sex = sex;
   const res = await fetch(`${BASE_URL}/dogs?${new URLSearchParams(params)}`, { headers: { Accept: "application/json" } });
   if (!res.ok) throw new Error("Failed to search dogs");
