@@ -482,7 +482,6 @@ function StudCertTab() {
                   </Text>
                 </View>
                 <Text style={tStyles.certDate}>{c.mating_date}</Text>
-                <Text style={tStyles.certId}>{c.id}</Text>
                 <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
               </View>
             </TouchableOpacity>
