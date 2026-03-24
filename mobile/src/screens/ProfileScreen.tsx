@@ -1059,7 +1059,11 @@ function LitterRegistrationTab() {
       ) : (
         <View style={tStyles.certList}>
           {allRegs.map((item, i) => {
-            const totalPups = item.puppy_count ?? ((item.male_puppies || 0) + (item.female_puppies || 0));
+            const males   = item.male_puppies   ?? 0;
+            const females = item.female_puppies ?? 0;
+            const total   = item.puppy_count != null && item.puppy_count > 0
+              ? item.puppy_count
+              : males + females;
             const isApproved = item.status === "Approved";
             const isGranted  = item.status === "Permission Granted";
             const isRejected = item.status === "Rejected";
@@ -1083,13 +1087,26 @@ function LitterRegistrationTab() {
                     <Text style={tStyles.certDam} numberOfLines={1}>{item.dam.name}</Text>
                   </View>
                   <Text style={tStyles.certKP} numberOfLines={1}>KP {item.dam.KP}</Text>
+                  {/* Puppy count chips */}
+                  <View style={{ flexDirection: "row", gap: 4, marginTop: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: `${COLORS.primary}12`, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
+                      <Ionicons name="male" size={10} color={COLORS.primary} />
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.primary }}>{males}</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F3E8FF", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
+                      <Ionicons name="female" size={10} color="#9333EA" />
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#9333EA" }}>{females}</Text>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F1F5F9", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.textMuted }}>{total} total</Text>
+                    </View>
+                  </View>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
                   <View style={[tStyles.statusPill, { backgroundColor: pillBg }]}>
                     <Text style={[tStyles.statusPillText, { color: pillText }]}>{item.status ?? "Pending"}</Text>
                   </View>
                   {item.whelping_date && <Text style={tStyles.certDate}>{item.whelping_date}</Text>}
-                  <Text style={tStyles.certKP}>{totalPups} pups</Text>
                   <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
                 </View>
               </TouchableOpacity>
