@@ -617,10 +617,10 @@ function StudCertTab() {
     setSubmitting(true);
     try {
       await submitStudCertificate({
-        user_id:        user!.id,
-        sire_id:        selectedSire.id.replace(/^dog-/, ""),
-        dam_id:         selectedDam.id.replace(/^dog-/, ""),
-        mating_date:    form.dateOfMating.trim(),
+        user_id:     user!.id,
+        sire_id:     parseInt(selectedSire.id.replace(/^dog-/, ""), 10),
+        dam_id:      parseInt(selectedDam.id.replace(/^dog-/, ""), 10),
+        mating_date: form.dateOfMating.trim(),
       }, user!.token);
       setSelectedSire(null);
       setSelectedDam(null);

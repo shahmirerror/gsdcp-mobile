@@ -1,0 +1,194 @@
+public function store(Request $request)
+    {
+        try {
+            $user = User::find($request->user_id);
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'UNAUTHORIZED',
+                        'message' => 'Unauthorized'
+                    ]
+                ], 401);
+            }
+
+            $validated = $request->validate([
+                'sire_id' => 'required|integer|exists:dogs,id',
+                'dam_id' => 'required|integer|exists:dogs,id',
+                'mating_date' => 'required|date',
+            ]);
+
+            // Verify both sire and dam exist
+            $siredata = Dog::find($validated['sire_id']);
+            $damdata = Dog::find($validated['dam_id']);
+            
+            $start  = date_create($request->mating_date);
+            $end 	= date_create(); // Current time and date
+            $diff  	= date_diff( $start, $end );
+            $days_difference = $diff->days; 
+            $check_option = ProjectSetting::where('option_name','=','mating_days_limit')->first();
+            $allowed_days = $check_option->option_value;
+
+            if (!$siredata || !$damdata) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'INVALID_DOGS',
+                        'message' => 'Sire or dam dog not found'
+                    ]
+                ], 422);
+            }
+            
+            if($days_difference >= $allowed_days)
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'HD_ERROR',
+                        'message' => 'This Certificate is 15 days old. Please contact your Group Breed Warden.'
+                    ]
+                ], 500);
+            }
+            
+            if(($siredata->hip == 'Just Permitted' && $damdata->hip != 'Normal') || ($siredata->hip != 'Normal' && $damdata->hip == 'Just Permitted'))
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'HD_ERROR',
+                        'message' => 'Failed to Save! Please check HD Rating of both Sire and Dam before submitting the form!'
+                    ]
+                ], 500);
+            }
+            elseif(($siredata->elbows == 'Just Permitted' && $damdata->elbows != 'Normal') || ($siredata->elbows != 'Normal' && $damdata->elbows == 'Just Permitted'))
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'ED_ERROR',
+                        'message' => 'Failed to Save! Please check ED Rating of both Sire and Dam before submitting the form!'
+                    ]
+                ], 500);
+            }
+            elseif($siredata->elbows != 'Just Permitted' && $siredata->elbows != 'Normal' && $siredata->elbows != 'Fast Normal')
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'ED_ERROR',
+                        'message' => 'Failed to Save! Please check ED Rating of both Sire and Dam before submitting the form!'
+                    ]
+                ], 500);
+            }
+            elseif($siredata->hip != 'Just Permitted' && $siredata->hip != 'Normal' && $siredata->hip != 'Fast Normal')
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'ED_ERROR',
+                        'message' => 'Failed to Save! Please check ED Rating of both Sire and Dam before submitting the form!'
+                    ]
+                ], 500);
+            }
+            elseif($damdata->elbows != 'Just Permitted' && $damdata->elbows != 'Normal' && $damdata->elbows != 'Fast Normal')
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'ED_ERROR',
+                        'message' => 'Failed to Save! Please check ED Rating of both Sire and Dam before submitting the form!'
+                    ]
+                ], 500);
+            }
+            elseif($damdata->hip != 'Just Permitted' && $damdata->hip != 'Normal' && $damdata->hip != 'Fast Normal')
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'HD_ERROR',
+                        'message' => 'Failed to Save! Please check HD Rating of both Sire and Dam before submitting the form!'
+                    ]
+                ], 500);
+            }
+            elseif($damdata->hair != $siredata->hair && (strpos($damdata->hair, "Long Stock") === false || strpos($siredata->hair, "Long Stock") === false))
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'HAIR_ERROR',
+                        'message' => 'Failed to Save! Please confirm Hair Type of both Sire and Dam are the same before submitting the form!'
+                    ]
+                ], 500);
+            }
+            elseif($damdata->hair != $siredata->hair && (strpos($damdata->hair, "Stock Hair") === false || strpos($siredata->hair, "Stock Hair") === false))
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'HAIR_ERROR',
+                        'message' => 'Failed to Save! Please confirm Hair Type of both Sire and Dam are the same before submitting the form!'
+                    ]
+                ], 500);
+            }
+            
+            $dam_dog1 = Dog::select('dogs.id','dogs.KP','dogs.dob','dogs.microchip','dogs.hair','dogs.breed_survey_done','dogs.hip','dogs.elbows','dogs.DNA_status','users.id as userid','users.first_name','users.last_name')
+                    ->leftjoin('dog_owners','dog_owners.dog_id','=','dogs.id')
+                    ->leftjoin('users','users.id','=','dog_owners.owner_id')
+                    ->where('dog_owners.type','!=','Previous')
+                    ->where('dogs.id','=',$validated['dam_id'])
+                    ->where('dogs.status','=','Active')
+                    ->get();
+            
+            for($e = 0; $e < count($dam_dog1); $e++){
+            
+                if($dam_dog1[$e]->userid != null || $dam_dog1[$e]->userid != '')
+                {
+                    $damowner_id = $dam_dog1[$e]->userid;
+                    $valid_owner_found = 1;
+                }
+                
+            }
+
+            $certificate = StudCertificate::create([
+                'owner_id' => $user->id,
+                'sire' => $validated['sire_id'],
+                'dam' => $validated['dam_id'],
+                'sire_owner_id' => $user->id,
+                'dam_owner_id' => $damowner_id ?? NULL,
+                'mating_date' => $validated['mating_date'],
+                'created_by' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stud certificate created successfully',
+                'data' => [
+                    'id' => 'stud-'.$certificate->id,
+                    'owner_id' => $certificate->owner_id,
+                    'sire' => $certificate->sire_id,
+                    'dam' => $certificate->dam_id,
+                    'mating_date' => $certificate->mating_date,
+                    'status' => $certificate->status,
+                    'created_at' => $certificate->created_at,
+                ]
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'VALIDATION_ERROR',
+                    'message' => 'Validation failed',
+                    'details' => $e->errors()
+                ]
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'STUD_CERTIFICATE_ERROR',
+                    'message' => 'Failed to create stud certificate: ' . $e->getMessage()
+                ]
+            ], 500);
+        }
+    }

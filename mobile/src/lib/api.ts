@@ -603,8 +603,8 @@ export async function fetchStudCertificateDetail(certId: string, userId: number)
 
 export type StudCertPayload = {
   user_id: number;
-  sire_id: string;
-  dam_id: string;
+  sire_id: number;
+  dam_id: number;
   mating_date: string;
 };
 
