@@ -614,16 +614,20 @@ export type StudCertPayload = {
   remarks: string;
 };
 
-export async function fetchStudCertificates(userId: number): Promise<StudCertificate[]> {
+export async function fetchStudCertificates(
+  userId: number, page = 1, perPage = 10
+): Promise<{ certificates: StudCertificate[]; total: number }> {
   const res = await fetch(`${BASE_URL}/stud-certificates`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ user_id: userId, page, per_page: perPage }),
   });
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? "Failed to fetch stud certificates");
-  // Response: { success: true, data: { certificates: [...], total: N } }
-  return Array.isArray(json.data?.certificates) ? json.data.certificates : [];
+  return {
+    certificates: Array.isArray(json.data?.certificates) ? json.data.certificates : [],
+    total: json.data?.total ?? 0,
+  };
 }
 
 export async function submitStudCertificate(payload: StudCertPayload): Promise<void> {
@@ -678,15 +682,20 @@ export type LitterInspectionPayload = {
   remarks: string;
 };
 
-export async function fetchLitterInspections(userId: number): Promise<LitterInspection[]> {
+export async function fetchLitterInspections(
+  userId: number, page = 1, perPage = 10
+): Promise<{ inspections: LitterInspection[]; total: number }> {
   const res = await fetch(`${BASE_URL}/litter-inspections`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ user_id: userId }),
+    body: JSON.stringify({ user_id: userId, page, per_page: perPage }),
   });
   const json = await res.json();
-  if (!json.success) throw new Error(json.message ?? "Failed to fetch litter inspections");
-  return Array.isArray(json.data?.inspections) ? json.data.inspections : [];
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch litter inspections");
+  return {
+    inspections: Array.isArray(json.data?.inspections) ? json.data.inspections : [],
+    total: json.data?.total ?? 0,
+  };
 }
 
 export async function fetchLitterInspectionDetail(id: string, userId: number): Promise<LitterInspectionDetail> {

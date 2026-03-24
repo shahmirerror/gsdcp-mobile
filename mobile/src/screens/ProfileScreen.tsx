@@ -333,11 +333,35 @@ function StudCertTab() {
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
-  const { data: certs = [], isLoading: certsLoading, refetch } = useQuery<StudCertificate[]>({
+  const CERT_PER_PAGE = 10;
+  const [allCerts, setAllCerts]     = useState<StudCertificate[]>([]);
+  const [certTotal, setCertTotal]   = useState(0);
+  const [certPage, setCertPage]     = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const { isLoading: certsLoading, refetch } = useQuery({
     queryKey: ["stud-certificates", user?.id],
-    queryFn: () => fetchStudCertificates(user!.id),
+    queryFn: async () => {
+      const res = await fetchStudCertificates(user!.id, 1, CERT_PER_PAGE);
+      setAllCerts(res.certificates);
+      setCertTotal(res.total);
+      setCertPage(1);
+      return res;
+    },
     enabled: !!user,
   });
+
+  const loadMoreCerts = async () => {
+    if (loadingMore || allCerts.length >= certTotal) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetchStudCertificates(user!.id, certPage + 1, CERT_PER_PAGE);
+      setAllCerts(prev => [...prev, ...res.certificates]);
+      setCertPage(prev => prev + 1);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const { data: certDetail, isLoading: detailLoading } = useQuery<StudCertificateDetail>({
     queryKey: ["stud-certificate-detail", selectedCertId],
@@ -450,20 +474,19 @@ function StudCertTab() {
       <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
       {certsLoading ? (
         <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
-      ) : certs.length === 0 ? (
+      ) : allCerts.length === 0 ? (
         <View style={tStyles.emptyRow}>
           <Ionicons name="ribbon-outline" size={20} color={COLORS.textMuted} />
           <Text style={tStyles.emptyRowText}>No stud certificates yet</Text>
         </View>
       ) : (
         <View style={tStyles.certList}>
-          {certs.map((c, i) => (
+          {allCerts.map((c, i) => (
             <TouchableOpacity
               key={c.id}
-              style={[tStyles.certRow, i < certs.length - 1 && tStyles.certRowBorder]}
+              style={[tStyles.certRow, i < allCerts.length - 1 && tStyles.certRowBorder]}
               onPress={() => setSelectedCertId(c.id)}
               activeOpacity={0.7}
-              data-testid={`card-cert-${c.id}`}
             >
               <View style={{ flex: 1, gap: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -488,6 +511,13 @@ function StudCertTab() {
               </View>
             </TouchableOpacity>
           ))}
+          {allCerts.length < certTotal && (
+            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMoreCerts} disabled={loadingMore} activeOpacity={0.7}>
+              {loadingMore
+                ? <ActivityIndicator size="small" color={COLORS.primary} />
+                : <Text style={tStyles.loadMoreText}>Load more ({certTotal - allCerts.length} remaining)</Text>}
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -511,11 +541,35 @@ function LitterInspectionTab() {
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
-  const { data: inspections = [], isLoading, error: listError, refetch } = useQuery<LitterInspection[]>({
+  const INSP_PER_PAGE = 10;
+  const [allInspections, setAllInspections] = useState<LitterInspection[]>([]);
+  const [inspTotal, setInspTotal]           = useState(0);
+  const [inspPage, setInspPage]             = useState(1);
+  const [loadingMoreInsp, setLoadingMoreInsp] = useState(false);
+
+  const { isLoading, error: listError, refetch } = useQuery({
     queryKey: ["litter-inspections", user?.id],
-    queryFn: () => fetchLitterInspections(user!.id),
+    queryFn: async () => {
+      const res = await fetchLitterInspections(user!.id, 1, INSP_PER_PAGE);
+      setAllInspections(res.inspections);
+      setInspTotal(res.total);
+      setInspPage(1);
+      return res;
+    },
     enabled: !!user,
   });
+
+  const loadMoreInspections = async () => {
+    if (loadingMoreInsp || allInspections.length >= inspTotal) return;
+    setLoadingMoreInsp(true);
+    try {
+      const res = await fetchLitterInspections(user!.id, inspPage + 1, INSP_PER_PAGE);
+      setAllInspections(prev => [...prev, ...res.inspections]);
+      setInspPage(prev => prev + 1);
+    } finally {
+      setLoadingMoreInsp(false);
+    }
+  };
 
   const { data: detail, isLoading: detailLoading } = useQuery<LitterInspectionDetail>({
     queryKey: ["litter-inspection-detail", selectedId],
@@ -665,19 +719,19 @@ function LitterInspectionTab() {
           <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
           <Text style={[tStyles.emptyRowText, { color: "#EF4444" }]}>Could not load inspections</Text>
         </View>
-      ) : inspections.length === 0 ? (
+      ) : allInspections.length === 0 ? (
         <View style={tStyles.emptyRow}>
           <Ionicons name="search-outline" size={20} color={COLORS.textMuted} />
           <Text style={tStyles.emptyRowText}>No litter inspections yet</Text>
         </View>
       ) : (
         <View style={tStyles.certList}>
-          {inspections.map((item, i) => {
+          {allInspections.map((item, i) => {
             const totalPups = item.total_puppies ?? ((Number(item.male_puppies) || 0) + (Number(item.female_puppies) || 0));
             return (
               <TouchableOpacity
                 key={item.id}
-                style={[tStyles.certRow, i < inspections.length - 1 && tStyles.certRowBorder]}
+                style={[tStyles.certRow, i < allInspections.length - 1 && tStyles.certRowBorder]}
                 onPress={() => setSelectedId(item.id)}
                 activeOpacity={0.7}
               >
@@ -706,6 +760,13 @@ function LitterInspectionTab() {
               </TouchableOpacity>
             );
           })}
+          {allInspections.length < inspTotal && (
+            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMoreInspections} disabled={loadingMoreInsp} activeOpacity={0.7}>
+              {loadingMoreInsp
+                ? <ActivityIndicator size="small" color={COLORS.primary} />
+                : <Text style={tStyles.loadMoreText}>Load more ({inspTotal - allInspections.length} remaining)</Text>}
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -986,6 +1047,16 @@ const tStyles = StyleSheet.create({
   },
   pupCountLabel: {
     fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2,
+  },
+
+  /* ── Load more button ── */
+  loadMoreBtn: {
+    alignItems: "center", justifyContent: "center",
+    paddingVertical: 12, marginTop: 4,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  loadMoreText: {
+    fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: "600",
   },
 });
 
