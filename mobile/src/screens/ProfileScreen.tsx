@@ -399,9 +399,14 @@ function DogDropdown({
       debounceRef.current = setTimeout(async () => {
         setSearching(true);
         try {
+          console.log("[DOG_SEARCH] searching:", query, "sexFilter:", sexFilter);
           const dogs = await searchDogs(query, 1, 12, sexFilter);
+          console.log("[DOG_SEARCH] got", dogs.length, "results");
           setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, owner: d.owner, sex: d.sex, color: d.color })));
-        } catch { setResults([]); }
+        } catch (e) {
+          console.log("[DOG_SEARCH] error:", e);
+          setResults([]);
+        }
         finally { setSearching(false); }
       }, 400);
     }
@@ -486,6 +491,11 @@ function DogDropdown({
             </TouchableOpacity>
           ))}
         </View>
+      )}
+      {open && mode === "remote" && query.length === 0 && (
+        <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4, paddingHorizontal: 4 }}>
+          Type a dog's name or KP number to search…
+        </Text>
       )}
       {open && mode === "remote" && query.length > 0 && query.length < 2 && (
         <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4, paddingHorizontal: 4 }}>
