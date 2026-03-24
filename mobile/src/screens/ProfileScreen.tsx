@@ -475,7 +475,7 @@ function StudCertTab() {
   const [damVerifyError, setDamVerifyError]     = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "",
+    dateOfMating: "",
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
@@ -578,9 +578,6 @@ function StudCertTab() {
         dam_name:          selectedDam.name,
         dam_kp:            selectedDam.KP,
         date_of_mating:    form.dateOfMating.trim(),
-        no_of_matings:     form.noOfMatings.trim(),
-        expected_whelping: form.expectedWhelping.trim(),
-        remarks:           form.remarks.trim(),
       });
       setSelectedSire(null);
       setSelectedDam(null);
@@ -588,7 +585,7 @@ function StudCertTab() {
       setSireVerifyError(null);
       setDamVerification(null);
       setDamVerifyError(null);
-      setForm({ dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
+      setForm({ dateOfMating: "" });
       setShowForm(false);
       refetch();
       Alert.alert("Submitted", "Stud certificate submitted successfully.");
@@ -741,10 +738,7 @@ function StudCertTab() {
 
         <View style={styles.divider} />
         <FormSection title="MATING DETAILS" />
-        <FormField label="Date of Mating"    value={form.dateOfMating}     onChangeText={set("dateOfMating")}     placeholder="DD/MM/YYYY" required />
-        <FormField label="Number of Matings" value={form.noOfMatings}      onChangeText={set("noOfMatings")}      placeholder="e.g. 2" keyboardType="numeric" />
-        <FormField label="Expected Whelping" value={form.expectedWhelping} onChangeText={set("expectedWhelping")} placeholder="DD/MM/YYYY" />
-        <FormField label="Remarks"           value={form.remarks}          onChangeText={set("remarks")}          placeholder="Any additional notes…" multiline />
+        <FormField label="Date of Mating" value={form.dateOfMating} onChangeText={set("dateOfMating")} placeholder="DD/MM/YYYY" required />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn label={submitting ? "Submitting…" : "Submit Stud Certificate"} onPress={handleSubmit} />

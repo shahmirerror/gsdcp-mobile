@@ -608,9 +608,6 @@ export type StudCertPayload = {
   dam_name: string;
   dam_kp: string;
   date_of_mating: string;
-  no_of_matings: string;
-  expected_whelping: string;
-  remarks: string;
 };
 
 export async function fetchStudCertificates(
