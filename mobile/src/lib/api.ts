@@ -583,6 +583,24 @@ export type StudCertificate = {
   status: string | null;
 };
 
+export type StudCertificateDetail = {
+  id: string;
+  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
+  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
+  mating_date: string;
+  status: string | null;
+};
+
+export async function fetchStudCertificateDetail(certId: string, userId: number): Promise<StudCertificateDetail> {
+  // certId may be "stud-1762" or "1762" — both work
+  const res = await fetch(`${BASE_URL}/stud-certificates/${certId}?user_id=${userId}`, {
+    headers: { Accept: "application/json" },
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message ?? "Failed to fetch certificate detail");
+  return json.data;
+}
+
 export type StudCertPayload = {
   user_id: number;
   stud_name: string;

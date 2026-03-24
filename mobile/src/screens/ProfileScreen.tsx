@@ -20,7 +20,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import {
   fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog,
-  fetchStudCertificates, submitStudCertificate, StudCertificate,
+  fetchStudCertificates, fetchStudCertificateDetail, submitStudCertificate,
+  StudCertificate, StudCertificateDetail,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -294,12 +295,48 @@ function FormBackBtn({ onPress }: { onPress: () => void }) {
   );
 }
 
+/* ── Stud cert detail dog card ──────────────────────── */
+function CertDogCard({ dog, role }: { dog: StudCertificateDetail["sire"]; role: "Sire" | "Dam" }) {
+  const isMale = role === "Sire";
+  const iconColor = isMale ? COLORS.primary : "#9333EA";
+  const validImg = dog.imageUrl &&
+    !dog.imageUrl.includes("dog_not_found") &&
+    !dog.imageUrl.includes("user-not-found") &&
+    !dog.imageUrl.startsWith("https::");
+
+  return (
+    <View style={tStyles.dogCard}>
+      {validImg ? (
+        <Image source={{ uri: dog.imageUrl! }} style={tStyles.dogCardImg} />
+      ) : (
+        <View style={[tStyles.dogCardImg, tStyles.dogCardImgPlaceholder]}>
+          <Ionicons name="paw" size={28} color="#CBD5E1" />
+        </View>
+      )}
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+          <View style={[tStyles.roleTag, { backgroundColor: isMale ? "#DCFCE7" : "#F3E8FF" }]}>
+            <Ionicons name={isMale ? "male" : "female"} size={10} color={iconColor} />
+            <Text style={[tStyles.roleTagText, { color: iconColor }]}>{role}</Text>
+          </View>
+          <Text style={tStyles.certId}>{dog.id}</Text>
+        </View>
+        <Text style={tStyles.certSire} numberOfLines={2}>{dog.name}</Text>
+        <Text style={tStyles.certKP}>KP {dog.KP}{dog.foreign_reg_no ? `  ·  ${dog.foreign_reg_no}` : ""}</Text>
+        {dog.color && <Text style={tStyles.certKP}>Color: {dog.color}</Text>}
+        {dog.date_of_birth && <Text style={tStyles.certKP}>DOB: {dog.date_of_birth}</Text>}
+      </View>
+    </View>
+  );
+}
+
 /* ── Tab: Stud Certificate ──────────────────────────── */
 function StudCertTab() {
   const { user } = useAuth();
-  const [showForm, setShowForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [showForm, setShowForm]         = useState(false);
+  const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
+  const [submitting, setSubmitting]     = useState(false);
+  const [submitError, setSubmitError]   = useState("");
   const [form, setForm] = useState({
     studName: "", studKP: "",
     damName: "", damKP: "", damOwner: "",
@@ -313,6 +350,12 @@ function StudCertTab() {
     enabled: !!user,
   });
 
+  const { data: certDetail, isLoading: detailLoading } = useQuery<StudCertificateDetail>({
+    queryKey: ["stud-certificate-detail", selectedCertId],
+    queryFn: () => fetchStudCertificateDetail(selectedCertId!, user!.id),
+    enabled: !!selectedCertId && !!user,
+  });
+
   const handleSubmit = async () => {
     if (!form.studName.trim()) { setSubmitError("Stud dog name is required."); return; }
     if (!form.damName.trim())  { setSubmitError("Dam name is required."); return; }
@@ -322,16 +365,10 @@ function StudCertTab() {
     setSubmitting(true);
     try {
       await submitStudCertificate({
-        user_id:          user!.id,
-        stud_name:        form.studName.trim(),
-        stud_kp:          form.studKP.trim(),
-        dam_name:         form.damName.trim(),
-        dam_kp:           form.damKP.trim(),
-        dam_owner:        form.damOwner.trim(),
-        date_of_mating:   form.dateOfMating.trim(),
-        no_of_matings:    form.noOfMatings.trim(),
-        expected_whelping: form.expectedWhelping.trim(),
-        remarks:          form.remarks.trim(),
+        user_id: user!.id, stud_name: form.studName.trim(), stud_kp: form.studKP.trim(),
+        dam_name: form.damName.trim(), dam_kp: form.damKP.trim(), dam_owner: form.damOwner.trim(),
+        date_of_mating: form.dateOfMating.trim(), no_of_matings: form.noOfMatings.trim(),
+        expected_whelping: form.expectedWhelping.trim(), remarks: form.remarks.trim(),
       });
       setForm({ studName: "", studKP: "", damName: "", damKP: "", damOwner: "", dateOfMating: "", noOfMatings: "", expectedWhelping: "", remarks: "" });
       setShowForm(false);
@@ -344,6 +381,44 @@ function StudCertTab() {
     }
   };
 
+  /* ── Detail view ── */
+  if (selectedCertId) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setSelectedCertId(null)} />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <Text style={styles.cardHeading}>Certificate Detail</Text>
+          {certDetail && (
+            <View style={[tStyles.statusPill, { backgroundColor: certDetail.status === "Used" ? "#DCFCE7" : "#FEF9C3" }]}>
+              <Text style={[tStyles.statusPillText, { color: certDetail.status === "Used" ? "#166534" : "#854D0E" }]}>
+                {certDetail.status ?? "Pending"}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {detailLoading ? (
+          <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
+        ) : certDetail ? (
+          <>
+            <CertDogCard dog={certDetail.sire} role="Sire" />
+            <View style={styles.divider} />
+            <CertDogCard dog={certDetail.dam} role="Dam" />
+            <View style={styles.divider} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+              <Text style={tStyles.certDate}>Mating date: {certDetail.mating_date}</Text>
+            </View>
+            <Text style={[tStyles.certId, { marginTop: 6 }]}>{certDetail.id}</Text>
+          </>
+        ) : (
+          <Text style={tStyles.emptyRowText}>Could not load certificate details.</Text>
+        )}
+      </View>
+    );
+  }
+
+  /* ── Form view ── */
   if (showForm) {
     return (
       <View style={styles.card}>
@@ -351,7 +426,7 @@ function StudCertTab() {
         <Text style={styles.cardHeading}>New Stud Certificate</Text>
 
         <FormSection title="STUD (SIRE)" />
-        <FormField label="Stud Dog Name"        value={form.studName} onChangeText={set("studName")} placeholder="Enter stud dog name"  required />
+        <FormField label="Stud Dog Name"        value={form.studName} onChangeText={set("studName")} placeholder="Enter stud dog name" required />
         <FormField label="Stud Dog KP / Reg No" value={form.studKP}   onChangeText={set("studKP")}   placeholder="e.g. KP-12345" />
 
         <View style={styles.divider} />
@@ -367,15 +442,13 @@ function StudCertTab() {
         <FormField label="Expected Whelping" value={form.expectedWhelping} onChangeText={set("expectedWhelping")} placeholder="DD/MM/YYYY" />
         <FormField label="Remarks"           value={form.remarks}          onChangeText={set("remarks")}          placeholder="Any additional notes…" multiline />
 
-        {!!submitError && (
-          <Text style={tStyles.errorText}>{submitError}</Text>
-        )}
-
+        {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn label={submitting ? "Submitting…" : "Submit Stud Certificate"} onPress={handleSubmit} />
       </View>
     );
   }
 
+  /* ── List view ── */
   return (
     <View style={styles.card}>
       <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
@@ -389,8 +462,13 @@ function StudCertTab() {
       ) : (
         <View style={tStyles.certList}>
           {certs.map((c, i) => (
-            <View key={c.id} style={[tStyles.certRow, i < certs.length - 1 && tStyles.certRowBorder]}>
-              {/* Left: sire / dam */}
+            <TouchableOpacity
+              key={c.id}
+              style={[tStyles.certRow, i < certs.length - 1 && tStyles.certRowBorder]}
+              onPress={() => setSelectedCertId(c.id)}
+              activeOpacity={0.7}
+              data-testid={`card-cert-${c.id}`}
+            >
               <View style={{ flex: 1, gap: 2 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Ionicons name="male" size={12} color={COLORS.primary} />
@@ -403,7 +481,6 @@ function StudCertTab() {
                 </View>
                 <Text style={tStyles.certKP} numberOfLines={1}>KP {c.dam.KP}</Text>
               </View>
-              {/* Right: date + status */}
               <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
                 <View style={[tStyles.statusPill, { backgroundColor: c.status === "Used" ? "#DCFCE7" : "#FEF9C3" }]}>
                   <Text style={[tStyles.statusPillText, { color: c.status === "Used" ? "#166534" : "#854D0E" }]}>
@@ -412,8 +489,9 @@ function StudCertTab() {
                 </View>
                 <Text style={tStyles.certDate}>{c.mating_date}</Text>
                 <Text style={tStyles.certId}>{c.id}</Text>
+                <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -737,6 +815,25 @@ const tStyles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11, fontWeight: "700", letterSpacing: 0.2,
+  },
+
+  /* ── Cert detail dog card ── */
+  dogCard: {
+    flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 4,
+  },
+  dogCardImg: {
+    width: 72, height: 72, borderRadius: 10,
+  },
+  dogCardImgPlaceholder: {
+    backgroundColor: "#F1F5F9",
+    alignItems: "center", justifyContent: "center",
+  },
+  roleTag: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10,
+  },
+  roleTagText: {
+    fontSize: 10, fontWeight: "700",
   },
 });
 
