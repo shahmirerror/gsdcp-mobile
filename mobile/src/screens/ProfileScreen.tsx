@@ -947,41 +947,62 @@ function LitterRegistrationTab() {
               <>
                 <View style={styles.divider} />
                 <FormSection title={`PUPPIES (${detail.puppies.length})`} />
-                {detail.puppies.map((pup, i) => (
-                  <View
-                    key={pup.id}
-                    style={[
-                      { flexDirection: "row", alignItems: "center", paddingVertical: 8, gap: 10 },
-                      i < detail.puppies.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border },
-                    ]}
-                  >
-                    <View style={{
-                      width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
-                      backgroundColor: pup.sex === "Male" ? `${COLORS.primary}18` : "#F3E8FF",
-                    }}>
-                      <Ionicons
-                        name={pup.sex === "Male" ? "male" : "female"}
-                        size={14}
-                        color={pup.sex === "Male" ? COLORS.primary : "#9333EA"}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }}>{pup.name}</Text>
-                      {pup.color && <Text style={{ fontSize: 11, color: COLORS.textMuted }}>{pup.color}</Text>}
-                    </View>
-                    <View style={{ alignItems: "flex-end", gap: 3 }}>
-                      {pup.microchip
-                        ? <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                            <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
-                            <Text style={{ fontSize: 10, color: "#16A34A", fontWeight: "600" }}>Chipped</Text>
-                          </View>
-                        : <Text style={{ fontSize: 10, color: COLORS.textMuted }}>No chip</Text>}
-                      {pup.DNA_taken === "Yes" && (
-                        <Text style={{ fontSize: 10, color: COLORS.accent, fontWeight: "600" }}>DNA ✓</Text>
-                      )}
-                    </View>
-                  </View>
-                ))}
+                {detail.puppies.map((pup, i) => {
+                  const isDead = pup.dead_check === "1" || pup.dead_check === 1 || (pup.dead_check as any) === true;
+                  const dogId  = pup.dog_id ? `dog-${pup.dog_id}` : null;
+                  const sexColor = pup.sex === "Male" ? COLORS.primary : "#9333EA";
+                  const Row = dogId ? TouchableOpacity : View;
+                  return (
+                    <Row
+                      key={pup.id}
+                      {...(dogId ? {
+                        onPress: () => navigation.push("DogProfile", { id: dogId, name: pup.name }),
+                        activeOpacity: 0.7,
+                      } : {})}
+                      style={[
+                        { flexDirection: "row", alignItems: "center", paddingVertical: 8, gap: 10 },
+                        i < detail.puppies.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+                        isDead && { opacity: 0.5 },
+                      ]}
+                    >
+                      <View style={{
+                        width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
+                        backgroundColor: isDead ? "#F1F5F9" : pup.sex === "Male" ? `${COLORS.primary}18` : "#F3E8FF",
+                      }}>
+                        <Ionicons
+                          name={isDead ? "skull-outline" : pup.sex === "Male" ? "male" : "female"}
+                          size={14}
+                          color={isDead ? COLORS.textMuted : sexColor}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text style={{ fontSize: 13, fontWeight: "600", color: isDead ? COLORS.textMuted : COLORS.text }}>
+                            {pup.name}
+                          </Text>
+                          {isDead && (
+                            <View style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
+                              <Text style={{ fontSize: 9, fontWeight: "700", color: "#991B1B", letterSpacing: 0.3 }}>DECEASED</Text>
+                            </View>
+                          )}
+                        </View>
+                        {pup.color && <Text style={{ fontSize: 11, color: COLORS.textMuted }}>{pup.color}</Text>}
+                      </View>
+                      <View style={{ alignItems: "flex-end", gap: 3 }}>
+                        {pup.microchip
+                          ? <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                              <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
+                              <Text style={{ fontSize: 10, color: "#16A34A", fontWeight: "600" }}>Chipped</Text>
+                            </View>
+                          : <Text style={{ fontSize: 10, color: COLORS.textMuted }}>No chip</Text>}
+                        {pup.DNA_taken === "Yes" && (
+                          <Text style={{ fontSize: 10, color: COLORS.accent, fontWeight: "600" }}>DNA ✓</Text>
+                        )}
+                        {dogId && <Ionicons name="chevron-forward" size={13} color="#CBD5E1" />}
+                      </View>
+                    </Row>
+                  );
+                })}
               </>
             )}
           </>
