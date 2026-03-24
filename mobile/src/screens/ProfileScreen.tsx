@@ -399,14 +399,14 @@ function DogDropdown({
       debounceRef.current = setTimeout(async () => {
         setSearching(true);
         try {
-          console.log("[DOG_SEARCH] searching:", query, "sexFilter:", sexFilter);
-          const dogs = await searchDogs(query, 1, 12, sexFilter);
-          console.log("[DOG_SEARCH] got", dogs.length, "results");
-          setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, owner: d.owner, sex: d.sex, color: d.color })));
-        } catch (e) {
-          console.log("[DOG_SEARCH] error:", e);
-          setResults([]);
-        }
+          const dogs = await searchDogs(query, 1, 100, sexFilter);
+          const q = query.trim().toLowerCase();
+          const filtered = dogs.filter(d =>
+            d.dog_name.toLowerCase().includes(q) ||
+            d.KP.toLowerCase().includes(q)
+          );
+          setResults(filtered.slice(0, 15).map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, owner: d.owner, sex: d.sex, color: d.color })));
+        } catch { setResults([]); }
         finally { setSearching(false); }
       }, 400);
     }
