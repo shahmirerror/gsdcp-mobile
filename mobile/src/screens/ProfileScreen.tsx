@@ -295,67 +295,31 @@ function FormBackBtn({ onPress }: { onPress: () => void }) {
   );
 }
 
-/* ── Stud cert detail dog card — mirrors DogListItem style ── */
-function CertDogCard({ dog, role }: { dog: StudCertificateDetail["sire"]; role: "Sire" | "Dam" }) {
-  const isMale = role === "Sire";
-  const iconColor = isMale ? COLORS.primary : "#9333EA";
-  const tagBg    = isMale ? "#DCFCE7" : "#F3E8FF";
-
-  const validImg = !!dog.imageUrl &&
-    !dog.imageUrl.includes("dog_not_found") &&
-    !dog.imageUrl.includes("user-not-found") &&
-    !dog.imageUrl.startsWith("https::");
-
-  const initials = dog.name.trim().split(" ")
-    .filter(w => w.length > 0).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
-
-  const kpLine = dog.KP && dog.KP !== "0"
-    ? `KP ${dog.KP}${dog.foreign_reg_no ? `  ·  ${dog.foreign_reg_no}` : ""}`
-    : dog.foreign_reg_no ?? "—";
-
-  return (
-    <View style={tStyles.dogCard}>
-      {/* Circular avatar */}
-      {validImg ? (
-        <Image source={{ uri: dog.imageUrl! }} style={tStyles.dogCardAvatar} resizeMode="cover" />
-      ) : (
-        <View style={tStyles.dogCardAvatarPlaceholder}>
-          <Text style={tStyles.dogCardAvatarText}>{initials}</Text>
-        </View>
-      )}
-
-      {/* Info */}
-      <View style={{ flex: 1 }}>
-        {/* Role tag */}
-        <View style={[tStyles.roleTag, { backgroundColor: tagBg, alignSelf: "flex-start", marginBottom: 4 }]}>
-          <Ionicons name={isMale ? "male" : "female"} size={10} color={iconColor} />
-          <Text style={[tStyles.roleTagText, { color: iconColor }]}>{role}</Text>
-        </View>
-
-        <Text style={tStyles.dogCardName} numberOfLines={1}>{dog.name}</Text>
-        <Text style={tStyles.dogCardKP}>{kpLine}</Text>
-
-        {/* Badges */}
-        <View style={tStyles.dogCardBadges}>
-          {dog.color ? (
-            <View style={tStyles.dogCardBadge}>
-              <Text style={tStyles.dogCardBadgeText}>{dog.color}</Text>
-            </View>
-          ) : null}
-          {dog.date_of_birth ? (
-            <View style={tStyles.dogCardBadge}>
-              <Text style={tStyles.dogCardBadgeText}>b. {dog.date_of_birth}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
-    </View>
-  );
+/* ── Map a cert sire/dam to the Dog shape DogListItem expects ── */
+function certDogToDog(d: StudCertificateDetail["sire"], sex: string): Dog {
+  return {
+    id: d.id,
+    dog_name: d.name,
+    KP: d.KP,
+    foreign_reg_no: d.foreign_reg_no,
+    color: d.color,
+    imageUrl: d.imageUrl,
+    sex,
+    dob: d.date_of_birth,
+    breed: "GSD",
+    owner: null, breeder: null,
+    sire: null, sire_id: null,
+    dam: null,  dam_id: null,
+    titles: [], microchip: null, hair: null,
+    hd: null, ed: null, working_title: null,
+    dna_status: null, breed_survey_period: null, show_rating: null,
+  };
 }
 
 /* ── Tab: Stud Certificate ──────────────────────────── */
 function StudCertTab() {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const [showForm, setShowForm]         = useState(false);
   const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
   const [submitting, setSubmitting]     = useState(false);
@@ -424,9 +388,17 @@ function StudCertTab() {
           <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
         ) : certDetail ? (
           <>
-            <CertDogCard dog={certDetail.sire} role="Sire" />
+            <FormSection title="SIRE" />
+            <DogListItem
+              dog={certDogToDog(certDetail.sire, "Male")}
+              onPress={() => navigation.push("DogProfile", { id: certDetail.sire.id, name: certDetail.sire.name })}
+            />
             <View style={styles.divider} />
-            <CertDogCard dog={certDetail.dam} role="Dam" />
+            <FormSection title="DAM" />
+            <DogListItem
+              dog={certDogToDog(certDetail.dam, "Female")}
+              onPress={() => navigation.push("DogProfile", { id: certDetail.dam.id, name: certDetail.dam.name })}
+            />
             <View style={styles.divider} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
@@ -839,50 +811,6 @@ const tStyles = StyleSheet.create({
     fontSize: 11, fontWeight: "700", letterSpacing: 0.2,
   },
 
-  /* ── Cert detail dog card — mirrors DogListItem ── */
-  dogCard: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  dogCardAvatar: {
-    width: 48, height: 48, borderRadius: 999,
-    backgroundColor: "#E8F5E9", marginRight: 0,
-  },
-  dogCardAvatarPlaceholder: {
-    width: 48, height: 48, borderRadius: 999,
-    backgroundColor: "#E8F5E9",
-    alignItems: "center", justifyContent: "center",
-  },
-  dogCardAvatarText: {
-    color: COLORS.primary, fontWeight: "600", fontSize: FONT_SIZES.sm,
-  },
-  dogCardName: {
-    fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text,
-  },
-  dogCardKP: {
-    fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 2,
-  },
-  dogCardBadges: {
-    flexDirection: "row", gap: 6, marginTop: 4, flexWrap: "wrap",
-  },
-  dogCardBadge: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  dogCardBadgeText: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textSecondary,
-  },
-  roleTag: {
-    flexDirection: "row", alignItems: "center", gap: 3,
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10,
-  },
-  roleTagText: {
-    fontSize: 10, fontWeight: "700",
-  },
 });
 
 /* ── Form styles ────────────────────────────────────── */
