@@ -331,7 +331,7 @@ function certDogToDog(d: DogCardShape, sex: string): Dog {
 type DogOption = { id: string; name: string; KP: string; owner?: string; sex?: string; color?: string };
 
 function DogDropdown({
-  label, required, selected, onSelect, onClear, mode, localOptions,
+  label, required, selected, onSelect, onClear, mode, localOptions, sexFilter,
 }: {
   label: string; required?: boolean;
   selected: DogOption | null;
@@ -339,6 +339,7 @@ function DogDropdown({
   onClear: () => void;
   mode: "local" | "remote";
   localOptions?: DogOption[];
+  sexFilter?: string;
 }) {
   const [query, setQuery]       = useState("");
   const [results, setResults]   = useState<DogOption[]>([]);
@@ -358,13 +359,13 @@ function DogDropdown({
       debounceRef.current = setTimeout(async () => {
         setSearching(true);
         try {
-          const dogs = await searchDogs(query, 1, 12);
+          const dogs = await searchDogs(query, 1, 12, sexFilter);
           setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, owner: d.owner, sex: d.sex, color: d.color })));
         } catch { setResults([]); }
         finally { setSearching(false); }
       }, 400);
     }
-  }, [query, mode, localOptions]);
+  }, [query, mode, localOptions, sexFilter]);
 
   if (selected) {
     return (
@@ -704,6 +705,7 @@ function StudCertTab() {
           label="Dam Dog"
           required
           mode="remote"
+          sexFilter="Female"
           selected={selectedDam}
           onSelect={setSelectedDam}
           onClear={() => { setSelectedDam(null); setDamVerification(null); setDamVerifyError(null); }}

@@ -880,9 +880,10 @@ export type DogSearchResult = {
   owner: string;
 };
 
-export async function searchDogs(query: string, page = 1, perPage = 10): Promise<DogSearchResult[]> {
-  const params = new URLSearchParams({ search: query, page: String(page), per_page: String(perPage) });
-  const res = await fetch(`${BASE_URL}/dogs?${params}`, { headers: { Accept: "application/json" } });
+export async function searchDogs(query: string, page = 1, perPage = 10, sex?: string): Promise<DogSearchResult[]> {
+  const params: Record<string, string> = { search: query, page: String(page), per_page: String(perPage) };
+  if (sex) params.sex = sex;
+  const res = await fetch(`${BASE_URL}/dogs?${new URLSearchParams(params)}`, { headers: { Accept: "application/json" } });
   if (!res.ok) throw new Error("Failed to search dogs");
   const json = await res.json();
   return Array.isArray(json.data) ? json.data : [];
