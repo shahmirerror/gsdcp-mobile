@@ -295,36 +295,59 @@ function FormBackBtn({ onPress }: { onPress: () => void }) {
   );
 }
 
-/* ── Stud cert detail dog card ──────────────────────── */
+/* ── Stud cert detail dog card — mirrors DogListItem style ── */
 function CertDogCard({ dog, role }: { dog: StudCertificateDetail["sire"]; role: "Sire" | "Dam" }) {
   const isMale = role === "Sire";
   const iconColor = isMale ? COLORS.primary : "#9333EA";
-  const validImg = dog.imageUrl &&
+  const tagBg    = isMale ? "#DCFCE7" : "#F3E8FF";
+
+  const validImg = !!dog.imageUrl &&
     !dog.imageUrl.includes("dog_not_found") &&
     !dog.imageUrl.includes("user-not-found") &&
     !dog.imageUrl.startsWith("https::");
 
+  const initials = dog.name.trim().split(" ")
+    .filter(w => w.length > 0).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+
+  const kpLine = dog.KP && dog.KP !== "0"
+    ? `KP ${dog.KP}${dog.foreign_reg_no ? `  ·  ${dog.foreign_reg_no}` : ""}`
+    : dog.foreign_reg_no ?? "—";
+
   return (
     <View style={tStyles.dogCard}>
+      {/* Circular avatar */}
       {validImg ? (
-        <Image source={{ uri: dog.imageUrl! }} style={tStyles.dogCardImg} />
+        <Image source={{ uri: dog.imageUrl! }} style={tStyles.dogCardAvatar} resizeMode="cover" />
       ) : (
-        <View style={[tStyles.dogCardImg, tStyles.dogCardImgPlaceholder]}>
-          <Ionicons name="paw" size={28} color="#CBD5E1" />
+        <View style={tStyles.dogCardAvatarPlaceholder}>
+          <Text style={tStyles.dogCardAvatarText}>{initials}</Text>
         </View>
       )}
+
+      {/* Info */}
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
-          <View style={[tStyles.roleTag, { backgroundColor: isMale ? "#DCFCE7" : "#F3E8FF" }]}>
-            <Ionicons name={isMale ? "male" : "female"} size={10} color={iconColor} />
-            <Text style={[tStyles.roleTagText, { color: iconColor }]}>{role}</Text>
-          </View>
-          <Text style={tStyles.certId}>{dog.id}</Text>
+        {/* Role tag */}
+        <View style={[tStyles.roleTag, { backgroundColor: tagBg, alignSelf: "flex-start", marginBottom: 4 }]}>
+          <Ionicons name={isMale ? "male" : "female"} size={10} color={iconColor} />
+          <Text style={[tStyles.roleTagText, { color: iconColor }]}>{role}</Text>
         </View>
-        <Text style={tStyles.certSire} numberOfLines={2}>{dog.name}</Text>
-        <Text style={tStyles.certKP}>KP {dog.KP}{dog.foreign_reg_no ? `  ·  ${dog.foreign_reg_no}` : ""}</Text>
-        {dog.color && <Text style={tStyles.certKP}>Color: {dog.color}</Text>}
-        {dog.date_of_birth && <Text style={tStyles.certKP}>DOB: {dog.date_of_birth}</Text>}
+
+        <Text style={tStyles.dogCardName} numberOfLines={1}>{dog.name}</Text>
+        <Text style={tStyles.dogCardKP}>{kpLine}</Text>
+
+        {/* Badges */}
+        <View style={tStyles.dogCardBadges}>
+          {dog.color ? (
+            <View style={tStyles.dogCardBadge}>
+              <Text style={tStyles.dogCardBadgeText}>{dog.color}</Text>
+            </View>
+          ) : null}
+          {dog.date_of_birth ? (
+            <View style={tStyles.dogCardBadge}>
+              <Text style={tStyles.dogCardBadgeText}>b. {dog.date_of_birth}</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -409,7 +432,6 @@ function StudCertTab() {
               <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
               <Text style={tStyles.certDate}>Mating date: {certDetail.mating_date}</Text>
             </View>
-            <Text style={[tStyles.certId, { marginTop: 6 }]}>{certDetail.id}</Text>
           </>
         ) : (
           <Text style={tStyles.emptyRowText}>Could not load certificate details.</Text>
@@ -817,16 +839,42 @@ const tStyles = StyleSheet.create({
     fontSize: 11, fontWeight: "700", letterSpacing: 0.2,
   },
 
-  /* ── Cert detail dog card ── */
+  /* ── Cert detail dog card — mirrors DogListItem ── */
   dogCard: {
-    flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 4,
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  dogCardImg: {
-    width: 72, height: 72, borderRadius: 10,
+  dogCardAvatar: {
+    width: 48, height: 48, borderRadius: 999,
+    backgroundColor: "#E8F5E9", marginRight: 0,
   },
-  dogCardImgPlaceholder: {
-    backgroundColor: "#F1F5F9",
+  dogCardAvatarPlaceholder: {
+    width: 48, height: 48, borderRadius: 999,
+    backgroundColor: "#E8F5E9",
     alignItems: "center", justifyContent: "center",
+  },
+  dogCardAvatarText: {
+    color: COLORS.primary, fontWeight: "600", fontSize: FONT_SIZES.sm,
+  },
+  dogCardName: {
+    fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text,
+  },
+  dogCardKP: {
+    fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 2,
+  },
+  dogCardBadges: {
+    flexDirection: "row", gap: 6, marginTop: 4, flexWrap: "wrap",
+  },
+  dogCardBadge: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  dogCardBadgeText: {
+    fontSize: FONT_SIZES.xs, color: COLORS.textSecondary,
   },
   roleTag: {
     flexDirection: "row", alignItems: "center", gap: 3,
