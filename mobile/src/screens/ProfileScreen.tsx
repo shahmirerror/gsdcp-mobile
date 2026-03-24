@@ -24,6 +24,8 @@ import {
   StudCertificate, StudCertificateDetail,
   fetchLitterInspections, fetchLitterInspectionDetail, submitLitterInspection,
   LitterInspection, LitterInspectionDetail,
+  fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
+  LitterRegistration, LitterRegistrationDetail,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -781,20 +783,160 @@ function LitterInspectionTab() {
 
 /* ── Tab: Litter Registration ───────────────────────── */
 function LitterRegistrationTab() {
-  const [showForm, setShowForm] = useState(false);
+  const { user } = useAuth();
+  const navigation = useNavigation<any>();
+  const [showForm, setShowForm]         = useState(false);
+  const [selectedId, setSelectedId]     = useState<string | null>(null);
+  const [submitting, setSubmitting]     = useState(false);
+  const [submitError, setSubmitError]   = useState("");
   const [form, setForm] = useState({
     sireName: "", sireKP: "",
     damName: "", damKP: "",
     dateOfWhelping: "",
-    totalPups: "", malePups: "", femalePups: "",
+    malePups: "", femalePups: "",
     remarks: "",
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
+  const REG_PER_PAGE = 10;
+  const [allRegs, setAllRegs]       = useState<LitterRegistration[]>([]);
+  const [regTotal, setRegTotal]     = useState(0);
+  const [regPage, setRegPage]       = useState(1);
+  const [loadingMoreReg, setLoadingMoreReg] = useState(false);
+
+  const { data: page1Regs, isLoading, error: listError, refetch } = useQuery({
+    queryKey: ["litter-registrations", user?.id],
+    queryFn: () => fetchLitterRegistrations(user!.id, 1, REG_PER_PAGE),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (page1Regs) {
+      setAllRegs(page1Regs.registrations);
+      setRegTotal(page1Regs.total);
+      setRegPage(1);
+    }
+  }, [page1Regs]);
+
+  const loadMoreRegs = async () => {
+    if (loadingMoreReg || allRegs.length >= regTotal) return;
+    setLoadingMoreReg(true);
+    try {
+      const res = await fetchLitterRegistrations(user!.id, regPage + 1, REG_PER_PAGE);
+      setAllRegs(prev => [...prev, ...res.registrations]);
+      setRegPage(prev => prev + 1);
+    } finally {
+      setLoadingMoreReg(false);
+    }
+  };
+
+  const { data: detail, isLoading: detailLoading } = useQuery<LitterRegistrationDetail>({
+    queryKey: ["litter-registration-detail", selectedId],
+    queryFn: () => fetchLitterRegistrationDetail(selectedId!, user!.id),
+    enabled: !!selectedId && !!user,
+  });
+
+  const handleSubmit = async () => {
+    if (!form.sireName.trim())       { setSubmitError("Sire name is required."); return; }
+    if (!form.damName.trim())        { setSubmitError("Dam name is required."); return; }
+    if (!form.dateOfWhelping.trim()) { setSubmitError("Date of whelping is required."); return; }
+    if (!form.malePups.trim())       { setSubmitError("Number of male pups is required."); return; }
+    if (!form.femalePups.trim())     { setSubmitError("Number of female pups is required."); return; }
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await submitLitterRegistration({
+        user_id: user!.id,
+        sire_name: form.sireName.trim(), sire_kp: form.sireKP.trim(),
+        dam_name: form.damName.trim(),   dam_kp: form.damKP.trim(),
+        date_of_whelping: form.dateOfWhelping.trim(),
+        male_pups: form.malePups.trim(),
+        female_pups: form.femalePups.trim(),
+        remarks: form.remarks.trim(),
+      });
+      setForm({ sireName: "", sireKP: "", damName: "", damKP: "", dateOfWhelping: "", malePups: "", femalePups: "", remarks: "" });
+      setShowForm(false);
+      refetch();
+      Alert.alert("Submitted", "Litter registration submitted successfully.");
+    } catch (e: any) {
+      setSubmitError(e.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ── Detail view ── */
+  if (selectedId) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setSelectedId(null)} />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <Text style={styles.cardHeading}>Litter Registration</Text>
+          {detail && (
+            <View style={[tStyles.statusPill, { backgroundColor: detail.status === "Approved" ? "#DCFCE7" : "#FEF9C3" }]}>
+              <Text style={[tStyles.statusPillText, { color: detail.status === "Approved" ? "#166534" : "#854D0E" }]}>
+                {detail.status ?? "Pending"}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {detailLoading ? (
+          <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
+        ) : detail ? (
+          <>
+            {detail.registration_no && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 10, backgroundColor: "#F0FDF4", borderRadius: 8 }}>
+                <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                <Text style={{ fontSize: 13, color: "#166534", fontWeight: "600" }}>Reg No: {detail.registration_no}</Text>
+              </View>
+            )}
+            <FormSection title="SIRE" />
+            <DogListItem
+              dog={certDogToDog(detail.sire, "Male")}
+              onPress={() => navigation.push("DogProfile", { id: detail.sire.id, name: detail.sire.name })}
+            />
+            <View style={styles.divider} />
+            <FormSection title="DAM" />
+            <DogListItem
+              dog={certDogToDog(detail.dam, "Female")}
+              onPress={() => navigation.push("DogProfile", { id: detail.dam.id, name: detail.dam.name })}
+            />
+            <View style={styles.divider} />
+
+            <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+              {[
+                { label: "Male",   value: detail.male_puppies,   color: COLORS.primary },
+                { label: "Female", value: detail.female_puppies, color: "#9333EA" },
+                { label: "Total",  value: String(detail.total_puppies ?? "—"), color: COLORS.accent },
+              ].map(({ label, value, color }) => (
+                <View key={label} style={tStyles.pupCountBox}>
+                  <Text style={[tStyles.pupCountNum, { color }]}>{value ?? "—"}</Text>
+                  <Text style={tStyles.pupCountLabel}>{label}</Text>
+                </View>
+              ))}
+            </View>
+
+            {detail.whelping_date && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
+                <Text style={tStyles.certDate}>Whelped: {detail.whelping_date}</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <Text style={tStyles.emptyRowText}>Could not load registration details.</Text>
+        )}
+      </View>
+    );
+  }
+
+  /* ── Form view ── */
   if (showForm) {
     return (
       <View style={styles.card}>
-        <FormBackBtn onPress={() => setShowForm(false)} />
+        <FormBackBtn onPress={() => { setShowForm(false); setSubmitError(""); }} />
         <Text style={styles.cardHeading}>New Litter Registration</Text>
 
         <FormSection title="SIRE" />
@@ -810,26 +952,79 @@ function LitterRegistrationTab() {
         <FormSection title="LITTER DETAILS" />
         <FormField label="Date of Whelping" value={form.dateOfWhelping} onChangeText={set("dateOfWhelping")} placeholder="DD/MM/YYYY" required />
         <View style={fStyles.row}>
-          <View style={{ flex: 1 }}><FormField label="Total Pups" value={form.totalPups}  onChangeText={set("totalPups")}  placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ flex: 1 }}><FormField label="Male Pups"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
           <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Male"       value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Female"     value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ flex: 1 }}><FormField label="Female Pups" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
         </View>
         <FormField label="Remarks" value={form.remarks} onChangeText={set("remarks")} placeholder="Any additional notes…" multiline />
 
-        <SubmitBtn label="Submit Litter Registration" onPress={() => { Alert.alert("Submitted", "Litter registration submitted."); setShowForm(false); }} />
+        {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
+        <SubmitBtn label={submitting ? "Submitting…" : "Submit Litter Registration"} onPress={handleSubmit} />
       </View>
     );
   }
 
+  /* ── List view ── */
   return (
     <View style={styles.card}>
       <ListHeader title="Litter Registrations" onNew={() => setShowForm(true)} />
-      <View style={tStyles.table}>
-        <TableHead cols={[{ label: "SIRE", flex: 2 }, { label: "DAM", flex: 2 }, { label: "WHELPED" }, { label: "PUPS" }]} />
-        <EmptyTable icon="document-text-outline" message="No litter registrations yet" />
-      </View>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+      ) : listError ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
+          <Text style={[tStyles.emptyRowText, { color: "#EF4444" }]}>Could not load registrations</Text>
+        </View>
+      ) : allRegs.length === 0 ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons name="document-text-outline" size={20} color={COLORS.textMuted} />
+          <Text style={tStyles.emptyRowText}>No litter registrations yet</Text>
+        </View>
+      ) : (
+        <View style={tStyles.certList}>
+          {allRegs.map((item, i) => {
+            const totalPups = item.total_puppies ?? ((Number(item.male_puppies) || 0) + (Number(item.female_puppies) || 0));
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[tStyles.certRow, i < allRegs.length - 1 && tStyles.certRowBorder]}
+                onPress={() => setSelectedId(item.id)}
+                activeOpacity={0.7}
+              >
+                <View style={{ flex: 1, gap: 2 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Ionicons name="male" size={12} color={COLORS.primary} />
+                    <Text style={tStyles.certSire} numberOfLines={1}>{item.sire.name}</Text>
+                  </View>
+                  <Text style={tStyles.certKP} numberOfLines={1}>KP {item.sire.KP}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <Ionicons name="female" size={12} color="#9333EA" />
+                    <Text style={tStyles.certDam} numberOfLines={1}>{item.dam.name}</Text>
+                  </View>
+                  <Text style={tStyles.certKP} numberOfLines={1}>KP {item.dam.KP}</Text>
+                </View>
+                <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
+                  <View style={[tStyles.statusPill, { backgroundColor: item.status === "Approved" ? "#DCFCE7" : "#FEF9C3" }]}>
+                    <Text style={[tStyles.statusPillText, { color: item.status === "Approved" ? "#166534" : "#854D0E" }]}>
+                      {item.status ?? "Pending"}
+                    </Text>
+                  </View>
+                  {item.whelping_date && <Text style={tStyles.certDate}>{item.whelping_date}</Text>}
+                  <Text style={tStyles.certKP}>{totalPups} pups</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+          {allRegs.length < regTotal && (
+            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMoreRegs} disabled={loadingMoreReg} activeOpacity={0.7}>
+              {loadingMoreReg
+                ? <ActivityIndicator size="small" color={COLORS.primary} />
+                : <Text style={tStyles.loadMoreText}>Load more ({regTotal - allRegs.length} remaining)</Text>}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }

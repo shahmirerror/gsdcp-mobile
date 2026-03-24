@@ -721,6 +721,81 @@ export async function submitLitterInspection(payload: LitterInspectionPayload): 
   }
 }
 
+/* ── Litter Registrations ────────────────────────────── */
+export type LitterRegistration = {
+  id: string;
+  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null };
+  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null };
+  whelping_date: string | null;
+  male_puppies: string | null;
+  female_puppies: string | null;
+  total_puppies: number | null;
+  status: string | null;
+  registration_no: string | null;
+};
+
+export type LitterRegistrationDetail = {
+  id: string;
+  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
+  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
+  whelping_date: string | null;
+  male_puppies: string | null;
+  female_puppies: string | null;
+  total_puppies: number | null;
+  status: string | null;
+  registration_no: string | null;
+};
+
+export type LitterRegistrationPayload = {
+  user_id: number;
+  sire_name: string;
+  sire_kp: string;
+  dam_name: string;
+  dam_kp: string;
+  date_of_whelping: string;
+  male_pups: string;
+  female_pups: string;
+  remarks: string;
+};
+
+export async function fetchLitterRegistrations(
+  userId: number, page = 1, perPage = 10
+): Promise<{ registrations: LitterRegistration[]; total: number }> {
+  const res = await fetch(`${BASE_URL}/litter-registrations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ user_id: userId, page, per_page: perPage }),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch litter registrations");
+  return {
+    registrations: Array.isArray(json.data?.registrations) ? json.data.registrations : [],
+    total: json.data?.total ?? 0,
+  };
+}
+
+export async function fetchLitterRegistrationDetail(id: string, userId: number): Promise<LitterRegistrationDetail> {
+  const numericId = id.replace(/^reg-/, "");
+  const res = await fetch(`${BASE_URL}/litter-registrations/${numericId}?user_id=${userId}`, {
+    headers: { Accept: "application/json" },
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch litter registration detail");
+  return json.data;
+}
+
+export async function submitLitterRegistration(payload: LitterRegistrationPayload): Promise<void> {
+  const res = await fetch(`${BASE_URL}/litter-registrations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok || json.success === false) {
+    throw new Error(json.message ?? json.error?.message ?? "Submission failed. Please try again.");
+  }
+}
+
 export function getAncestorName(ancestor: PedigreeAncestor): string {
   if (!ancestor) return "Unknown";
   if (typeof ancestor === "string") return ancestor || "Unknown";
