@@ -1223,6 +1223,8 @@ function LitterInspectionTab() {
                 </Text>
                 {certCheck.found && certCheck.matingDate ? (
                   <Text style={{ fontSize: 11, color: "#166534", marginTop: 1 }}>Mating date: {certCheck.matingDate}</Text>
+                ) : certCheck.found && !certCheck.matingDate ? (
+                  <Text style={{ fontSize: 11, color: "#166534", marginTop: 1 }}>{certCheck.message}</Text>
                 ) : !certCheck.found ? (
                   <Text style={{ fontSize: 11, color: "#991B1B", marginTop: 1 }}>{certCheck.message}</Text>
                 ) : null}

@@ -725,14 +725,21 @@ export async function checkLitterCertificate(sireId: string, damId: string): Pro
   const text = await res.text();
   let json: any;
   try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
-  if (!res.ok && json.success == null) throw new Error(json.message ?? "Server error");
+
+  // Happy path
   if (json.success === true) {
     return { found: true, matingDate: json.data?.mating_date ?? json.data?.date ?? null, message: json.message ?? "Stud certificate found" };
   }
+  // "No stud cert" — returned correctly even on HTTP 500
   if (json.error?.code === "STUD_CERTIFICATE_ERROR") {
     return { found: false, matingDate: null, message: json.error.message ?? "No stud certificate found" };
   }
-  return { found: false, matingDate: null, message: json.message ?? "No stud certificate found" };
+  // Backend crash: "Undefined variable: stud" fires when a cert IS found but response fails
+  if (json.exception === "ErrorException" && typeof json.message === "string" && json.message.toLowerCase().includes("stud")) {
+    return { found: true, matingDate: null, message: "Stud certificate found (details unavailable)" };
+  }
+  // Other backend crash — genuinely unknown
+  throw new Error(json.message ?? "Server error");
 }
 
 export async function submitLitterInspection(payload: LitterInspectionPayload): Promise<void> {
