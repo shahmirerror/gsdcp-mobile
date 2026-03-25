@@ -521,7 +521,7 @@ function DogDropdown({
       const opts = localOptions ?? [];
       if (!query.trim()) { setResults(opts.slice(0, 30)); return; }
       const q = query.toLowerCase();
-      setResults(opts.filter(d => d.name.toLowerCase().includes(q) || d.KP.toLowerCase().includes(q)).slice(0, 30));
+      setResults(opts.filter(d => (d.name ?? "").toLowerCase().includes(q) || (d.KP ?? "").toLowerCase().includes(q)).slice(0, 30));
     } else {
       if (!query.trim() || query.length < 2) { setResults([]); return; }
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -1457,10 +1457,10 @@ function LitterRegistrationTab() {
     try {
       await submitLitterRegistration({
         user_id:          user!.id,
-        sire_id:          parseInt(regSire.id.replace(/^dog-/, ""), 10),
+        sire_id:          parseInt(String(regSire.id).replace(/^dog-/, ""), 10),
         sire_name:        regSire.name,
         sire_kp:          regSire.KP,
-        dam_id:           parseInt(regDam.id.replace(/^dog-/, ""), 10),
+        dam_id:           parseInt(String(regDam.id).replace(/^dog-/, ""), 10),
         dam_name:         regDam.name,
         dam_kp:           regDam.KP,
         date_of_whelping: whelpingApiDate,
