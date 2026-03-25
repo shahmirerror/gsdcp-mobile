@@ -12,6 +12,7 @@ import {
   TextInput,
   Platform,
   Alert,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -369,6 +370,113 @@ function certDogToDog(d: DogCardShape, sex: string): Dog {
 
 /* ── Dog search dropdown (used in stud cert form) ──── */
 type DogOption = { id: string; name: string; KP: string; owner?: string; sex?: string; color?: string };
+
+const CAL_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const CAL_DOW    = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+
+function CalendarDatePicker({ label, required, value, onChange }: {
+  label: string; required?: boolean;
+  value: string;       // DD-MM-YYYY display / storage
+  onChange: (v: string) => void;
+}) {
+  const today = new Date();
+  const parseValue = (v: string): Date | null => {
+    if (!v) return null;
+    const [d, m, y] = v.split("-").map(Number);
+    return d && m && y ? new Date(y, m - 1, d) : null;
+  };
+  const selected = parseValue(value);
+  const [show,      setShow]      = useState(false);
+  const [viewYear,  setViewYear]  = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+
+  const openPicker = () => {
+    if (selected) { setViewYear(selected.getFullYear()); setViewMonth(selected.getMonth()); }
+    setShow(true);
+  };
+
+  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
+  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); };
+
+  const selectDay = (day: number) => {
+    onChange(`${String(day).padStart(2,"0")}-${String(viewMonth+1).padStart(2,"0")}-${viewYear}`);
+    setShow(false);
+  };
+
+  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let i = 1; i <= daysInMonth; i++) cells.push(i);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const isSel   = (d: number) => selected && selected.getDate() === d && selected.getMonth() === viewMonth && selected.getFullYear() === viewYear;
+  const isTod   = (d: number) => today.getDate() === d && today.getMonth() === viewMonth && today.getFullYear() === viewYear;
+
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>
+        {label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
+      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, backgroundColor: "#fff", overflow: "hidden" }}>
+        <TouchableOpacity onPress={openPicker} activeOpacity={0.8} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
+          <Ionicons name="calendar-outline" size={16} color={value ? COLORS.primary : COLORS.textMuted} />
+          <Text style={{ fontSize: 13, color: value ? COLORS.text : COLORS.textMuted }}>{value || "Select date"}</Text>
+        </TouchableOpacity>
+        {!!value && (
+          <TouchableOpacity onPress={() => onChange("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ paddingHorizontal: 12 }}>
+            <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <Modal visible={show} transparent animationType="fade" onRequestClose={() => setShow(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center" }} activeOpacity={1} onPress={() => setShow(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: "#fff", borderRadius: 16, padding: 16, width: 300 }}>
+            {/* Month navigation */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.text }}>{CAL_MONTHS[viewMonth]} {viewYear}</Text>
+              <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="chevron-forward" size={22} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+            {/* Day-of-week headers */}
+            <View style={{ flexDirection: "row", marginBottom: 6 }}>
+              {CAL_DOW.map(d => (
+                <Text key={d} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "600", color: COLORS.textMuted }}>{d}</Text>
+              ))}
+            </View>
+            {/* Day grid */}
+            {Array.from({ length: cells.length / 7 }).map((_, week) => (
+              <View key={week} style={{ flexDirection: "row", marginBottom: 2 }}>
+                {cells.slice(week * 7, week * 7 + 7).map((day, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => { if (day) selectDay(day); }}
+                    activeOpacity={day ? 0.7 : 1}
+                    style={{ flex: 1, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18, backgroundColor: day && isSel(day) ? COLORS.primary : day && isTod(day) ? `${COLORS.primary}18` : "transparent" }}
+                  >
+                    {!!day && (
+                      <Text style={{ fontSize: 13, fontWeight: isSel(day) || isTod(day) ? "700" : "400", color: isSel(day) ? "#fff" : isTod(day) ? COLORS.primary : COLORS.text }}>
+                        {day}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+            <TouchableOpacity onPress={() => setShow(false)} style={{ marginTop: 10, alignItems: "center", paddingVertical: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: COLORS.textMuted }}>Cancel</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+}
 
 function DogDropdown({
   label, required, selected, onSelect, onClear, mode, localOptions, sexFilter,
@@ -933,6 +1041,9 @@ function LitterInspectionTab() {
     setSubmitError("");
     setSubmitting(true);
     const today = new Date().toISOString().split("T")[0];
+    // Convert DD-MM-YYYY → YYYY-MM-DD for the API
+    const [dd, mm, yyyy] = form.dateOfWhelping.split("-");
+    const whelpingApiDate = `${yyyy}-${mm}-${dd}`;
     try {
       await submitLitterInspection({
         user_id:            user!.id,
@@ -942,7 +1053,7 @@ function LitterInspectionTab() {
         sire_kp:            inspSire.KP,
         dam_name:           inspDam.name,
         dam_kp:             inspDam.KP,
-        date_of_whelping:   form.dateOfWhelping.trim(),
+        date_of_whelping:   whelpingApiDate,
         date_of_inspection: today,
         total_puppies:      form.totalPups.trim() || undefined,
         male_pups:          form.malePups.trim(),
@@ -1055,7 +1166,7 @@ function LitterInspectionTab() {
 
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
-        <FormField label="Whelping Date" value={form.dateOfWhelping} onChangeText={set("dateOfWhelping")} placeholder="YYYY-MM-DD" required />
+        <CalendarDatePicker label="Whelping Date" required value={form.dateOfWhelping} onChange={set("dateOfWhelping")} />
         <FormField label="Total No. of Puppies (Born)" value={form.totalPups} onChangeText={set("totalPups")} placeholder="0" keyboardType="numeric" />
         <View style={fStyles.row}>
           <View style={{ flex: 1 }}><FormField label="Male Puppies (Alive)"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
