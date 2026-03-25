@@ -825,14 +825,17 @@ export type LitterRegistrationDetail = {
 
 export type LitterRegistrationPayload = {
   user_id: number;
+  sire_id?: number;
   sire_name: string;
   sire_kp: string;
+  dam_id?: number;
   dam_name: string;
   dam_kp: string;
   date_of_whelping: string;
   male_pups: string;
   female_pups: string;
   remarks: string;
+  puppies?: { name: string; sex: string; color: string }[];
 };
 
 export type LitterRegStats = {

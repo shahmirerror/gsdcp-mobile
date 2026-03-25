@@ -1377,14 +1377,26 @@ function LitterRegistrationTab() {
   const [submitting, setSubmitting]     = useState(false);
   const [submitError, setSubmitError]   = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [form, setForm] = useState({
-    sireName: "", sireKP: "",
-    damName: "", damKP: "",
-    dateOfWhelping: "",
-    malePups: "", femalePups: "",
-    remarks: "",
+  const [regSire, setRegSire]           = useState<DogOption | null>(null);
+  const [regDam,  setRegDam]            = useState<DogOption | null>(null);
+  const [dateOfWhelping, setDateOfWhelping] = useState("");
+  const [puppies, setPuppies] = useState<{ name: string; sex: string; color: string }[]>([
+    { name: "", sex: "Male", color: "" },
+  ]);
+  const updatePuppy = (idx: number, field: string, val: string) =>
+    setPuppies(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p));
+  const addPuppy    = () => setPuppies(prev => [...prev, { name: "", sex: "Male", color: "" }]);
+  const removePuppy = (idx: number) => setPuppies(prev => prev.filter((_, i) => i !== idx));
+
+  const { data: regMemberDetail } = useQuery<MemberDetail>({
+    queryKey: ["member-detail", user ? `member-${user.id}` : null],
+    queryFn: () => fetchMemberDetail(`member-${user!.id}`),
+    enabled: !!user,
+    staleTime: 300_000,
   });
-  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+  const regDamOptions: DogOption[] = (regMemberDetail?.ownedDogs ?? [])
+    .filter((d: any) => d.gender === "Female" || d.sex === "Female")
+    .map((d: any) => ({ id: d.id, name: d.name, KP: d.KP ?? d.studbook_no ?? "", gender: "Female" }));
 
   const REG_PER_PAGE = 10;
   const [allRegs, setAllRegs]             = useState<LitterRegistration[]>([]);
@@ -1430,24 +1442,37 @@ function LitterRegistrationTab() {
   });
 
   const handleSubmit = async () => {
-    if (!form.sireName.trim())       { setSubmitError("Sire name is required."); return; }
-    if (!form.damName.trim())        { setSubmitError("Dam name is required."); return; }
-    if (!form.dateOfWhelping.trim()) { setSubmitError("Date of whelping is required."); return; }
-    if (!form.malePups.trim())       { setSubmitError("Number of male pups is required."); return; }
-    if (!form.femalePups.trim())     { setSubmitError("Number of female pups is required."); return; }
+    if (!regSire)                    { setSubmitError("Sire dog is required."); return; }
+    if (!regDam)                     { setSubmitError("Dam dog is required."); return; }
+    if (!dateOfWhelping.trim())      { setSubmitError("Whelping date is required."); return; }
+    if (puppies.length === 0)        { setSubmitError("Add at least one puppy."); return; }
+    const badIdx = puppies.findIndex(p => !p.name.trim());
+    if (badIdx !== -1)               { setSubmitError(`Puppy ${badIdx + 1} needs a name.`); return; }
     setSubmitError("");
     setSubmitting(true);
+    const [dd, mm, yyyy] = dateOfWhelping.split("-");
+    const whelpingApiDate = `${yyyy}-${mm}-${dd}`;
+    const malePups   = String(puppies.filter(p => p.sex === "Male").length);
+    const femalePups = String(puppies.filter(p => p.sex === "Female").length);
     try {
       await submitLitterRegistration({
-        user_id: user!.id,
-        sire_name: form.sireName.trim(), sire_kp: form.sireKP.trim(),
-        dam_name: form.damName.trim(),   dam_kp: form.damKP.trim(),
-        date_of_whelping: form.dateOfWhelping.trim(),
-        male_pups: form.malePups.trim(),
-        female_pups: form.femalePups.trim(),
-        remarks: form.remarks.trim(),
+        user_id:          user!.id,
+        sire_id:          parseInt(regSire.id.replace(/^dog-/, ""), 10),
+        sire_name:        regSire.name,
+        sire_kp:          regSire.KP,
+        dam_id:           parseInt(regDam.id.replace(/^dog-/, ""), 10),
+        dam_name:         regDam.name,
+        dam_kp:           regDam.KP,
+        date_of_whelping: whelpingApiDate,
+        male_pups:        malePups,
+        female_pups:      femalePups,
+        remarks:          "",
+        puppies:          puppies.map(p => ({ name: p.name.trim(), sex: p.sex, color: p.color.trim() })),
       });
-      setForm({ sireName: "", sireKP: "", damName: "", damKP: "", dateOfWhelping: "", malePups: "", femalePups: "", remarks: "" });
+      setRegSire(null);
+      setRegDam(null);
+      setDateOfWhelping("");
+      setPuppies([{ name: "", sex: "Male", color: "" }]);
       setShowForm(false);
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 5000);
@@ -1611,23 +1636,99 @@ function LitterRegistrationTab() {
         <Text style={styles.cardHeading}>New Litter Registration</Text>
 
         <FormSection title="SIRE" />
-        <FormField label="Sire Name"        value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
-        <FormField label="Sire KP / Reg No" value={form.sireKP}   onChangeText={set("sireKP")}   placeholder="e.g. KP-12345" />
+        <DogDropdown
+          label="Sire Dog" required
+          mode="remote" sexFilter="male"
+          selected={regSire}
+          onSelect={setRegSire}
+          onClear={() => setRegSire(null)}
+        />
 
         <View style={styles.divider} />
         <FormSection title="DAM" />
-        <FormField label="Dam Name"         value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
-        <FormField label="Dam KP / Reg No"  value={form.damKP}   onChangeText={set("damKP")}   placeholder="e.g. KP-67890" />
+        <DogDropdown
+          label="Dam Dog" required
+          mode="local"
+          localOptions={regDamOptions}
+          selected={regDam}
+          onSelect={setRegDam}
+          onClear={() => setRegDam(null)}
+        />
 
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
-        <FormField label="Date of Whelping" value={form.dateOfWhelping} onChangeText={set("dateOfWhelping")} placeholder="DD/MM/YYYY" required />
-        <View style={fStyles.row}>
-          <View style={{ flex: 1 }}><FormField label="Male Pups"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Female Pups" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
+        <CalendarDatePicker label="Date of Whelping" required value={dateOfWhelping} onChange={setDateOfWhelping} />
+
+        <View style={styles.divider} />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <FormSection title={`PUPPIES (${puppies.length})`} />
+          <TouchableOpacity
+            onPress={addPuppy}
+            activeOpacity={0.7}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, backgroundColor: `${COLORS.primary}12` }}
+          >
+            <Ionicons name="add-circle-outline" size={16} color={COLORS.primary} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: COLORS.primary }}>Add Puppy</Text>
+          </TouchableOpacity>
         </View>
-        <FormField label="Remarks" value={form.remarks} onChangeText={set("remarks")} placeholder="Any additional notes…" multiline />
+
+        {puppies.map((pup, idx) => (
+          <View key={idx} style={{ borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 12, marginBottom: 10, backgroundColor: "#FAFAFA" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: COLORS.textMuted }}>PUPPY {idx + 1}</Text>
+              {puppies.length > 1 && (
+                <TouchableOpacity onPress={() => removePuppy(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Name */}
+            <FormField
+              label="Name" required
+              value={pup.name}
+              onChangeText={v => updatePuppy(idx, "name", v)}
+              placeholder="Puppy name"
+            />
+
+            {/* Sex toggle */}
+            <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 6 }}>
+              Gender <Text style={{ color: COLORS.error }}>*</Text>
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+              {["Male", "Female"].map(s => (
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => updatePuppy(idx, "sex", s)}
+                  activeOpacity={0.7}
+                  style={{
+                    flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center",
+                    borderWidth: 1.5,
+                    borderColor: pup.sex === s ? (s === "Male" ? COLORS.primary : "#9333EA") : COLORS.border,
+                    backgroundColor: pup.sex === s ? (s === "Male" ? `${COLORS.primary}15` : "#9333EA15") : "#fff",
+                  }}
+                >
+                  <Ionicons
+                    name={s === "Male" ? "male" : "female"}
+                    size={14}
+                    color={pup.sex === s ? (s === "Male" ? COLORS.primary : "#9333EA") : COLORS.textMuted}
+                  />
+                  <Text style={{ fontSize: 12, fontWeight: "600", marginTop: 2, color: pup.sex === s ? (s === "Male" ? COLORS.primary : "#9333EA") : COLORS.textMuted }}>
+                    {s}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Color */}
+            <FormField
+              label="Color"
+              value={pup.color}
+              onChangeText={v => updatePuppy(idx, "color", v)}
+              placeholder="e.g. Black - Brown"
+            />
+          </View>
+        ))}
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn label={submitting ? "Submitting…" : "Submit Litter Registration"} onPress={handleSubmit} />
