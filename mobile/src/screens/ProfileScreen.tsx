@@ -1476,6 +1476,7 @@ function LitterRegistrationTab() {
     try {
       await submitLitterRegistration({
         user_id:          user!.id,
+        kennel_id:        user!.myKennel?.kennel_id ?? undefined,
         sire_id:          parseInt(String(regSire.id).replace(/^dog-/, ""), 10),
         sire_name:        regSire.name,
         sire_kp:          regSire.KP,

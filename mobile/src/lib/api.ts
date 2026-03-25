@@ -825,6 +825,7 @@ export type LitterRegistrationDetail = {
 
 export type LitterRegistrationPayload = {
   user_id: number;
+  kennel_id?: string;
   sire_id?: number;
   sire_name: string;
   sire_kp: string;
