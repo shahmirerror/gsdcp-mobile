@@ -855,12 +855,13 @@ export async function verifySire(dogId: string, userId: number): Promise<SireVer
   return { eligible: true, message: "" };
 }
 
-export async function verifyDam(dogId: string, userId: number): Promise<SireVerification> {
+export async function verifyDam(dogId: string, userId: number, sireId?: string): Promise<SireVerification> {
   const numericId = parseInt(dogId.replace(/^dog-/, ""), 10);
+  const numericSireId = sireId ? parseInt(sireId.replace(/^dog-/, ""), 10) : undefined;
   const res = await fetch(`${BASE_URL}/stud-certificates/verify_dam`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ dam_id: numericId, user_id: userId }),
+    body: JSON.stringify({ dam_id: numericId, user_id: userId, ...(numericSireId ? { sire_id: numericSireId } : {}) }),
   });
   const text = await res.text();
   let json: any;

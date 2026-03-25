@@ -566,12 +566,12 @@ function StudCertTab() {
     setDamVerifying(true);
     setDamVerification(null);
     setDamVerifyError(null);
-    verifyDam(selectedDam.id, user.id)
+    verifyDam(selectedDam.id, user.id, selectedSire?.id)
       .then(result => { if (!cancelled) setDamVerification(result); })
       .catch(err  => { if (!cancelled) setDamVerifyError(err?.message ?? "Verification unavailable"); })
       .finally(()  => { if (!cancelled) setDamVerifying(false); });
     return () => { cancelled = true; };
-  }, [selectedDam?.id]);
+  }, [selectedDam?.id, selectedSire?.id]);
 
   const CERT_PER_PAGE = 10;
   const [allCerts, setAllCerts]     = useState<StudCertificate[]>([]);
