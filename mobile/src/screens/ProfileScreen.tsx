@@ -11,7 +11,6 @@ import {
   RefreshControl,
   TextInput,
   Platform,
-  Alert,
   Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -644,6 +643,7 @@ function StudCertTab() {
   const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
   const [submitting, setSubmitting]     = useState(false);
   const [submitError, setSubmitError]   = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const [selectedSire, setSelectedSire]         = useState<DogOption | null>(null);
   const [selectedDam,  setSelectedDam]          = useState<DogOption | null>(null);
@@ -768,8 +768,9 @@ function StudCertTab() {
       setDamVerifyError(null);
       setForm({ dateOfMating: "" });
       setShowForm(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
       refetch();
-      Alert.alert("Submitted", "Stud certificate submitted successfully.");
     } catch (e: any) {
       setSubmitError(e.message ?? "Submission failed. Please try again.");
     } finally {
@@ -940,6 +941,12 @@ function StudCertTab() {
   return (
     <View style={styles.card}>
       <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
+      {submitSuccess && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>Stud certificate submitted successfully.</Text>
+        </View>
+      )}
       {certsLoading ? (
         <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
       ) : allCerts.length === 0 ? (
@@ -1000,6 +1007,7 @@ function LitterInspectionTab() {
   const [selectedId, setSelectedId]       = useState<string | null>(null);
   const [submitting, setSubmitting]       = useState(false);
   const [submitError, setSubmitError]     = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [inspSire, setInspSire]           = useState<DogOption | null>(null);
   const [inspDam,  setInspDam]            = useState<DogOption | null>(null);
   const [certCheck, setCertCheck]         = useState<CertificateCheck | null>(null);
@@ -1122,8 +1130,9 @@ function LitterInspectionTab() {
       setInspDam(null);
       setForm({ dateOfWhelping: "", totalPups: "", malePups: "", femalePups: "", deadPups: "" });
       setShowForm(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
       refetch();
-      Alert.alert("Submitted", "Litter inspection submitted successfully.");
     } catch (e: any) {
       console.error("[LitterInspection] submit error:", e);
       setSubmitError(e.message ?? "Submission failed. Please try again.");
@@ -1288,6 +1297,12 @@ function LitterInspectionTab() {
   return (
     <View style={styles.card}>
       <ListHeader title="Litter Inspections" onNew={() => setShowForm(true)} />
+      {submitSuccess && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>Litter inspection submitted successfully.</Text>
+        </View>
+      )}
       {isLoading ? (
         <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
       ) : listError ? (
@@ -1357,6 +1372,7 @@ function LitterRegistrationTab() {
   const [selectedId, setSelectedId]     = useState<string | null>(null);
   const [submitting, setSubmitting]     = useState(false);
   const [submitError, setSubmitError]   = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [form, setForm] = useState({
     sireName: "", sireKP: "",
     damName: "", damKP: "",
@@ -1427,8 +1443,9 @@ function LitterRegistrationTab() {
       });
       setForm({ sireName: "", sireKP: "", damName: "", damKP: "", dateOfWhelping: "", malePups: "", femalePups: "", remarks: "" });
       setShowForm(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
       refetch();
-      Alert.alert("Submitted", "Litter registration submitted successfully.");
     } catch (e: any) {
       setSubmitError(e.message ?? "Submission failed. Please try again.");
     } finally {
@@ -1616,6 +1633,12 @@ function LitterRegistrationTab() {
   return (
     <View style={styles.card}>
       <ListHeader title="Litter Registrations" onNew={() => setShowForm(true)} />
+      {submitSuccess && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>Litter registration submitted successfully.</Text>
+        </View>
+      )}
 
       {regStats && (
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
