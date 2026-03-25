@@ -740,6 +740,8 @@ function StudCertTab() {
     queryKey: ["stud-certificate-detail", selectedCertId],
     queryFn: () => fetchStudCertificateDetail(selectedCertId!, user!.id),
     enabled: !!selectedCertId && !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const handleSubmit = async () => {
@@ -1083,6 +1085,8 @@ function LitterInspectionTab() {
     queryKey: ["litter-inspection-detail", selectedId],
     queryFn: () => fetchLitterInspectionDetail(selectedId!, user!.id),
     enabled: !!selectedId && !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const setNum = (key: keyof typeof form) => (v: string) =>
@@ -1421,6 +1425,8 @@ function LitterRegistrationTab() {
     queryKey: ["litter-registration-detail", selectedId],
     queryFn: () => fetchLitterRegistrationDetail(selectedId!, user!.id),
     enabled: !!selectedId && !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const handleSubmit = async () => {
