@@ -1032,12 +1032,23 @@ function LitterInspectionTab() {
     enabled: !!selectedId && !!user,
   });
 
+  const setNum = (key: keyof typeof form) => (v: string) =>
+    setForm(f => ({ ...f, [key]: v.replace(/[^0-9]/g, "") }));
+
+  const totalVal  = parseInt(form.totalPups)  || 0;
+  const maleVal   = parseInt(form.malePups)   || 0;
+  const femaleVal = parseInt(form.femalePups) || 0;
+  const deadVal   = parseInt(form.deadPups)   || 0;
+  const puppySum  = maleVal + femaleVal + deadVal;
+  const puppyMismatch = form.totalPups.trim() !== "" && totalVal !== puppySum;
+
   const handleSubmit = async () => {
     if (!inspSire)                   { setSubmitError("Sire dog is required."); return; }
     if (!inspDam)                    { setSubmitError("Dam dog is required."); return; }
     if (!form.dateOfWhelping.trim()) { setSubmitError("Whelping date is required."); return; }
     if (!form.malePups.trim())       { setSubmitError("Number of male puppies is required."); return; }
     if (!form.femalePups.trim())     { setSubmitError("Number of female puppies is required."); return; }
+    if (puppyMismatch)               { setSubmitError(`Total (${totalVal}) must equal Male + Female + Expired (${puppySum}).`); return; }
     setSubmitError("");
     setSubmitting(true);
     const today = new Date().toISOString().split("T")[0];
@@ -1167,13 +1178,20 @@ function LitterInspectionTab() {
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
         <CalendarDatePicker label="Whelping Date" required value={form.dateOfWhelping} onChange={set("dateOfWhelping")} />
-        <FormField label="Total No. of Puppies (Born)" value={form.totalPups} onChangeText={set("totalPups")} placeholder="0" keyboardType="numeric" />
+        <FormField label="Total No. of Puppies (Born)" value={form.totalPups} onChangeText={setNum("totalPups")} placeholder="0" keyboardType="number-pad" />
+        {puppyMismatch && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, marginTop: -6, paddingHorizontal: 4 }}>
+            <Ionicons name="warning-outline" size={13} color="#D97706" />
+            <Text style={{ fontSize: 12, color: "#92400E" }}>Total must equal Male + Female + Expired ({puppySum})</Text>
+          </View>
+        )}
         <View style={fStyles.row}>
-          <View style={{ flex: 1 }}><FormField label="Male Puppies (Alive)"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ flex: 1 }}><FormField label="Male (Alive)"   value={form.malePups}   onChangeText={setNum("malePups")}   placeholder="0" keyboardType="number-pad" required /></View>
           <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Female Puppies (Alive)" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ flex: 1 }}><FormField label="Female (Alive)" value={form.femalePups} onChangeText={setNum("femalePups")} placeholder="0" keyboardType="number-pad" required /></View>
+          <View style={{ width: 12 }} />
+          <View style={{ flex: 1 }}><FormField label="Expired"        value={form.deadPups}   onChangeText={setNum("deadPups")}   placeholder="0" keyboardType="number-pad" /></View>
         </View>
-        <FormField label="No. of Puppies Expired" value={form.deadPups} onChangeText={set("deadPups")} placeholder="0" keyboardType="numeric" />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn label={submitting ? "Submitting…" : "Submit Litter Inspection"} onPress={handleSubmit} />
