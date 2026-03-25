@@ -27,6 +27,7 @@ import {
   checkLitterCertificate, CertificateCheck,
   LitterInspection, LitterInspectionDetail,
   fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
+  checkLitterInspection, LitterInspectionCheck,
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
   searchDogs, DogSearchResult,
   verifySire, verifyDam, SireVerification,
@@ -1380,6 +1381,9 @@ function LitterRegistrationTab() {
   const [regSire, setRegSire]           = useState<DogOption | null>(null);
   const [regDam,  setRegDam]            = useState<DogOption | null>(null);
   const [dateOfWhelping, setDateOfWhelping] = useState("");
+  const [inspCheck, setInspCheck]       = useState<LitterInspectionCheck | null>(null);
+  const [inspChecking, setInspChecking] = useState(false);
+  const [inspCheckError, setInspCheckError] = useState("");
   const [puppies, setPuppies] = useState<{ name: string; sex: string; color: string }[]>([
     { name: "", sex: "Male", color: "" },
   ]);
@@ -1387,6 +1391,21 @@ function LitterRegistrationTab() {
     setPuppies(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p));
   const addPuppy    = () => setPuppies(prev => [...prev, { name: "", sex: "Male", color: "" }]);
   const removePuppy = (idx: number) => setPuppies(prev => prev.filter((_, i) => i !== idx));
+
+  useEffect(() => {
+    if (!regSire || !regDam || !dateOfWhelping) { setInspCheck(null); setInspCheckError(""); return; }
+    const [dd, mm, yyyy] = dateOfWhelping.split("-");
+    const apiDate = `${yyyy}-${mm}-${dd}`;
+    let cancelled = false;
+    setInspChecking(true);
+    setInspCheck(null);
+    setInspCheckError("");
+    checkLitterInspection(regSire.id, regDam.id, apiDate)
+      .then(result => { if (!cancelled) { setInspCheck(result); setInspCheckError(""); } })
+      .catch((e: any) => { if (!cancelled) setInspCheckError(e.message ?? "Verification failed"); })
+      .finally(() => { if (!cancelled) setInspChecking(false); });
+    return () => { cancelled = true; };
+  }, [regSire?.id, regDam?.id, dateOfWhelping]);
 
   const { data: regMemberDetail } = useQuery<MemberDetail>({
     queryKey: ["member-detail", user ? `member-${user.id}` : null],
@@ -1473,6 +1492,8 @@ function LitterRegistrationTab() {
       setRegDam(null);
       setDateOfWhelping("");
       setPuppies([{ name: "", sex: "Male", color: "" }]);
+      setInspCheck(null);
+      setInspCheckError("");
       setShowForm(false);
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 5000);
@@ -1658,6 +1679,49 @@ function LitterRegistrationTab() {
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
         <CalendarDatePicker label="Date of Whelping" required value={dateOfWhelping} onChange={setDateOfWhelping} />
+
+        {/* Inspection verification banner */}
+        {(inspChecking || inspCheck || inspCheckError) && (
+          <View style={{
+            flexDirection: "row", alignItems: "center", gap: 8,
+            borderRadius: 10, padding: 12, marginTop: 8,
+            backgroundColor: inspChecking
+              ? "#F1F5F9"
+              : inspCheck?.found
+                ? "#F0FDF4"
+                : "#FFF7ED",
+            borderWidth: 1,
+            borderColor: inspChecking
+              ? COLORS.border
+              : inspCheck?.found
+                ? "#86EFAC"
+                : "#FED7AA",
+          }}>
+            {inspChecking
+              ? <ActivityIndicator size="small" color={COLORS.primary} />
+              : <Ionicons
+                  name={inspCheck?.found ? "checkmark-circle" : "warning"}
+                  size={18}
+                  color={inspCheck?.found ? "#16A34A" : "#EA580C"}
+                />
+            }
+            <View style={{ flex: 1 }}>
+              {inspChecking
+                ? <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Verifying litter inspection…</Text>
+                : inspCheck?.found
+                  ? <>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#15803D" }}>Litter inspection verified</Text>
+                      {inspCheck.matingDate
+                        ? <Text style={{ fontSize: 11, color: "#16A34A", marginTop: 1 }}>Mating date: {inspCheck.matingDate}</Text>
+                        : null}
+                    </>
+                  : <Text style={{ fontSize: 13, fontWeight: "600", color: "#C2410C" }}>
+                      {inspCheckError || inspCheck?.message || "No matching litter inspection found"}
+                    </Text>
+              }
+            </View>
+          </View>
+        )}
 
         <View style={styles.divider} />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>

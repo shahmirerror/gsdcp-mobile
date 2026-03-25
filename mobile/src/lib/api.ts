@@ -879,6 +879,33 @@ export async function fetchLitterRegistrationDetail(id: string, userId: number):
   return json.data;
 }
 
+export type LitterInspectionCheck = {
+  found: boolean;
+  matingDate: string | null;
+  message: string;
+};
+
+export async function checkLitterInspection(
+  sireId: string | number,
+  damId:  string | number,
+  dateOfWhelping: string,   // YYYY-MM-DD
+): Promise<LitterInspectionCheck> {
+  const sNum = parseInt(String(sireId).replace(/^dog-/, ""), 10);
+  const dNum = parseInt(String(damId).replace(/^dog-/, ""), 10);
+  const res = await fetch(`${BASE_URL}/litter-registration/checkinspection`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sire_id: sNum, dam_id: dNum, date_of_whelping: dateOfWhelping }),
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
+  if (json.success === true) {
+    return { found: true, matingDate: json.data?.mating_date ?? null, message: json.message ?? "Inspection verified" };
+  }
+  return { found: false, matingDate: null, message: json.error?.message ?? json.message ?? "No matching inspection found" };
+}
+
 export async function submitLitterRegistration(payload: LitterRegistrationPayload): Promise<void> {
   const res = await fetch(`${BASE_URL}/litter-registrations`, {
     method: "POST",
