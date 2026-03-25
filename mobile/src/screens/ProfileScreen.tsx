@@ -1395,8 +1395,8 @@ function LitterRegistrationTab() {
     staleTime: 300_000,
   });
   const regDamOptions: DogOption[] = (regMemberDetail?.ownedDogs ?? [])
-    .filter((d: any) => d.gender === "Female" || d.sex === "Female")
-    .map((d: any) => ({ id: d.id, name: d.name, KP: d.KP ?? d.studbook_no ?? "", gender: "Female" }));
+    .filter(d => d.sex === "Female")
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
   const REG_PER_PAGE = 10;
   const [allRegs, setAllRegs]             = useState<LitterRegistration[]>([]);
