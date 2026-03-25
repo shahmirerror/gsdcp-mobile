@@ -908,10 +908,24 @@ export async function checkLitterInspection(
 }
 
 export async function submitLitterRegistration(payload: LitterRegistrationPayload): Promise<void> {
+  const form = new URLSearchParams();
+  form.append("user_id",          String(payload.user_id));
+  if (payload.kennel_id != null)  form.append("kennel_id",    String(payload.kennel_id));
+  if (payload.sire_id   != null)  form.append("sire_id",      String(payload.sire_id));
+  form.append("sire_name",        payload.sire_name);
+  form.append("sire_kp",          payload.sire_kp);
+  if (payload.dam_id    != null)  form.append("dam_id",       String(payload.dam_id));
+  form.append("dam_name",         payload.dam_name);
+  form.append("dam_kp",           payload.dam_kp);
+  form.append("date_of_whelping", payload.date_of_whelping);
+  form.append("male_pups",        payload.male_pups);
+  form.append("female_pups",      payload.female_pups);
+  form.append("remarks",          payload.remarks);
+  if (payload.puppies)            form.append("puppies",      JSON.stringify(payload.puppies));
   const res = await fetch(`${BASE_URL}/new-litter-registration`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(payload),
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: form.toString(),
   });
   const json = await res.json();
   if (!res.ok || json.success === false) {
