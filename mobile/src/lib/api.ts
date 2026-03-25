@@ -908,7 +908,7 @@ export async function checkLitterInspection(
 }
 
 export async function submitLitterRegistration(payload: LitterRegistrationPayload): Promise<void> {
-  const res = await fetch(`${BASE_URL}/litter-registrations`, {
+  const res = await fetch(`${BASE_URL}/new-litter-registration`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
