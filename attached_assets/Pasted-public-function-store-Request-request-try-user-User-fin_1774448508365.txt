@@ -1,0 +1,109 @@
+public function store(Request $request)
+    {
+        // try {
+            $user = User::find($request->user_id);
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'UNAUTHORIZED',
+                        'message' => 'Unauthorized'
+                    ]
+                ], 401);
+            }
+
+            // $validated = $request->validate([
+            //     'sire_id' => 'required|integer|exists:mobile_dogs,id',
+            //     'dam_id' => 'required|integer|exists:mobile_dogs,id',
+            //     'inspection_id' => 'nullable|integer|exists:litter_inspections,id',
+            //     'puppies' => 'required|array|min:1',
+            //     'puppies.*.name' => 'required|string|max:255',
+            //     'puppies.*.gender' => 'required|in:Male,Female',
+            //     'puppies.*.color' => 'nullable|string|max:100',
+            //     'registration_date' => 'required|date',
+            //     'stud_fee' => 'nullable|numeric|min:0',
+            //     'notes' => 'nullable|string',
+            // ]);
+
+            // Verify sire and dam exist
+            $sire = Dog::find($request->sire_id);
+            $dam = Dog::find($request->dam_id);
+            $whelping_date = $request->date_of_whelping;
+
+            if (!$sire || !$dam) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'INVALID_DOGS',
+                        'message' => 'Sire or dam dog not found'
+                    ]
+                ], 422);
+            }
+            
+            $check = LitterInspection::where('sire_id',$sire_id)->where('dam_id',$dam_id)->where('whelping_date',$whelping_date)->where('status',2)->where('is_deleted',0)->orderBy('id','DESC')->first();
+
+            // Verify inspection belongs to user if provided
+            if (!isset($check->id))
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'INVALID_INSPECTION',
+                        'message' => 'Litter inspection not found.'
+                    ]
+                ], 404);
+            }
+
+            $registration = new LitterRegistration;
+            $registration->owner_id = $user->id;
+            $registration->kennel_id = str_replace("ken-","",$request->kennel_id);
+            $registration->sire_id = $request->sire_id;
+            $registration->dam_id = $request->dam_id;
+            $registration->stud_id = $check->stud_id;
+            $registration->inspection_1 = 1;
+            $registration->dob = $request->date_of_whelping;
+            $registration->no_of_puppies = $request->male_pups + $request->female_pups;
+            $registration->save();
+            
+            foreach($request->puppies as $puppy)
+            {
+                $puppies = new LitterDetail;
+                $puppies->litter_id = $registration->id;
+                $puppies->name = $puppy->name;
+                $puppies->sex = $puppy->sex;
+                $puppies->color = $puppy->color;
+                $puppies->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Litter registration created successfully',
+                'data' => [
+                    'id' => $registration->id,
+                    'breeder_id' => $registration->owner_id,
+                    'sire_id' => $registration->sire_id,
+                    'dam_id' => $registration->dam_id,
+                    'status' => $registration->status,
+                    'created_at' => $registration->created_at->format('Y-m-d H:i:s'),
+                ]
+            ], 201);
+        // } catch (\Illuminate\Validation\ValidationException $e) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'error' => [
+        //             'code' => 'VALIDATION_ERROR',
+        //             'message' => 'Validation failed',
+        //             'details' => $e->errors()
+        //         ]
+        //     ], 422);
+        // } catch (\Exception $e) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'error' => [
+        //             'code' => 'LITTER_REGISTRATION_ERROR',
+        //             'message' => 'Failed to create litter registration: ' . $e->getMessage()
+        //         ]
+        //     ], 500);
+        // }
+    }
