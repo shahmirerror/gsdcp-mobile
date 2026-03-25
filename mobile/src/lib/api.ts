@@ -757,7 +757,7 @@ export async function checkLitterCertificate(sireId: string, damId: string, user
 }
 
 export async function submitLitterInspection(payload: LitterInspectionPayload): Promise<void> {
-  const res = await fetch(`${BASE_URL}/litter-inspections`, {
+  const res = await fetch(`${BASE_URL}/new-litter-inspection`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
