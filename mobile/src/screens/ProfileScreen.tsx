@@ -375,12 +375,17 @@ type DogOption = { id: string; name: string; KP: string; owner?: string; sex?: s
 const CAL_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const CAL_DOW    = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-function CalendarDatePicker({ label, required, value, onChange }: {
+function CalendarDatePicker({ label, required, value, onChange, maxDate }: {
   label: string; required?: boolean;
   value: string;       // DD-MM-YYYY display / storage
   onChange: (v: string) => void;
+  maxDate?: Date;      // no date after this may be selected (defaults to today)
 }) {
   const today = new Date();
+  const max   = maxDate ?? today;
+  // Normalise max to start-of-day for clean comparisons
+  const maxDay = new Date(max.getFullYear(), max.getMonth(), max.getDate());
+
   const parseValue = (v: string): Date | null => {
     if (!v) return null;
     const [d, m, y] = v.split("-").map(Number);
@@ -393,13 +398,24 @@ function CalendarDatePicker({ label, required, value, onChange }: {
 
   const openPicker = () => {
     if (selected) { setViewYear(selected.getFullYear()); setViewMonth(selected.getMonth()); }
+    else { setViewYear(maxDay.getFullYear()); setViewMonth(maxDay.getMonth()); }
     setShow(true);
   };
 
+  // Block navigating forward past the max month
+  const atMaxMonth = viewYear > maxDay.getFullYear() ||
+    (viewYear === maxDay.getFullYear() && viewMonth >= maxDay.getMonth());
+
   const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
-  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); };
+  const nextMonth = () => {
+    if (atMaxMonth) return;
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1);
+  };
+
+  const isFuture = (day: number) => new Date(viewYear, viewMonth, day) > maxDay;
 
   const selectDay = (day: number) => {
+    if (isFuture(day)) return;
     onChange(`${String(day).padStart(2,"0")}-${String(viewMonth+1).padStart(2,"0")}-${viewYear}`);
     setShow(false);
   };
@@ -411,8 +427,8 @@ function CalendarDatePicker({ label, required, value, onChange }: {
   for (let i = 1; i <= daysInMonth; i++) cells.push(i);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const isSel   = (d: number) => selected && selected.getDate() === d && selected.getMonth() === viewMonth && selected.getFullYear() === viewYear;
-  const isTod   = (d: number) => today.getDate() === d && today.getMonth() === viewMonth && today.getFullYear() === viewYear;
+  const isSel = (d: number) => selected && selected.getDate() === d && selected.getMonth() === viewMonth && selected.getFullYear() === viewYear;
+  const isTod = (d: number) => today.getDate() === d && today.getMonth() === viewMonth && today.getFullYear() === viewYear;
 
   return (
     <View style={{ marginBottom: 14 }}>
@@ -440,7 +456,7 @@ function CalendarDatePicker({ label, required, value, onChange }: {
                 <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
               </TouchableOpacity>
               <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.text }}>{CAL_MONTHS[viewMonth]} {viewYear}</Text>
-              <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity onPress={atMaxMonth ? undefined : nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ opacity: atMaxMonth ? 0.25 : 1 }}>
                 <Ionicons name="chevron-forward" size={22} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
@@ -453,20 +469,25 @@ function CalendarDatePicker({ label, required, value, onChange }: {
             {/* Day grid */}
             {Array.from({ length: cells.length / 7 }).map((_, week) => (
               <View key={week} style={{ flexDirection: "row", marginBottom: 2 }}>
-                {cells.slice(week * 7, week * 7 + 7).map((day, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => { if (day) selectDay(day); }}
-                    activeOpacity={day ? 0.7 : 1}
-                    style={{ flex: 1, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18, backgroundColor: day && isSel(day) ? COLORS.primary : day && isTod(day) ? `${COLORS.primary}18` : "transparent" }}
-                  >
-                    {!!day && (
-                      <Text style={{ fontSize: 13, fontWeight: isSel(day) || isTod(day) ? "700" : "400", color: isSel(day) ? "#fff" : isTod(day) ? COLORS.primary : COLORS.text }}>
-                        {day}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                {cells.slice(week * 7, week * 7 + 7).map((day, i) => {
+                  const future  = !!day && isFuture(day);
+                  const sel     = !!day && !!isSel(day);
+                  const tod     = !!day && isTod(day);
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => { if (day && !future) selectDay(day); }}
+                      activeOpacity={day && !future ? 0.7 : 1}
+                      style={{ flex: 1, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18, backgroundColor: sel ? COLORS.primary : tod ? `${COLORS.primary}18` : "transparent", opacity: future ? 0.3 : 1 }}
+                    >
+                      {!!day && (
+                        <Text style={{ fontSize: 13, fontWeight: sel || tod ? "700" : "400", color: sel ? "#fff" : tod ? COLORS.primary : COLORS.text }}>
+                          {day}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             ))}
             <TouchableOpacity onPress={() => setShow(false)} style={{ marginTop: 10, alignItems: "center", paddingVertical: 8 }}>
