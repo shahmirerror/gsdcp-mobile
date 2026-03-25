@@ -1709,15 +1709,13 @@ function LitterRegistrationTab() {
               {inspChecking
                 ? <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Verifying litter inspection…</Text>
                 : inspCheck?.found
-                  ? <>
+                  ? <View>
                       <Text style={{ fontSize: 13, fontWeight: "700", color: "#15803D" }}>Litter inspection verified</Text>
                       {inspCheck.matingDate
-                        ? <Text style={{ fontSize: 11, color: "#16A34A", marginTop: 1 }}>Mating date: {inspCheck.matingDate}</Text>
+                        ? <Text style={{ fontSize: 11, color: "#16A34A", marginTop: 1 }}>{"Mating date: " + inspCheck.matingDate}</Text>
                         : null}
-                    </>
-                  : <Text style={{ fontSize: 13, fontWeight: "600", color: "#C2410C" }}>
-                      {inspCheckError || inspCheck?.message || "No matching litter inspection found"}
-                    </Text>
+                    </View>
+                  : <Text style={{ fontSize: 13, fontWeight: "600", color: "#C2410C" }}>{inspCheckError || (inspCheck ? inspCheck.message : "") || "No matching litter inspection found"}</Text>
               }
             </View>
           </View>
@@ -1802,7 +1800,15 @@ function LitterRegistrationTab() {
         <SubmitBtn
           label={submitting ? "Submitting…" : "Submit Litter Registration"}
           onPress={handleSubmit}
-          disabled={!inspCheck?.found || submitting || !regSire || !regDam || !dateOfWhelping}
+          disabled={
+            !inspCheck?.found ||
+            submitting ||
+            !regSire ||
+            !regDam ||
+            !dateOfWhelping ||
+            puppies.length === 0 ||
+            puppies.some(p => !p.name.trim())
+          }
         />
       </View>
     );
