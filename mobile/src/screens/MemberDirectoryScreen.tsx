@@ -19,6 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMembersPage, Member, MembersPage } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 
 function getInitials(name: string): string {
   return name
@@ -75,6 +76,7 @@ function MemberListItem({ member, onPress }: { member: Member; onPress: () => vo
 export default function MemberDirectoryScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
@@ -333,7 +335,13 @@ export default function MemberDirectoryScreen() {
           renderItem={({ item }) => (
             <MemberListItem
               member={item}
-              onPress={() => navigation.push("MemberProfile", { id: item.id, member: item })}
+              onPress={() => {
+                if (user && item.id === user.member_id) {
+                  navigation.navigate("ProfileTab");
+                } else {
+                  navigation.push("MemberProfile", { id: item.id, member: item });
+                }
+              }}
             />
           )}
           ListFooterComponent={
