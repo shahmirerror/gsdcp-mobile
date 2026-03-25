@@ -665,12 +665,15 @@ export type LitterInspectionDetail = {
 
 export type LitterInspectionPayload = {
   user_id: number;
+  sire_id?: number;
+  dam_id?: number;
   sire_name: string;
   sire_kp: string;
   dam_name: string;
   dam_kp: string;
   date_of_whelping: string;
   date_of_inspection: string;
+  total_puppies?: string;
   male_pups: string;
   female_pups: string;
   dead_pups: string;

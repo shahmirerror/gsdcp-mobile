@@ -867,12 +867,11 @@ function LitterInspectionTab() {
   const [selectedId, setSelectedId]       = useState<string | null>(null);
   const [submitting, setSubmitting]       = useState(false);
   const [submitError, setSubmitError]     = useState("");
+  const [inspSire, setInspSire]           = useState<DogOption | null>(null);
+  const [inspDam,  setInspDam]            = useState<DogOption | null>(null);
   const [form, setForm] = useState({
-    sireName: "", sireKP: "",
-    damName: "", damKP: "",
-    dateOfWhelping: "", dateOfInspection: "",
-    malePups: "", femalePups: "", deadPups: "",
-    inspectorName: "", remarks: "",
+    dateOfWhelping: "",
+    totalPups: "", malePups: "", femalePups: "", deadPups: "",
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
@@ -916,29 +915,35 @@ function LitterInspectionTab() {
   });
 
   const handleSubmit = async () => {
-    if (!form.sireName.trim())       { setSubmitError("Sire name is required."); return; }
-    if (!form.damName.trim())        { setSubmitError("Dam name is required."); return; }
-    if (!form.dateOfWhelping.trim()) { setSubmitError("Date of whelping is required."); return; }
-    if (!form.dateOfInspection.trim()) { setSubmitError("Date of inspection is required."); return; }
-    if (!form.malePups.trim())       { setSubmitError("Number of male pups is required."); return; }
-    if (!form.femalePups.trim())     { setSubmitError("Number of female pups is required."); return; }
-    if (!form.inspectorName.trim())  { setSubmitError("Inspector name is required."); return; }
+    if (!inspSire)                   { setSubmitError("Sire dog is required."); return; }
+    if (!inspDam)                    { setSubmitError("Dam dog is required."); return; }
+    if (!form.dateOfWhelping.trim()) { setSubmitError("Whelping date is required."); return; }
+    if (!form.malePups.trim())       { setSubmitError("Number of male puppies is required."); return; }
+    if (!form.femalePups.trim())     { setSubmitError("Number of female puppies is required."); return; }
     setSubmitError("");
     setSubmitting(true);
+    const today = new Date().toISOString().split("T")[0];
     try {
       await submitLitterInspection({
-        user_id: user!.id,
-        sire_name: form.sireName.trim(), sire_kp: form.sireKP.trim(),
-        dam_name: form.damName.trim(),  dam_kp: form.damKP.trim(),
-        date_of_whelping: form.dateOfWhelping.trim(),
-        date_of_inspection: form.dateOfInspection.trim(),
-        male_pups: form.malePups.trim(),
-        female_pups: form.femalePups.trim(),
-        dead_pups: form.deadPups.trim(),
-        inspector_name: form.inspectorName.trim(),
-        remarks: form.remarks.trim(),
+        user_id:            user!.id,
+        sire_id:            parseInt(inspSire.id.replace(/^dog-/, ""), 10),
+        dam_id:             parseInt(inspDam.id.replace(/^dog-/, ""), 10),
+        sire_name:          inspSire.name,
+        sire_kp:            inspSire.KP,
+        dam_name:           inspDam.name,
+        dam_kp:             inspDam.KP,
+        date_of_whelping:   form.dateOfWhelping.trim(),
+        date_of_inspection: today,
+        total_puppies:      form.totalPups.trim() || undefined,
+        male_pups:          form.malePups.trim(),
+        female_pups:        form.femalePups.trim(),
+        dead_pups:          form.deadPups.trim() || "0",
+        inspector_name:     "",
+        remarks:            "",
       });
-      setForm({ sireName: "", sireKP: "", damName: "", damKP: "", dateOfWhelping: "", dateOfInspection: "", malePups: "", femalePups: "", deadPups: "", inspectorName: "", remarks: "" });
+      setInspSire(null);
+      setInspDam(null);
+      setForm({ dateOfWhelping: "", totalPups: "", malePups: "", femalePups: "", deadPups: "" });
       setShowForm(false);
       refetch();
       Alert.alert("Submitted", "Litter inspection submitted successfully.");
@@ -1018,27 +1023,36 @@ function LitterInspectionTab() {
         <Text style={styles.cardHeading}>New Litter Inspection</Text>
 
         <FormSection title="SIRE" />
-        <FormField label="Sire Name"        value={form.sireName} onChangeText={set("sireName")} placeholder="Enter sire name" required />
-        <FormField label="Sire KP / Reg No" value={form.sireKP}   onChangeText={set("sireKP")}   placeholder="e.g. KP-12345" />
+        <DogDropdown
+          label="Sire Dog" required
+          mode="remote"
+          sexFilter="male"
+          selected={inspSire}
+          onSelect={setInspSire}
+          onClear={() => setInspSire(null)}
+        />
 
         <View style={styles.divider} />
         <FormSection title="DAM" />
-        <FormField label="Dam Name"         value={form.damName} onChangeText={set("damName")} placeholder="Enter dam name" required />
-        <FormField label="Dam KP / Reg No"  value={form.damKP}   onChangeText={set("damKP")}   placeholder="e.g. KP-67890" />
+        <DogDropdown
+          label="Dam Dog" required
+          mode="remote"
+          sexFilter="female"
+          selected={inspDam}
+          onSelect={setInspDam}
+          onClear={() => setInspDam(null)}
+        />
 
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
-        <FormField label="Date of Whelping"   value={form.dateOfWhelping}   onChangeText={set("dateOfWhelping")}   placeholder="DD/MM/YYYY" required />
-        <FormField label="Date of Inspection" value={form.dateOfInspection} onChangeText={set("dateOfInspection")} placeholder="DD/MM/YYYY" required />
+        <FormField label="Whelping Date" value={form.dateOfWhelping} onChangeText={set("dateOfWhelping")} placeholder="YYYY-MM-DD" required />
+        <FormField label="Total No. of Puppies (Born)" value={form.totalPups} onChangeText={set("totalPups")} placeholder="0" keyboardType="numeric" />
         <View style={fStyles.row}>
-          <View style={{ flex: 1 }}><FormField label="Male Pups"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
+          <View style={{ flex: 1 }}><FormField label="Male Puppies (Alive)"   value={form.malePups}   onChangeText={set("malePups")}   placeholder="0" keyboardType="numeric" required /></View>
           <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Female Pups" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Dead"        value={form.deadPups}   onChangeText={set("deadPups")}   placeholder="0" keyboardType="numeric" /></View>
+          <View style={{ flex: 1 }}><FormField label="Female Puppies (Alive)" value={form.femalePups} onChangeText={set("femalePups")} placeholder="0" keyboardType="numeric" required /></View>
         </View>
-        <FormField label="Inspector Name" value={form.inspectorName} onChangeText={set("inspectorName")} placeholder="Full name" required />
-        <FormField label="Remarks"        value={form.remarks}       onChangeText={set("remarks")}       placeholder="Any additional notes…" multiline />
+        <FormField label="No. of Puppies Expired" value={form.deadPups} onChangeText={set("deadPups")} placeholder="0" keyboardType="numeric" />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn label={submitting ? "Submitting…" : "Submit Litter Inspection"} onPress={handleSubmit} />
