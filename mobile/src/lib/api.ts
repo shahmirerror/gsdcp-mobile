@@ -708,6 +708,33 @@ export async function fetchLitterInspectionDetail(id: string, userId: number): P
   return json.data;
 }
 
+export type CertificateCheck = {
+  found: boolean;
+  matingDate: string | null;
+  message: string;
+};
+
+export async function checkLitterCertificate(sireId: string, damId: string): Promise<CertificateCheck> {
+  const sNum = parseInt(sireId.replace(/^dog-/, ""), 10);
+  const dNum = parseInt(damId.replace(/^dog-/, ""), 10);
+  const res = await fetch(`${BASE_URL}/litter-inspections/checkcertificate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sire_id: sNum, dam_id: dNum }),
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("Invalid response"); }
+  if (!res.ok && json.success == null) throw new Error(json.message ?? "Server error");
+  if (json.success === true) {
+    return { found: true, matingDate: json.data?.mating_date ?? json.data?.date ?? null, message: json.message ?? "Stud certificate found" };
+  }
+  if (json.error?.code === "STUD_CERTIFICATE_ERROR") {
+    return { found: false, matingDate: null, message: json.error.message ?? "No stud certificate found" };
+  }
+  return { found: false, matingDate: null, message: json.message ?? "No stud certificate found" };
+}
+
 export async function submitLitterInspection(payload: LitterInspectionPayload): Promise<void> {
   const res = await fetch(`${BASE_URL}/litter-inspections`, {
     method: "POST",

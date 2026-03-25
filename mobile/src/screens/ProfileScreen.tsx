@@ -25,6 +25,7 @@ import {
   fetchStudCertificates, fetchStudCertificateDetail, submitStudCertificate,
   StudCertificate, StudCertificateDetail,
   fetchLitterInspections, fetchLitterInspectionDetail, submitLitterInspection,
+  checkLitterCertificate, CertificateCheck,
   LitterInspection, LitterInspectionDetail,
   fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
@@ -980,6 +981,9 @@ function LitterInspectionTab() {
   const [submitError, setSubmitError]     = useState("");
   const [inspSire, setInspSire]           = useState<DogOption | null>(null);
   const [inspDam,  setInspDam]            = useState<DogOption | null>(null);
+  const [certCheck, setCertCheck]         = useState<CertificateCheck | null>(null);
+  const [certChecking, setCertChecking]   = useState(false);
+  const [certCheckError, setCertCheckError] = useState<string | null>(null);
   const [form, setForm] = useState({
     dateOfWhelping: "",
     totalPups: "", malePups: "", femalePups: "", deadPups: "",
@@ -1016,6 +1020,23 @@ function LitterInspectionTab() {
       setInspPage(1);
     }
   }, [page1Insp]);
+
+  useEffect(() => {
+    if (!inspSire || !inspDam) {
+      setCertCheck(null);
+      setCertCheckError(null);
+      return;
+    }
+    let cancelled = false;
+    setCertChecking(true);
+    setCertCheck(null);
+    setCertCheckError(null);
+    checkLitterCertificate(inspSire.id, inspDam.id)
+      .then(result => { if (!cancelled) setCertCheck(result); })
+      .catch(err   => { if (!cancelled) setCertCheckError(err?.message ?? "Check unavailable"); })
+      .finally(()  => { if (!cancelled) setCertChecking(false); });
+    return () => { cancelled = true; };
+  }, [inspSire?.id, inspDam?.id]);
 
   const loadMoreInspections = async () => {
     if (loadingMoreInsp || allInspections.length >= inspTotal) return;
@@ -1177,6 +1198,43 @@ function LitterInspectionTab() {
           onSelect={setInspDam}
           onClear={() => setInspDam(null)}
         />
+
+        {/* Stud certificate check banner */}
+        {inspSire && inspDam && (
+          certChecking ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, padding: 10, borderRadius: 8, backgroundColor: "#F1F5F9" }}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Checking stud certificate…</Text>
+            </View>
+          ) : certCheck ? (
+            <View style={{
+              flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10,
+              padding: 10, borderRadius: 8,
+              backgroundColor: certCheck.found ? "#DCFCE7" : "#FEE2E2",
+            }}>
+              <Ionicons
+                name={certCheck.found ? "checkmark-circle" : "close-circle"}
+                size={16}
+                color={certCheck.found ? "#16A34A" : "#DC2626"}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: certCheck.found ? "#166534" : "#991B1B" }}>
+                  {certCheck.found ? "Stud Certificate Found" : "No Stud Certificate"}
+                </Text>
+                {certCheck.found && certCheck.matingDate ? (
+                  <Text style={{ fontSize: 11, color: "#166534", marginTop: 1 }}>Mating date: {certCheck.matingDate}</Text>
+                ) : !certCheck.found ? (
+                  <Text style={{ fontSize: 11, color: "#991B1B", marginTop: 1 }}>{certCheck.message}</Text>
+                ) : null}
+              </View>
+            </View>
+          ) : certCheckError ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, padding: 10, borderRadius: 8, backgroundColor: "#FFFBEB" }}>
+              <Ionicons name="warning-outline" size={14} color="#D97706" />
+              <Text style={{ fontSize: 12, color: "#92400E" }}>Certificate check unavailable</Text>
+            </View>
+          ) : null
+        )}
 
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
