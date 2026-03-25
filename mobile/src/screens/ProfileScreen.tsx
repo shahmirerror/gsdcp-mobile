@@ -1723,6 +1723,8 @@ function LitterRegistrationTab() {
           </View>
         )}
 
+        {inspCheck?.found && (
+        <View>
         <View style={styles.divider} />
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <FormSection title={`PUPPIES (${puppies.length})`} />
@@ -1793,9 +1795,15 @@ function LitterRegistrationTab() {
             />
           </View>
         ))}
+        </View>
+        )}
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
-        <SubmitBtn label={submitting ? "Submitting…" : "Submit Litter Registration"} onPress={handleSubmit} />
+        <SubmitBtn
+          label={submitting ? "Submitting…" : "Submit Litter Registration"}
+          onPress={handleSubmit}
+          disabled={!inspCheck?.found || submitting || !regSire || !regDam || !dateOfWhelping}
+        />
       </View>
     );
   }
