@@ -714,7 +714,7 @@ export type CertificateCheck = {
   message: string;
 };
 
-export async function checkLitterCertificate(sireId: string, damId: string): Promise<CertificateCheck> {
+export async function checkLitterCertificate(sireId: string, damId: string, userId?: number): Promise<CertificateCheck> {
   const sNum = parseInt(sireId.replace(/^dog-/, ""), 10);
   const dNum = parseInt(damId.replace(/^dog-/, ""), 10);
   const res = await fetch(`${BASE_URL}/litter-inspections/checkcertificate`, {
@@ -734,8 +734,22 @@ export async function checkLitterCertificate(sireId: string, damId: string): Pro
   if (json.error?.code === "STUD_CERTIFICATE_ERROR") {
     return { found: false, matingDate: null, message: json.error.message ?? "No stud certificate found" };
   }
-  // Backend crash: "Undefined variable: stud" fires when a cert IS found but response fails
+  // Backend crash: "Undefined variable: stud" fires when a cert IS found but response-building fails.
+  // Fall back to the stud certificates list to retrieve the mating date.
   if (json.exception === "ErrorException" && typeof json.message === "string" && json.message.toLowerCase().includes("stud")) {
+    if (userId) {
+      try {
+        const { certificates } = await fetchStudCertificates(userId, 1, 100);
+        const match = certificates.find(c => {
+          const cSire = String(c.sire.id).replace(/^dog-/, "");
+          const cDam  = String(c.dam.id).replace(/^dog-/, "");
+          return cSire === String(sNum) && cDam === String(dNum);
+        });
+        if (match) {
+          return { found: true, matingDate: match.mating_date ?? null, message: "Stud certificate found" };
+        }
+      } catch { /* fallthrough */ }
+    }
     return { found: true, matingDate: null, message: "Stud certificate found (details unavailable)" };
   }
   // Other backend crash — genuinely unknown

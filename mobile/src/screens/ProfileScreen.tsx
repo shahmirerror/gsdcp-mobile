@@ -1031,7 +1031,7 @@ function LitterInspectionTab() {
     setCertChecking(true);
     setCertCheck(null);
     setCertCheckError(null);
-    checkLitterCertificate(inspSire.id, inspDam.id)
+    checkLitterCertificate(inspSire.id, inspDam.id, user?.id)
       .then(result => { if (!cancelled) setCertCheck(result); })
       .catch(err   => { if (!cancelled) setCertCheckError(err?.message ?? "Check unavailable"); })
       .finally(()  => { if (!cancelled) setCertChecking(false); });
