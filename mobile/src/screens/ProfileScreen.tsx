@@ -1480,7 +1480,7 @@ function LitterRegistrationTab() {
     try {
       await submitLitterRegistration({
         user_id:          user!.id,
-        kennel_id:        user!.myKennel?.kennel_id ?? undefined,
+        kennel_id:        user!.myKennel?.kennel_id ?? null,
         sire_id:          parsedSireId,
         sire_name:        regSire.name,
         sire_kp:          regSire.KP,
