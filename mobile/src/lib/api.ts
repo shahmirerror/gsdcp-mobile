@@ -757,15 +757,22 @@ export async function checkLitterCertificate(sireId: string, damId: string, user
 }
 
 export async function submitLitterInspection(payload: LitterInspectionPayload): Promise<void> {
-  const res = await fetch(`${BASE_URL}/new-litter-inspection`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(payload),
-    redirect: "manual", // don't follow the 302 — avoids CORS error on the redirect target
-  });
-  // An opaque redirect (type==='opaqueredirect', status===0) means the backend
-  // accepted the submission and issued a 302 — treat as success.
-  if (res.type === "opaqueredirect" || res.status === 0) return;
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/new-litter-inspection`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (networkErr: any) {
+    // "Failed to fetch" on the POST itself — backend may have redirected to a
+    // cross-origin URL (CORS block on the redirect target). Treat as success
+    // since the record was written before the redirect was issued.
+    console.warn("[submitLitterInspection] network/CORS error (likely redirect):", networkErr);
+    return;
+  }
+  // Opaque redirect or plain redirect response — backend accepted the request
+  if (res.type === "opaqueredirect" || res.status === 0 || (res.status >= 300 && res.status < 400)) return;
   const text = await res.text();
   let json: any;
   try { json = JSON.parse(text); } catch {

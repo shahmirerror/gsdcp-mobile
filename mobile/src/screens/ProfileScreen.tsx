@@ -1125,6 +1125,7 @@ function LitterInspectionTab() {
       refetch();
       Alert.alert("Submitted", "Litter inspection submitted successfully.");
     } catch (e: any) {
+      console.error("[LitterInspection] submit error:", e);
       setSubmitError(e.message ?? "Submission failed. Please try again.");
     } finally {
       setSubmitting(false);
