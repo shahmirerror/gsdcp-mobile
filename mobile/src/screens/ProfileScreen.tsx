@@ -875,6 +875,16 @@ function LitterInspectionTab() {
   });
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
+  const { data: inspMemberDetail } = useQuery<MemberDetail>({
+    queryKey: ["member-detail", user ? `member-${user.id}` : null],
+    queryFn: () => fetchMemberDetail(`member-${user!.id}`),
+    enabled: !!user,
+    staleTime: 300_000,
+  });
+  const damOptions: DogOption[] = (inspMemberDetail?.ownedDogs ?? [])
+    .filter(d => d.sex === "Female")
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+
   const INSP_PER_PAGE = 10;
   const [allInspections, setAllInspections] = useState<LitterInspection[]>([]);
   const [inspTotal, setInspTotal]           = useState(0);
@@ -1036,8 +1046,8 @@ function LitterInspectionTab() {
         <FormSection title="DAM" />
         <DogDropdown
           label="Dam Dog" required
-          mode="remote"
-          sexFilter="female"
+          mode="local"
+          localOptions={damOptions}
           selected={inspDam}
           onSelect={setInspDam}
           onClear={() => setInspDam(null)}
