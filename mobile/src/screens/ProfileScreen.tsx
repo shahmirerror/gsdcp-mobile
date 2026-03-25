@@ -1786,12 +1786,24 @@ function LitterRegistrationTab() {
             </View>
 
             {/* Color */}
-            <FormField
-              label="Color"
-              value={pup.color}
-              onChangeText={v => updatePuppy(idx, "color", v)}
-              placeholder="e.g. Black - Brown"
-            />
+            <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 6 }}>Color</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+              {["Black - Brown", "Black", "Sable"].map(c => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => updatePuppy(idx, "color", c)}
+                  activeOpacity={0.7}
+                  style={{
+                    paddingVertical: 7, paddingHorizontal: 14, borderRadius: 8, alignItems: "center",
+                    borderWidth: 1.5,
+                    borderColor: pup.color === c ? COLORS.primary : COLORS.border,
+                    backgroundColor: pup.color === c ? `${COLORS.primary}15` : "#fff",
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: pup.color === c ? COLORS.primary : COLORS.textMuted }}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         ))}
         </View>
