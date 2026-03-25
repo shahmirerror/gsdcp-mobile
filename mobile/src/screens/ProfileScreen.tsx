@@ -1467,6 +1467,10 @@ function LitterRegistrationTab() {
     if (puppies.length === 0)        { setSubmitError("Add at least one puppy."); return; }
     const badIdx = puppies.findIndex(p => !p.name.trim());
     if (badIdx !== -1)               { setSubmitError(`Puppy ${badIdx + 1} needs a name.`); return; }
+    const parsedSireId = parseInt(String(regSire.id).replace(/^dog-/, ""), 10);
+    const parsedDamId  = parseInt(String(regDam.id).replace(/^dog-/, ""), 10);
+    if (isNaN(parsedSireId)) { setSubmitError("Could not resolve sire dog ID. Please re-select the sire and try again."); return; }
+    if (isNaN(parsedDamId))  { setSubmitError("Could not resolve dam dog ID. Please re-select the dam and try again."); return; }
     setSubmitError("");
     setSubmitting(true);
     const [dd, mm, yyyy] = dateOfWhelping.split("-");
@@ -1477,10 +1481,10 @@ function LitterRegistrationTab() {
       await submitLitterRegistration({
         user_id:          user!.id,
         kennel_id:        user!.myKennel?.kennel_id ?? undefined,
-        sire_id:          parseInt(String(regSire.id).replace(/^dog-/, ""), 10),
+        sire_id:          parsedSireId,
         sire_name:        regSire.name,
         sire_kp:          regSire.KP,
-        dam_id:           parseInt(String(regDam.id).replace(/^dog-/, ""), 10),
+        dam_id:           parsedDamId,
         dam_name:         regDam.name,
         dam_kp:           regDam.KP,
         date_of_whelping: whelpingApiDate,
