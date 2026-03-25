@@ -728,12 +728,15 @@ function StudCertTab() {
     if (!form.dateOfMating.trim()) { setSubmitError("Date of mating is required."); return; }
     setSubmitError("");
     setSubmitting(true);
+    // Convert DD-MM-YYYY → YYYY-MM-DD for the API
+    const [matDD, matMM, matYYYY] = form.dateOfMating.split("-");
+    const matingApiDate = `${matYYYY}-${matMM}-${matDD}`;
     try {
       await submitStudCertificate({
         user_id:     user!.id,
         sire_id:     parseInt(selectedSire.id.replace(/^dog-/, ""), 10),
         dam_id:      parseInt(selectedDam.id.replace(/^dog-/, ""), 10),
-        mating_date: form.dateOfMating.trim(),
+        mating_date: matingApiDate,
       }, user!.token);
       setSelectedSire(null);
       setSelectedDam(null);
@@ -895,7 +898,7 @@ function StudCertTab() {
 
         <View style={styles.divider} />
         <FormSection title="MATING DETAILS" />
-        <DateField label="Date of Mating" value={form.dateOfMating} onChange={set("dateOfMating")} required />
+        <CalendarDatePicker label="Date of Mating" required value={form.dateOfMating} onChange={set("dateOfMating")} />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn
