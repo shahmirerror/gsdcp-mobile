@@ -762,8 +762,15 @@ export async function submitLitterInspection(payload: LitterInspectionPayload): 
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
   });
-  const json = await res.json();
-  if (!res.ok || json.success === false) {
+  const text = await res.text();
+  // Backend returns a 302 redirect on success (web route behaviour) which fetch follows,
+  // giving a 200 HTML page. Treat any non-JSON ok response as success.
+  let json: any;
+  try { json = JSON.parse(text); } catch {
+    if (res.ok) return; // redirect-to-success path
+    throw new Error("Submission failed. Please try again.");
+  }
+  if (json.success === false) {
     throw new Error(json.message ?? json.error?.message ?? "Submission failed. Please try again.");
   }
 }
