@@ -761,13 +761,15 @@ export async function submitLitterInspection(payload: LitterInspectionPayload): 
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
+    redirect: "manual", // don't follow the 302 — avoids CORS error on the redirect target
   });
+  // An opaque redirect (type==='opaqueredirect', status===0) means the backend
+  // accepted the submission and issued a 302 — treat as success.
+  if (res.type === "opaqueredirect" || res.status === 0) return;
   const text = await res.text();
-  // Backend returns a 302 redirect on success (web route behaviour) which fetch follows,
-  // giving a 200 HTML page. Treat any non-JSON ok response as success.
   let json: any;
   try { json = JSON.parse(text); } catch {
-    if (res.ok) return; // redirect-to-success path
+    if (res.ok) return;
     throw new Error("Submission failed. Please try again.");
   }
   if (json.success === false) {
