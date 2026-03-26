@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
 import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -54,7 +55,7 @@ const STATUS_COLORS: Record<string, string> = {
   Past: "#9CA3AF",
 };
 
-type TabKey = "info" | "results";
+type TabKey = "info" | "results" | "entry";
 
 function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return (
@@ -110,9 +111,145 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
   );
 }
 
+type OwnedDog = { id: string; dog_name: string; KP: string; sex?: string; color?: string };
+
+function EntryFormTab({ show }: { show: ShowDetail }) {
+  const { user } = useAuth();
+  const [selectedDog, setSelectedDog] = useState<OwnedDog | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  const ownedDogs: OwnedDog[] = (user?.myDogs ?? []).map((d: any) => ({
+    id: String(d.id ?? ""),
+    dog_name: d.dog_name ?? d.name ?? "",
+    KP: d.KP ?? "",
+    sex: d.sex ?? undefined,
+    color: d.color ?? undefined,
+  })).filter((d: OwnedDog) => d.dog_name);
+
+  const handleSubmit = async () => {
+    if (!selectedDog) { setSubmitError("Please select a dog to enter."); return; }
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      // Placeholder — wire up to your entry submission API endpoint
+      await new Promise(res => setTimeout(res, 1000));
+      setSubmitSuccess(true);
+      setSelectedDog(null);
+      setTimeout(() => setSubmitSuccess(false), 5000);
+    } catch (e: any) {
+      setSubmitError(e.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (ownedDogs.length === 0) {
+    return (
+      <View style={styles.entryEmptyWrap}>
+        <View style={styles.emptyIconWrap}>
+          <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
+        </View>
+        <Text style={styles.emptyTitle}>No Dogs Registered</Text>
+        <Text style={styles.emptyDesc}>You have no dogs registered under your account to enter into this event.</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.entryCard}>
+      <Text style={styles.cardHeading}>Enter a Dog</Text>
+
+      {submitSuccess && (
+        <View style={styles.successBanner}>
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={styles.successText}>Entry submitted successfully.</Text>
+        </View>
+      )}
+
+      {submitError ? (
+        <View style={styles.errorBanner}>
+          <Ionicons name="warning-outline" size={16} color="#DC2626" />
+          <Text style={styles.errorBannerText}>{submitError}</Text>
+        </View>
+      ) : null}
+
+      <Text style={styles.fieldLabel}>Select Dog <Text style={styles.required}>*</Text></Text>
+
+      {selectedDog ? (
+        <View style={styles.selectedDogCard}>
+          <View style={styles.selectedDogAvatar}>
+            <Ionicons name="paw" size={20} color={COLORS.primary} />
+          </View>
+          <View style={styles.selectedDogInfo}>
+            <Text style={styles.selectedDogName}>{selectedDog.dog_name}</Text>
+            <Text style={styles.selectedDogSub}>KP {selectedDog.KP || "—"}{selectedDog.color ? ` · ${selectedDog.color}` : ""}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => { setSelectedDog(null); setDropdownOpen(false); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close-circle" size={22} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.dropdownTrigger, dropdownOpen && styles.dropdownTriggerOpen]}
+          onPress={() => setDropdownOpen(o => !o)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.dropdownPlaceholder}>Choose a dog…</Text>
+          <Ionicons name={dropdownOpen ? "chevron-up" : "chevron-down"} size={18} color={COLORS.textMuted} />
+        </TouchableOpacity>
+      )}
+
+      {dropdownOpen && !selectedDog && (
+        <View style={styles.dropdownList}>
+          {ownedDogs.map((dog, i) => (
+            <TouchableOpacity
+              key={dog.id || i}
+              style={[styles.dropdownItem, i < ownedDogs.length - 1 && styles.dropdownItemBorder]}
+              onPress={() => { setSelectedDog(dog); setDropdownOpen(false); setSubmitError(""); }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.dropdownItemAvatar}>
+                <Ionicons name="paw" size={14} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dropdownItemName}>{dog.dog_name}</Text>
+                <Text style={styles.dropdownItemSub}>KP {dog.KP || "—"}{dog.sex ? ` · ${dog.sex}` : ""}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.submitBtn, (!selectedDog || submitting) && styles.submitBtnDisabled]}
+        onPress={handleSubmit}
+        activeOpacity={0.8}
+        disabled={!selectedDog || submitting}
+      >
+        {submitting ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <>
+            <Ionicons name="send" size={16} color="#fff" />
+            <Text style={styles.submitBtnText}>Submit Entry</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function ShowDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { id, name } = route.params as { id: string; name?: string };
   const [activeTab, setActiveTab] = useState<TabKey>("info");
   const [selectedHair, setSelectedHair] = useState<string | null>(null);
@@ -199,6 +336,7 @@ export default function ShowDetailScreen() {
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
     ...(isShowType ? [{ key: "results" as TabKey, label: "Results", count: results.length }] : []),
+    ...(user ? [{ key: "entry" as TabKey, label: "Entry Form" }] : []),
   ];
 
   if (isLoading) {
@@ -224,7 +362,6 @@ export default function ShowDetailScreen() {
     );
   }
 
-  const isActive = show.status === "Current" || show.status === "Upcoming";
   const color = EVENT_TYPE_COLORS[show.event_type] || COLORS.accent;
   const icon = EVENT_TYPE_ICONS[show.event_type] || "calendar";
   const statusColor = STATUS_COLORS[show.status] || COLORS.textMuted;
@@ -287,6 +424,25 @@ export default function ShowDetailScreen() {
       </View>
     </>
   );
+
+  if (activeTab === "entry" && user) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+        overScrollMode="always"
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+        }
+      >
+        {renderHeader()}
+        <EntryFormTab show={show} />
+        <View style={{ height: 32 }} />
+      </ScrollView>
+    );
+  }
 
   if (activeTab === "info" || !isShowType) {
     return (
@@ -702,28 +858,27 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
   },
   hairTabCount: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: BORDER_RADIUS.full,
-    minWidth: 20,
+    minWidth: 22,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.border,
+    justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 5,
   },
   hairTabCountActive: {
-    backgroundColor: `${COLORS.accent}20`,
+    backgroundColor: `${COLORS.accent}30`,
   },
   hairTabCountText: {
     fontSize: 10,
     fontWeight: "700",
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
   },
   hairTabCountTextActive: {
     color: COLORS.accent,
   },
   classTabsWrapper: {
     paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   classTabsContent: {
     paddingHorizontal: SPACING.lg,
@@ -734,14 +889,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: BORDER_RADIUS.full,
+    paddingVertical: 7,
+    borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
   classTabActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}12`,
     borderColor: COLORS.primary,
   },
   classTabText: {
@@ -750,88 +905,256 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   classTabTextActive: {
-    color: "#fff",
+    color: COLORS.primary,
   },
   classTabCount: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: BORDER_RADIUS.full,
-    minWidth: 20,
+    minWidth: 22,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.border,
+    justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 5,
   },
   classTabCountActive: {
-    backgroundColor: "rgba(255,255,255,0.25)",
+    backgroundColor: `${COLORS.primary}20`,
   },
   classTabCountText: {
     fontSize: 10,
     fontWeight: "700",
-    color: COLORS.textMuted,
+    color: COLORS.textSecondary,
   },
   classTabCountTextActive: {
-    color: "#fff",
+    color: COLORS.primary,
   },
   resultsList: {
-    paddingTop: SPACING.sm,
+    marginHorizontal: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
   },
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.surface,
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.xs,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.05)",
     gap: SPACING.sm,
   },
-  resultInfo: {
-    flex: 1,
+  gradingBadge: {
+    minWidth: 52,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: `${COLORS.accent}18`,
+    alignItems: "center",
   },
+  gradingText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.accent,
+  },
+  resultInfo: { flex: 1 },
   resultName: {
-    fontSize: FONT_SIZES.md,
+    fontSize: 14,
     fontWeight: "600",
     color: COLORS.text,
   },
   resultKp: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: 2,
-  },
-  gradingBadge: {
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.full,
-  },
-  gradingText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
+    marginTop: 1,
   },
   emptyState: {
     alignItems: "center",
     paddingVertical: 48,
-    gap: 8,
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.sm,
   },
   emptyIconWrap: {
     width: 64,
     height: 64,
-    borderRadius: 18,
-    backgroundColor: `${COLORS.primary}12`,
+    borderRadius: 20,
+    backgroundColor: `${COLORS.primary}10`,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   emptyTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: COLORS.text,
+    textAlign: "center",
   },
   emptyDesc: {
     fontSize: 13,
     color: COLORS.textMuted,
     textAlign: "center",
+    lineHeight: 18,
+  },
+  entryCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  entryEmptyWrap: {
+    alignItems: "center",
+    paddingVertical: 48,
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.sm,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#334155",
+    marginBottom: 6,
+  },
+  required: {
+    color: COLORS.error ?? "#DC2626",
+  },
+  selectedDogCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: `${COLORS.primary}08`,
+    gap: 10,
+    marginBottom: 16,
+  },
+  selectedDogAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: `${COLORS.primary}15`,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  selectedDogInfo: { flex: 1 },
+  selectedDogName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  selectedDogSub: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  dropdownTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    marginBottom: 4,
+  },
+  dropdownTriggerOpen: {
+    borderColor: COLORS.primary,
+  },
+  dropdownPlaceholder: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+  dropdownList: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    backgroundColor: COLORS.surface,
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 10,
+  },
+  dropdownItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.06)",
+  },
+  dropdownItemAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: `${COLORS.primary}10`,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dropdownItemName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  dropdownItemSub: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  submitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 4,
+  },
+  submitBtnDisabled: {
+    opacity: 0.5,
+  },
+  submitBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  successBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#86EFAC",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  successText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#15803D",
+    flex: 1,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorBannerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#DC2626",
+    flex: 1,
   },
 });
