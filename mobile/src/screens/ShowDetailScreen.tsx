@@ -5,6 +5,7 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   StyleSheet,
   ActivityIndicator,
   ImageBackground,
@@ -116,7 +117,8 @@ type OwnedDog = { id: string; dog_name: string; KP: string; sex?: string; color?
 function EntryFormTab({ show }: { show: ShowDetail }) {
   const { user } = useAuth();
   const [selectedDog, setSelectedDog] = useState<OwnedDog | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [listOpen, setListOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -129,6 +131,14 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
     color: d.color ?? undefined,
   })).filter((d: OwnedDog) => d.dog_name);
 
+  const filteredDogs = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return ownedDogs;
+    return ownedDogs.filter(d =>
+      d.dog_name.toLowerCase().includes(q) || d.KP.toLowerCase().includes(q)
+    );
+  }, [searchQuery, ownedDogs]);
+
   const handleSubmit = async () => {
     if (!selectedDog) { setSubmitError("Please select a dog to enter."); return; }
     setSubmitError("");
@@ -138,6 +148,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
       await new Promise(res => setTimeout(res, 1000));
       setSubmitSuccess(true);
       setSelectedDog(null);
+      setSearchQuery("");
       setTimeout(() => setSubmitSuccess(false), 5000);
     } catch (e: any) {
       setSubmitError(e.message ?? "Submission failed. Please try again.");
@@ -188,7 +199,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
             <Text style={styles.selectedDogSub}>KP {selectedDog.KP || "—"}{selectedDog.color ? ` · ${selectedDog.color}` : ""}</Text>
           </View>
           <TouchableOpacity
-            onPress={() => { setSelectedDog(null); setDropdownOpen(false); }}
+            onPress={() => { setSelectedDog(null); setSearchQuery(""); setListOpen(false); setSubmitError(""); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             activeOpacity={0.7}
           >
@@ -196,23 +207,33 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity
-          style={[styles.dropdownTrigger, dropdownOpen && styles.dropdownTriggerOpen]}
-          onPress={() => setDropdownOpen(o => !o)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.dropdownPlaceholder}>Choose a dog…</Text>
-          <Ionicons name={dropdownOpen ? "chevron-up" : "chevron-down"} size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
+        <View style={[styles.searchInputWrap, listOpen && styles.searchInputWrapOpen]}>
+          <Ionicons name="search-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name or KP…"
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={t => { setSearchQuery(t); setListOpen(true); }}
+            onFocus={() => setListOpen(true)}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
-      {dropdownOpen && !selectedDog && (
+      {listOpen && !selectedDog && (
         <View style={styles.dropdownList}>
-          {ownedDogs.map((dog, i) => (
+          {filteredDogs.length > 0 ? filteredDogs.map((dog, i) => (
             <TouchableOpacity
               key={dog.id || i}
-              style={[styles.dropdownItem, i < ownedDogs.length - 1 && styles.dropdownItemBorder]}
-              onPress={() => { setSelectedDog(dog); setDropdownOpen(false); setSubmitError(""); }}
+              style={[styles.dropdownItem, i < filteredDogs.length - 1 && styles.dropdownItemBorder]}
+              onPress={() => { setSelectedDog(dog); setListOpen(false); setSearchQuery(""); setSubmitError(""); }}
               activeOpacity={0.7}
             >
               <View style={styles.dropdownItemAvatar}>
@@ -223,7 +244,11 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
                 <Text style={styles.dropdownItemSub}>KP {dog.KP || "—"}{dog.sex ? ` · ${dog.sex}` : ""}</Text>
               </View>
             </TouchableOpacity>
-          ))}
+          )) : (
+            <View style={styles.dropdownEmpty}>
+              <Text style={styles.dropdownEmptyText}>No dogs match "{searchQuery}"</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -1049,23 +1074,33 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 1,
   },
-  dropdownTrigger: {
+  searchInputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     backgroundColor: COLORS.surface,
     marginBottom: 4,
   },
-  dropdownTriggerOpen: {
+  searchInputWrapOpen: {
     borderColor: COLORS.primary,
   },
-  dropdownPlaceholder: {
+  searchInput: {
+    flex: 1,
     fontSize: 14,
+    color: COLORS.text,
+    paddingVertical: 0,
+  },
+  dropdownEmpty: {
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  dropdownEmptyText: {
+    fontSize: 13,
     color: COLORS.textMuted,
   },
   dropdownList: {
