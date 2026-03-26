@@ -10,6 +10,8 @@ import {
   Modal,
   Pressable,
   RefreshControl,
+  Image,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -38,6 +40,7 @@ export default function DogSearchScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempGender, setTempGender] = useState<string>("All");
   const [tempHair, setTempHair] = useState<string>("All");
+  const [previewDog, setPreviewDog] = useState<Dog | null>(null);
 
   const activeFilterCount =
     (genderFilter !== "All" ? 1 : 0) + (hairFilter !== "All" ? 1 : 0);
@@ -193,9 +196,7 @@ export default function DogSearchScreen() {
           renderItem={({ item }) => (
             <DogListItem
               dog={item}
-              onPress={() =>
-                navigation.navigate("DogProfile", { id: item.id, name: item.dog_name })
-              }
+              onPress={() => setPreviewDog(item)}
             />
           )}
           ListFooterComponent={
@@ -216,6 +217,92 @@ export default function DogSearchScreen() {
           }
         />
       )}
+
+      <Modal
+        visible={!!previewDog}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPreviewDog(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setPreviewDog(null)} />
+          {previewDog && (
+            <View style={styles.modalContent}>
+              <View style={styles.modalHandle} />
+
+              <View style={styles.dogPreviewHeader}>
+                {previewDog.imageUrl ? (
+                  <Image source={{ uri: previewDog.imageUrl }} style={styles.dogPreviewImage} resizeMode="cover" />
+                ) : (
+                  <View style={styles.dogPreviewAvatar}>
+                    <Text style={styles.dogPreviewAvatarText}>
+                      {(previewDog.dog_name || "")
+                        .trim().split(" ").filter(w => w.length > 0)
+                        .map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.dogPreviewHeadInfo}>
+                  <Text style={styles.dogPreviewName} numberOfLines={2}>{previewDog.dog_name}</Text>
+                  <Text style={styles.dogPreviewKP}>
+                    {previewDog.KP && previewDog.KP !== "0"
+                      ? `KP ${previewDog.KP}`
+                      : previewDog.foreign_reg_no || "—"}
+                  </Text>
+                  {previewDog.titles && previewDog.titles.length > 0 && (
+                    <View style={styles.dogPreviewTitlesRow}>
+                      {previewDog.titles.slice(0, 3).map(t => (
+                        <View key={t} style={styles.dogPreviewTitleBadge}>
+                          <Text style={styles.dogPreviewTitleBadgeText}>{t}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.dogPreviewDivider} />
+
+              <View style={styles.dogPreviewGrid}>
+                {[
+                  { label: "Sex", value: previewDog.sex },
+                  { label: "Color", value: previewDog.color },
+                  { label: "Hair", value: previewDog.hair },
+                  { label: "Date of Birth", value: previewDog.dob },
+                  { label: "Sire", value: previewDog.sire },
+                  { label: "Dam", value: previewDog.dam },
+                  { label: "Breeder", value: previewDog.breeder },
+                  {
+                    label: "Owner",
+                    value: previewDog.owner && previewDog.owner.length > 0
+                      ? previewDog.owner.map(o => o.name).join(", ")
+                      : null,
+                  },
+                ]
+                  .filter(row => row.value)
+                  .map(row => (
+                    <View key={row.label} style={styles.dogPreviewRow}>
+                      <Text style={styles.dogPreviewRowLabel}>{row.label}</Text>
+                      <Text style={styles.dogPreviewRowValue} numberOfLines={2}>{row.value}</Text>
+                    </View>
+                  ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.viewProfileBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setPreviewDog(null);
+                  navigation.navigate("DogProfile", { id: previewDog.id, name: previewDog.dog_name });
+                }}
+              >
+                <Ionicons name="paw" size={16} color="#fff" />
+                <Text style={styles.viewProfileBtnText}>View Full Profile</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Modal>
 
       <Modal
         visible={showFilterModal}
@@ -478,6 +565,106 @@ const styles = StyleSheet.create({
   applyButtonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "700",
+  },
+  dogPreviewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 14,
+  },
+  dogPreviewImage: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+  },
+  dogPreviewAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  dogPreviewAvatarText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 22,
+  },
+  dogPreviewHeadInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  dogPreviewName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
+  },
+  dogPreviewKP: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  dogPreviewTitlesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  dogPreviewTitleBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  dogPreviewTitleBadgeText: {
+    fontSize: FONT_SIZES.xs,
+    color: "#fff",
+    fontWeight: "600",
+  },
+  dogPreviewDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginBottom: 14,
+  },
+  dogPreviewGrid: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  dogPreviewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  dogPreviewRowLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+    width: 100,
+    flexShrink: 0,
+  },
+  dogPreviewRowValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  viewProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+  },
+  viewProfileBtnText: {
+    color: "#fff",
+    fontSize: 15,
     fontWeight: "700",
   },
 });
