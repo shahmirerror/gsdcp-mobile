@@ -53,12 +53,12 @@ function MatingRow({ mating, onPress }: {
 
         <View style={styles.dogRow}>
           <Text style={styles.dogLabel}>S</Text>
-          <Text style={styles.dogName} numberOfLines={1}>{mating.sire_name.trim()}</Text>
+          <Text style={styles.dogName} numberOfLines={1}>{mating.sire.name.trim()}</Text>
         </View>
 
         <View style={styles.dogRow}>
           <Text style={styles.dogLabel}>D</Text>
-          <Text style={styles.dogName} numberOfLines={1}>{mating.dam_name.trim()}</Text>
+          <Text style={styles.dogName} numberOfLines={1}>{mating.dam.name.trim()}</Text>
         </View>
 
         <View style={styles.badges}>
@@ -132,8 +132,8 @@ export default function RecentMatingsScreen() {
       results = results.filter(
         (m) =>
           m.kennel_name.toLowerCase().includes(q) ||
-          m.sire_name.toLowerCase().includes(q) ||
-          m.dam_name.toLowerCase().includes(q) ||
+          m.sire.name.toLowerCase().includes(q) ||
+          m.dam.name.toLowerCase().includes(q) ||
           (m.city && m.city.toLowerCase().includes(q)),
       );
     }
@@ -293,12 +293,15 @@ export default function RecentMatingsScreen() {
                 <TouchableOpacity
                   style={styles.previewDogRow}
                   activeOpacity={0.7}
-                  onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.sire_dog_id, name: previewMating.sire_name.trim() }); }}
+                  onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.sire.id, name: previewMating.sire.name.trim() }); }}
                 >
                   <View style={styles.previewDogLabelWrap}>
                     <Text style={styles.previewDogLabel}>SIRE</Text>
                   </View>
-                  <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.sire_name.trim()}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.sire.name.trim()}</Text>
+                    {previewMating.sire.KP ? <Text style={styles.previewDogSub}>KP {previewMating.sire.KP}</Text> : null}
+                  </View>
                   <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
                 </TouchableOpacity>
 
@@ -308,12 +311,15 @@ export default function RecentMatingsScreen() {
                 <TouchableOpacity
                   style={styles.previewDogRow}
                   activeOpacity={0.7}
-                  onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.dam_dog_id, name: previewMating.dam_name.trim() }); }}
+                  onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.dam.id, name: previewMating.dam.name.trim() }); }}
                 >
                   <View style={styles.previewDogLabelWrap}>
                     <Text style={styles.previewDogLabel}>DAM</Text>
                   </View>
-                  <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.dam_name.trim()}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.dam.name.trim()}</Text>
+                    {previewMating.dam.KP ? <Text style={styles.previewDogSub}>KP {previewMating.dam.KP}</Text> : null}
+                  </View>
                   <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
                 </TouchableOpacity>
 
@@ -572,7 +578,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   previewDogLabel: { fontSize: 10, fontWeight: "800", color: COLORS.primary, letterSpacing: 0.6 },
-  previewDogName: { flex: 1, fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text },
+  previewDogName: { fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text },
+  previewDogSub: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 1 },
 
   viewProfileBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",

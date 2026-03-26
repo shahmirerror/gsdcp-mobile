@@ -283,14 +283,19 @@ export async function fetchBreeder(id: string): Promise<BreederDetail> {
   return json.data;
 }
 
+export type MatingDog = {
+  name: string;
+  id: string;
+  KP: string | null;
+  foreign_reg_no: string | null;
+};
+
 export type RecentMating = {
   id: string;
   kennel_id: string;
   kennel_name: string;
-  sire_name: string;
-  sire_dog_id: string;
-  dam_name: string;
-  dam_dog_id: string;
+  sire: MatingDog;
+  dam: MatingDog;
   mating_date: string;
   city: string | null;
   litter_on_ground?: boolean;
