@@ -99,6 +99,7 @@ export default function ShowsScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempStatus, setTempStatus] = useState<string>("All");
   const [tempType, setTempType] = useState<string>("All");
+  const [previewShow, setPreviewShow] = useState<Show | null>(null);
 
   const activeFilterCount =
     (statusFilter !== "All" ? 1 : 0) + (typeFilter !== "All" ? 1 : 0);
@@ -254,9 +255,7 @@ export default function ShowsScreen() {
           renderItem={({ item }) => (
             <ShowListItem
               show={item}
-              onPress={() =>
-                navigation.navigate("ShowDetail", { id: item.id, name: item.name })
-              }
+              onPress={() => setPreviewShow(item)}
             />
           )}
           ListEmptyComponent={
@@ -268,6 +267,76 @@ export default function ShowsScreen() {
           }
         />
       )}
+
+      <Modal
+        visible={!!previewShow}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPreviewShow(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setPreviewShow(null)} />
+          {previewShow && (() => {
+            const statusColor = STATUS_COLORS[previewShow.status] || COLORS.textMuted;
+            const dateRange = formatDateRange(previewShow.dates);
+            return (
+              <View style={styles.modalContent}>
+                <View style={styles.modalHandle} />
+                <View style={styles.previewHeader}>
+                  <View style={styles.previewDateBlock}>
+                    {previewShow.dates.length > 0 ? (
+                      <>
+                        <Text style={styles.previewDateDay}>{parseInt(previewShow.dates[0].split("-")[2], 10)}</Text>
+                        <Text style={styles.previewDateMonth}>{MONTHS[parseInt(previewShow.dates[0].split("-")[1], 10) - 1]}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.previewDateMonth}>TBA</Text>
+                    )}
+                  </View>
+                  <View style={styles.previewHeadInfo}>
+                    <Text style={styles.previewName} numberOfLines={2}>{previewShow.name}</Text>
+                    <Text style={styles.previewSub}>{previewShow.event_type}</Text>
+                    <View style={styles.previewBadgeRow}>
+                      <View style={[styles.statusBadge, { backgroundColor: `${statusColor}18` }]}>
+                        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                        <Text style={[styles.statusBadgeText, { color: statusColor }]}>{previewShow.status}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.previewDivider} />
+                <View style={styles.previewGrid}>
+                  {[
+                    { label: "Date(s)", value: dateRange !== "TBA" ? dateRange : null },
+                    { label: "Location", value: previewShow.location },
+                    { label: "Entries", value: String(previewShow.entryCount) },
+                    { label: "Last Entry", value: previewShow.last_date_of_entry ? formatDate(previewShow.last_date_of_entry) : null },
+                    {
+                      label: previewShow.judges.length === 1 ? "Judge" : "Judges",
+                      value: previewShow.judges.length > 0
+                        ? previewShow.judges.map(j => j.full_name).join(", ")
+                        : null,
+                    },
+                  ].filter(r => r.value).map(r => (
+                    <View key={r.label} style={styles.previewRow}>
+                      <Text style={styles.previewRowLabel}>{r.label}</Text>
+                      <Text style={styles.previewRowValue} numberOfLines={2}>{r.value}</Text>
+                    </View>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={styles.viewProfileBtn}
+                  activeOpacity={0.8}
+                  onPress={() => { setPreviewShow(null); navigation.navigate("ShowDetail", { id: previewShow.id, name: previewShow.name }); }}
+                >
+                  <Ionicons name="ribbon" size={16} color="#fff" />
+                  <Text style={styles.viewProfileBtnText}>View Show Details</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })()}
+        </View>
+      </Modal>
 
       <Modal
         visible={showFilterModal}
@@ -634,6 +703,96 @@ const styles = StyleSheet.create({
   applyButtonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "700",
+  },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 14,
+  },
+  previewDateBlock: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: `${COLORS.primary}10`,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  previewDateDay: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.primary,
+    lineHeight: 30,
+  },
+  previewDateMonth: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.primary,
+    textTransform: "uppercase",
+  },
+  previewHeadInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  previewName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
+  },
+  previewSub: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  previewBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  previewDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginBottom: 14,
+  },
+  previewGrid: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  previewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  previewRowLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+    width: 90,
+    flexShrink: 0,
+  },
+  previewRowValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  viewProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+  },
+  viewProfileBtnText: {
+    color: "#fff",
+    fontSize: 15,
     fontWeight: "700",
   },
 });

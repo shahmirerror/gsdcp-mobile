@@ -101,6 +101,8 @@ export default function KennelDirectoryScreen() {
   const [cityFilter, setCityFilter] = useState<string>("All");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
+  const [previewKennel, setPreviewKennel] = useState<Kennel | null>(null);
+  const [previewImgErr, setPreviewImgErr] = useState(false);
 
   const activeFilterCount = cityFilter !== "All" ? 1 : 0;
 
@@ -270,12 +272,7 @@ export default function KennelDirectoryScreen() {
           renderItem={({ item }) => (
             <KennelListItem
               kennel={item}
-              onPress={() =>
-                navigation.navigate("KennelProfile", {
-                  id: item.id,
-                  name: item.kennelName,
-                })
-              }
+              onPress={() => { setPreviewImgErr(false); setPreviewKennel(item); }}
             />
           )}
           ListEmptyComponent={
@@ -289,6 +286,67 @@ export default function KennelDirectoryScreen() {
           }
         />
       )}
+
+      <Modal
+        visible={!!previewKennel}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPreviewKennel(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setPreviewKennel(null)} />
+          {previewKennel && (() => {
+            const hasImg = previewKennel.imageUrl && !previewKennel.imageUrl.includes("user-not-found") && !previewImgErr;
+            const initials = previewKennel.kennelName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+            const year = formatYear(previewKennel.activeSince);
+            return (
+              <View style={styles.modalContent}>
+                <View style={styles.modalHandle} />
+                <View style={styles.previewHeader}>
+                  {hasImg ? (
+                    <Image source={{ uri: previewKennel.imageUrl }} style={styles.previewImage} resizeMode="cover" onError={() => setPreviewImgErr(true)} />
+                  ) : (
+                    <View style={styles.previewAvatar}>
+                      <Text style={styles.previewAvatarText}>{initials}</Text>
+                    </View>
+                  )}
+                  <View style={styles.previewHeadInfo}>
+                    <Text style={styles.previewName} numberOfLines={2}>{previewKennel.kennelName}</Text>
+                    <Text style={styles.previewSub}>{previewKennel.city}, {previewKennel.country}</Text>
+                    {year ? (
+                      <View style={styles.previewBadgeRow}>
+                        <View style={styles.previewBadge}><Text style={styles.previewBadgeText}>Since {year}</Text></View>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+                <View style={styles.previewDivider} />
+                <View style={styles.previewGrid}>
+                  {[
+                    { label: "Location", value: previewKennel.location || null },
+                    { label: "Phone", value: previewKennel.phone },
+                    { label: "Email", value: previewKennel.email },
+                    { label: "Description", value: previewKennel.description },
+                  ].filter(r => r.value).map(r => (
+                    <View key={r.label} style={styles.previewRow}>
+                      <Text style={styles.previewRowLabel}>{r.label}</Text>
+                      <Text style={styles.previewRowValue} numberOfLines={3}>{r.value}</Text>
+                    </View>
+                  ))}
+                </View>
+                <TouchableOpacity
+                  style={styles.viewProfileBtn}
+                  activeOpacity={0.8}
+                  onPress={() => { setPreviewKennel(null); navigation.navigate("KennelProfile", { id: previewKennel.id, name: previewKennel.kennelName }); }}
+                >
+                  <Ionicons name="home" size={16} color="#fff" />
+                  <Text style={styles.viewProfileBtnText}>View Kennel Profile</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })()}
+        </View>
+      </Modal>
 
       <Modal
         visible={showFilterModal}
@@ -651,6 +709,109 @@ const styles = StyleSheet.create({
   applyButtonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "700",
+  },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 14,
+  },
+  previewImage: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    flexShrink: 0,
+  },
+  previewAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  previewAvatarText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 22,
+  },
+  previewHeadInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  previewName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
+  },
+  previewSub: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  previewBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  previewBadge: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  previewBadgeText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    fontWeight: "500",
+  },
+  previewDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginBottom: 14,
+  },
+  previewGrid: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  previewRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  previewRowLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+    width: 90,
+    flexShrink: 0,
+  },
+  previewRowValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  viewProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+  },
+  viewProfileBtnText: {
+    color: "#fff",
+    fontSize: 15,
     fontWeight: "700",
   },
 });
