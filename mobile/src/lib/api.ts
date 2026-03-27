@@ -229,6 +229,23 @@ export async function fetchShow(id: string): Promise<ShowDetail> {
   return json.data;
 }
 
+export type RemainingDog = {
+  id: string;
+  dog_name: string;
+  KP: string;
+  sex?: string | null;
+  color?: string | null;
+};
+
+export async function fetchRemainingDogs(showId: string, token?: string | null): Promise<RemainingDog[]> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/fetch-remaining-dogs?show_id=${showId}`, { headers });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.message ?? "Failed to fetch remaining dogs");
+  return json.data;
+}
+
 export type Breeder = {
   id: string;
   name: string;

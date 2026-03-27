@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
-import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge } from "../lib/api";
+import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 
 const heroBg = require("../../assets/hero-bg.jpg");
@@ -112,11 +112,9 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
   );
 }
 
-type OwnedDog = { id: string; dog_name: string; KP: string; sex?: string; color?: string };
-
 function EntryFormTab({ show }: { show: ShowDetail }) {
   const { user } = useAuth();
-  const [selectedDogs, setSelectedDogs] = useState<OwnedDog[]>([]);
+  const [selectedDogs, setSelectedDogs] = useState<RemainingDog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -124,26 +122,24 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
   const [submittedCount, setSubmittedCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
 
-  const ownedDogs: OwnedDog[] = (user?.myDogs ?? []).map((d: any) => ({
-    id: String(d.id ?? ""),
-    dog_name: d.dog_name ?? d.name ?? "",
-    KP: d.KP ?? "",
-    sex: d.sex ?? undefined,
-    color: d.color ?? undefined,
-  })).filter((d: OwnedDog) => d.dog_name);
+  const { data: availableDogs = [], isLoading: dogsLoading, isError: dogsError } = useQuery<RemainingDog[]>({
+    queryKey: ["remaining-dogs", show.id, user?.id],
+    queryFn: () => fetchRemainingDogs(show.id, user?.token),
+    enabled: !!user,
+  });
 
   const selectedIds = useMemo(() => new Set(selectedDogs.map(d => d.id)), [selectedDogs]);
 
   const filteredDogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    const available = ownedDogs.filter(d => !selectedIds.has(d.id));
-    if (!q) return available;
-    return available.filter(d =>
+    const unselected = availableDogs.filter(d => !selectedIds.has(d.id));
+    if (!q) return unselected;
+    return unselected.filter(d =>
       d.dog_name.toLowerCase().includes(q) || d.KP.toLowerCase().includes(q)
     );
-  }, [searchQuery, ownedDogs, selectedIds]);
+  }, [searchQuery, availableDogs, selectedIds]);
 
-  const addDog = (dog: OwnedDog) => {
+  const addDog = (dog: RemainingDog) => {
     setSelectedDogs(prev => [...prev, dog]);
     setSearchQuery("");
     setListOpen(false);
@@ -175,16 +171,37 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
     }
   };
 
-  const allSelected = ownedDogs.length > 0 && selectedDogs.length === ownedDogs.length;
+  const allSelected = availableDogs.length > 0 && selectedDogs.length === availableDogs.length;
 
-  if (ownedDogs.length === 0) {
+  if (dogsLoading) {
+    return (
+      <View style={styles.entryEmptyWrap}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={[styles.emptyDesc, { marginTop: 12 }]}>Loading your dogs…</Text>
+      </View>
+    );
+  }
+
+  if (dogsError) {
+    return (
+      <View style={styles.entryEmptyWrap}>
+        <View style={styles.emptyIconWrap}>
+          <Ionicons name="alert-circle-outline" size={32} color="#DC2626" />
+        </View>
+        <Text style={styles.emptyTitle}>Could Not Load Dogs</Text>
+        <Text style={styles.emptyDesc}>Unable to fetch eligible dogs. Please try again later.</Text>
+      </View>
+    );
+  }
+
+  if (availableDogs.length === 0 && selectedDogs.length === 0) {
     return (
       <View style={styles.entryEmptyWrap}>
         <View style={styles.emptyIconWrap}>
           <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
         </View>
-        <Text style={styles.emptyTitle}>No Dogs Registered</Text>
-        <Text style={styles.emptyDesc}>You have no dogs registered under your account to enter into this event.</Text>
+        <Text style={styles.emptyTitle}>No Eligible Dogs</Text>
+        <Text style={styles.emptyDesc}>You have no dogs available to enter into this event.</Text>
       </View>
     );
   }
