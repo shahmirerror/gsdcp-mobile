@@ -295,16 +295,34 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
                 </View>
                 <View style={styles.selectedDogInfo}>
                   <Text style={styles.selectedDogName}>{dog.dog_name}</Text>
+                  {/* Registration line */}
                   <Text style={styles.selectedDogSub}>
-                    KP {dog.KP || "—"}
-                    {dog.sex ? ` · ${dog.sex}` : ""}
-                    {dog.color ? ` · ${dog.color}` : ""}
+                    {dog.KP ? `KP ${dog.KP}` : ""}
+                    {dog.foreign_reg_no ? ` · ${dog.foreign_reg_no}` : ""}
                   </Text>
+                  {/* Physical attributes */}
+                  <Text style={styles.selectedDogSub}>
+                    {[dog.sex, dog.color, dog.hair].filter(Boolean).join(" · ")}
+                  </Text>
+                  {/* Date of birth */}
                   {dog.date_of_birth ? (
+                    <Text style={styles.selectedDogSub}>Born {formatDate(dog.date_of_birth)}</Text>
+                  ) : null}
+                  {/* Sire */}
+                  {dog.sire_name ? (
                     <Text style={styles.selectedDogSub}>
-                      Born {formatDate(dog.date_of_birth)}
+                      <Text style={styles.selectedDogPedigreeLabel}>Sire: </Text>
+                      {dog.sire_name}{dog.sire_KP ? ` (KP ${dog.sire_KP})` : ""}
                     </Text>
                   ) : null}
+                  {/* Dam */}
+                  {dog.dam_name ? (
+                    <Text style={styles.selectedDogSub}>
+                      <Text style={styles.selectedDogPedigreeLabel}>Dam: </Text>
+                      {dog.dam_name}{dog.dam_KP ? ` (KP ${dog.dam_KP})` : ""}
+                    </Text>
+                  ) : null}
+                  {/* Class badge on eligibility */}
                   {isEligible && vs.className ? (
                     <View style={styles.dogClassBadge}>
                       <Text style={styles.dogClassBadgeText}>{vs.className}</Text>
@@ -1254,6 +1272,10 @@ const styles = StyleSheet.create({
   selectedDogCardError: {
     borderColor: "#D97706",
     backgroundColor: "#FFFBEB",
+  },
+  selectedDogPedigreeLabel: {
+    fontWeight: "600",
+    color: "#374151",
   },
   dogClassBadge: {
     alignSelf: "flex-start",

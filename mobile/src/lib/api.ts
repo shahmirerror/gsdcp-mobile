@@ -235,9 +235,13 @@ export type RemainingDog = {
   KP: string;
   sex?: string | null;
   color?: string | null;
+  hair?: string | null;
+  foreign_reg_no?: string | null;
   date_of_birth?: string | null;
   sire_name?: string | null;
+  sire_KP?: string | null;
   dam_name?: string | null;
+  dam_KP?: string | null;
 };
 
 export async function fetchRemainingDogs(showId: string, userId?: number | null, token?: string | null): Promise<RemainingDog[]> {
@@ -260,9 +264,13 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
     KP: d.KP ?? "",
     sex: d.sex ?? null,
     color: d.color ?? null,
+    hair: d.hair ?? null,
+    foreign_reg_no: d.foreign_reg_no ?? null,
     date_of_birth: d.date_of_birth ?? null,
     sire_name: d.sire?.name ?? null,
+    sire_KP: d.sire?.KP ?? null,
     dam_name: d.dam?.name ?? null,
+    dam_KP: d.dam?.KP ?? null,
   })).filter((d) => d.dog_name);
 }
 
