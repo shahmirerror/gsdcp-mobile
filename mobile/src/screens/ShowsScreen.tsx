@@ -113,6 +113,11 @@ function ShowListItem({ show, onPress }: { show: Show; onPress: () => void }) {
             <Text style={styles.badgeText}>{show.entryCount} entries</Text>
           </View>
         </View>
+        {show.status === "Upcoming" && show.last_date_of_entry ? (
+          <Text style={styles.entryDeadline}>
+            Entries close: {formatDate(show.last_date_of_entry)}
+          </Text>
+        ) : null}
       </View>
       <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
     </TouchableOpacity>
@@ -585,6 +590,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     color: COLORS.textMuted,
+  },
+  entryDeadline: {
+    fontSize: 11,
+    color: "#D97706",
+    fontWeight: "600",
+    marginTop: 4,
   },
   itemInfo: {
     flex: 1,
