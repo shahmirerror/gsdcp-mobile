@@ -11,6 +11,7 @@ import {
   Pressable,
   ScrollView,
   RefreshControl,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -52,13 +53,31 @@ function MatingRow({ mating, onPress }: {
         <Text style={styles.itemName} numberOfLines={1}>{mating.kennel_name}</Text>
 
         <View style={styles.dogRow}>
-          <Text style={styles.dogLabel}>S</Text>
-          <Text style={styles.dogName} numberOfLines={1}>{mating.sire.name.trim()}</Text>
+          {mating.sire.imageUrl ? (
+            <Image source={{ uri: mating.sire.imageUrl }} style={styles.dogAvatar} />
+          ) : (
+            <View style={[styles.dogAvatar, styles.dogAvatarPlaceholder]}>
+              <Text style={styles.dogAvatarLetter}>S</Text>
+            </View>
+          )}
+          <View style={styles.dogRowInfo}>
+            <Text style={styles.dogName} numberOfLines={1}>{mating.sire.name.trim()}</Text>
+            {mating.sire.hair ? <Text style={styles.dogHair}>{mating.sire.hair}</Text> : null}
+          </View>
         </View>
 
         <View style={styles.dogRow}>
-          <Text style={styles.dogLabel}>D</Text>
-          <Text style={styles.dogName} numberOfLines={1}>{mating.dam.name.trim()}</Text>
+          {mating.dam.imageUrl ? (
+            <Image source={{ uri: mating.dam.imageUrl }} style={styles.dogAvatar} />
+          ) : (
+            <View style={[styles.dogAvatar, styles.dogAvatarPlaceholder]}>
+              <Text style={styles.dogAvatarLetter}>D</Text>
+            </View>
+          )}
+          <View style={styles.dogRowInfo}>
+            <Text style={styles.dogName} numberOfLines={1}>{mating.dam.name.trim()}</Text>
+            {mating.dam.hair ? <Text style={styles.dogHair}>{mating.dam.hair}</Text> : null}
+          </View>
         </View>
 
         <View style={styles.badges}>
@@ -295,12 +314,22 @@ export default function RecentMatingsScreen() {
                   activeOpacity={0.7}
                   onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.sire.id, name: previewMating.sire.name.trim() }); }}
                 >
+                  {previewMating.sire.imageUrl ? (
+                    <Image source={{ uri: previewMating.sire.imageUrl }} style={styles.previewDogImage} />
+                  ) : (
+                    <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
+                      <Text style={styles.previewDogLabel}>S</Text>
+                    </View>
+                  )}
                   <View style={styles.previewDogLabelWrap}>
                     <Text style={styles.previewDogLabel}>SIRE</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.sire.name.trim()}</Text>
-                    {previewMating.sire.KP ? <Text style={styles.previewDogSub}>KP {previewMating.sire.KP}</Text> : null}
+                    <View style={styles.previewDogMeta}>
+                      {previewMating.sire.KP ? <Text style={styles.previewDogSub}>KP {previewMating.sire.KP}</Text> : null}
+                      {previewMating.sire.hair ? <Text style={styles.previewDogHair}>{previewMating.sire.hair}</Text> : null}
+                    </View>
                   </View>
                   <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
                 </TouchableOpacity>
@@ -313,12 +342,22 @@ export default function RecentMatingsScreen() {
                   activeOpacity={0.7}
                   onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.dam.id, name: previewMating.dam.name.trim() }); }}
                 >
+                  {previewMating.dam.imageUrl ? (
+                    <Image source={{ uri: previewMating.dam.imageUrl }} style={styles.previewDogImage} />
+                  ) : (
+                    <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
+                      <Text style={styles.previewDogLabel}>D</Text>
+                    </View>
+                  )}
                   <View style={styles.previewDogLabelWrap}>
                     <Text style={styles.previewDogLabel}>DAM</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.dam.name.trim()}</Text>
-                    {previewMating.dam.KP ? <Text style={styles.previewDogSub}>KP {previewMating.dam.KP}</Text> : null}
+                    <View style={styles.previewDogMeta}>
+                      {previewMating.dam.KP ? <Text style={styles.previewDogSub}>KP {previewMating.dam.KP}</Text> : null}
+                      {previewMating.dam.hair ? <Text style={styles.previewDogHair}>{previewMating.dam.hair}</Text> : null}
+                    </View>
                   </View>
                   <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
                 </TouchableOpacity>
@@ -479,12 +518,19 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 2 },
 
   dogRow: {
-    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6,
+    flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6,
   },
-  dogLabel: {
-    fontSize: 10, fontWeight: "800", color: COLORS.textMuted,
-    width: 12, textTransform: "uppercase", letterSpacing: 0.5,
+  dogAvatar: {
+    width: 30, height: 30, borderRadius: 15,
+    borderWidth: 1, borderColor: COLORS.border,
   },
+  dogAvatarPlaceholder: {
+    backgroundColor: `${COLORS.primary}12`,
+    justifyContent: "center", alignItems: "center",
+  },
+  dogAvatarLetter: { fontSize: 11, fontWeight: "800", color: COLORS.primary },
+  dogRowInfo: { flex: 1 },
+  dogHair: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
 
   badges: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   badge: {
@@ -567,8 +613,16 @@ const styles = StyleSheet.create({
   previewRowDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: 4 },
 
   previewDogRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    paddingVertical: 14, paddingHorizontal: 4,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 12, paddingHorizontal: 4,
+  },
+  previewDogImage: {
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 1, borderColor: COLORS.border, flexShrink: 0,
+  },
+  previewDogImagePlaceholder: {
+    backgroundColor: `${COLORS.primary}12`,
+    justifyContent: "center", alignItems: "center",
   },
   previewDogLabelWrap: {
     width: 38, height: 26,
@@ -579,7 +633,14 @@ const styles = StyleSheet.create({
   },
   previewDogLabel: { fontSize: 10, fontWeight: "800", color: COLORS.primary, letterSpacing: 0.6 },
   previewDogName: { fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text },
-  previewDogSub: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 1 },
+  previewDogMeta: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" },
+  previewDogSub: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
+  previewDogHair: {
+    fontSize: FONT_SIZES.xs, color: COLORS.primary,
+    backgroundColor: `${COLORS.primary}10`,
+    paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: BORDER_RADIUS.full,
+  },
 
   viewProfileBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
@@ -588,5 +649,5 @@ const styles = StyleSheet.create({
   },
   viewProfileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 
-  dogName: { flex: 1, fontSize: FONT_SIZES.sm, fontWeight: "500", color: COLORS.text },
+  dogName: { fontSize: FONT_SIZES.sm, fontWeight: "500", color: COLORS.text },
 });

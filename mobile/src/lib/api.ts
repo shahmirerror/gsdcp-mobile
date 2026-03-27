@@ -288,6 +288,8 @@ export type MatingDog = {
   id: string;
   KP: string | null;
   foreign_reg_no: string | null;
+  hair: string | null;
+  imageUrl: string | null;
 };
 
 export type RecentMating = {
