@@ -122,7 +122,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
   const [submittedCount, setSubmittedCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
   const [dogVerifyStatus, setDogVerifyStatus] = useState<
-    Record<string, { status: "pending" | "eligible" | "ineligible"; reason?: string }>
+    Record<string, { status: "pending" | "eligible" | "ineligible" | "error"; reason?: string }>
   >({});
 
   const { data: availableDogs = [], isLoading: dogsLoading, isError: dogsError, refetch: refetchDogs } = useQuery<RemainingDog[]>({
@@ -150,9 +150,8 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
     setListOpen(false);
     setSubmitError("");
     // Verify immediately in the background
-    verifyEntry(show.id, dog.id, user!.id, user?.token)
+    verifyEntry(show.id, dog.id, user?.token)
       .then((result) => {
-        console.log("[verify]", dog.dog_name, result);
         setDogVerifyStatus(prev => ({
           ...prev,
           [dog.id]: result.eligible
@@ -160,11 +159,10 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
             : { status: "ineligible", reason: result.reason ?? "Not eligible for this show" },
         }));
       })
-      .catch((err) => {
-        console.log("[verify error]", dog.dog_name, err);
+      .catch(() => {
         setDogVerifyStatus(prev => ({
           ...prev,
-          [dog.id]: { status: "ineligible", reason: "Verification failed — check connection" },
+          [dog.id]: { status: "error", reason: "Could not verify eligibility. You may still submit." },
         }));
       });
   };
@@ -181,6 +179,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
 
   const anyPending = selectedDogs.some(d => dogVerifyStatus[d.id]?.status === "pending");
   const anyIneligible = selectedDogs.some(d => dogVerifyStatus[d.id]?.status === "ineligible");
+  const anyVerifyError = selectedDogs.some(d => dogVerifyStatus[d.id]?.status === "error");
 
   const handleSubmit = async () => {
     if (selectedDogs.length === 0) { setSubmitError("Please select at least one dog to enter."); return; }
@@ -280,22 +279,32 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
             const isPending = !vs || vs.status === "pending";
             const isIneligible = vs?.status === "ineligible";
             const isEligible = vs?.status === "eligible";
+            const isError = vs?.status === "error";
             return (
-              <View key={dog.id} style={[styles.selectedDogCard, isIneligible && styles.selectedDogCardIneligible]}>
+              <View key={dog.id} style={[
+                styles.selectedDogCard,
+                isIneligible && styles.selectedDogCardIneligible,
+                isError && styles.selectedDogCardError,
+              ]}>
                 <View style={styles.selectedDogAvatar}>
-                  <Ionicons name="paw" size={20} color={isIneligible ? "#DC2626" : COLORS.primary} />
+                  <Ionicons
+                    name="paw"
+                    size={20}
+                    color={isIneligible ? "#DC2626" : isError ? "#D97706" : COLORS.primary}
+                  />
                 </View>
                 <View style={styles.selectedDogInfo}>
                   <Text style={styles.selectedDogName}>{dog.dog_name}</Text>
                   <Text style={styles.selectedDogSub}>KP {dog.KP || "—"}{dog.color ? ` · ${dog.color}` : ""}</Text>
                   {vs?.reason ? (
-                    <Text style={styles.dogIneligibleReason}>{vs.reason}</Text>
+                    <Text style={[styles.dogIneligibleReason, isError && styles.dogErrorReason]}>{vs.reason}</Text>
                   ) : null}
                 </View>
                 <View style={styles.dogVerifyBadge}>
                   {isPending && <ActivityIndicator size="small" color={COLORS.primary} />}
                   {isEligible && <Ionicons name="checkmark-circle" size={22} color="#16A34A" />}
                   {isIneligible && <Ionicons name="close-circle" size={22} color="#DC2626" />}
+                  {isError && <Ionicons name="warning" size={22} color="#D97706" />}
                 </View>
                 <TouchableOpacity
                   onPress={() => removeDog(dog.id)}
@@ -388,6 +397,15 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
           <>
             <Ionicons name="close-circle" size={16} color="#fff" />
             <Text style={styles.submitBtnText}>Remove ineligible dogs</Text>
+          </>
+        ) : anyVerifyError ? (
+          <>
+            <Ionicons name="send" size={16} color="#fff" />
+            <Text style={styles.submitBtnText}>
+              {selectedDogs.length > 1
+                ? `Submit ${selectedDogs.length} Entries Anyway`
+                : "Submit Entry Anyway"}
+            </Text>
           </>
         ) : (
           <>
@@ -1219,11 +1237,18 @@ const styles = StyleSheet.create({
     borderColor: "#DC2626",
     backgroundColor: "#FEF2F2",
   },
+  selectedDogCardError: {
+    borderColor: "#D97706",
+    backgroundColor: "#FFFBEB",
+  },
   dogIneligibleReason: {
     fontSize: 11,
     color: "#DC2626",
     marginTop: 3,
     lineHeight: 15,
+  },
+  dogErrorReason: {
+    color: "#D97706",
   },
   dogVerifyBadge: {
     width: 26,

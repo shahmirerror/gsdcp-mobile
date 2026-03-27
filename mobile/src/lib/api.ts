@@ -268,7 +268,6 @@ export type VerifyEntryResult = {
 export async function verifyEntry(
   showId: string,
   dogId: string,
-  userId: number,
   token?: string | null,
 ): Promise<VerifyEntryResult> {
   const headers: Record<string, string> = {
@@ -282,15 +281,28 @@ export async function verifyEntry(
     body: JSON.stringify({
       show_id: Number(showId),
       dog_id: Number(dogId),
-      user_id: userId,
     }),
   });
-  const json = await res.json();
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("invalid-response");
+  }
+  // Server-side crash — not an eligibility result
+  if (res.status >= 500 || json.exception) {
+    throw new Error("server-error");
+  }
   if (json.success) return { eligible: true };
-  return {
-    eligible: false,
-    reason: json.error?.message ?? "Dog is not eligible for this show",
-  };
+  const reason =
+    (typeof json.error === "string" ? json.error : null) ??
+    json.error?.message ??
+    json.error?.msg ??
+    json.message ??
+    json.msg ??
+    "Dog is not eligible for this show";
+  return { eligible: false, reason };
 }
 
 export type Breeder = {
