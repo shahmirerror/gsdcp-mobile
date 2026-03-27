@@ -421,6 +421,8 @@ export function stripHtml(html: string): string {
     .replace(/&ccedil;/g, "ç")
     .replace(/&ntilde;/g, "ñ")
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/li>/gi, "\n")
