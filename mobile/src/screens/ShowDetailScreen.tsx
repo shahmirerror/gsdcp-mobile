@@ -122,7 +122,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
   const [submittedCount, setSubmittedCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
   const [dogVerifyStatus, setDogVerifyStatus] = useState<
-    Record<string, { status: "pending" | "eligible" | "ineligible" | "error"; reason?: string }>
+    Record<string, { status: "pending" | "eligible" | "ineligible" | "error"; reason?: string; className?: string }>
   >({});
 
   const { data: availableDogs = [], isLoading: dogsLoading, isError: dogsError, refetch: refetchDogs } = useQuery<RemainingDog[]>({
@@ -155,7 +155,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
         setDogVerifyStatus(prev => ({
           ...prev,
           [dog.id]: result.eligible
-            ? { status: "eligible" }
+            ? { status: "eligible", className: result.className }
             : { status: "ineligible", reason: result.reason ?? "Not eligible for this show" },
         }));
       })
@@ -295,7 +295,21 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
                 </View>
                 <View style={styles.selectedDogInfo}>
                   <Text style={styles.selectedDogName}>{dog.dog_name}</Text>
-                  <Text style={styles.selectedDogSub}>KP {dog.KP || "—"}{dog.color ? ` · ${dog.color}` : ""}</Text>
+                  <Text style={styles.selectedDogSub}>
+                    KP {dog.KP || "—"}
+                    {dog.sex ? ` · ${dog.sex}` : ""}
+                    {dog.color ? ` · ${dog.color}` : ""}
+                  </Text>
+                  {dog.date_of_birth ? (
+                    <Text style={styles.selectedDogSub}>
+                      Born {formatDate(dog.date_of_birth)}
+                    </Text>
+                  ) : null}
+                  {isEligible && vs.className ? (
+                    <View style={styles.dogClassBadge}>
+                      <Text style={styles.dogClassBadgeText}>{vs.className}</Text>
+                    </View>
+                  ) : null}
                   {vs?.reason ? (
                     <Text style={[styles.dogIneligibleReason, isError && styles.dogErrorReason]}>{vs.reason}</Text>
                   ) : null}
@@ -1240,6 +1254,20 @@ const styles = StyleSheet.create({
   selectedDogCardError: {
     borderColor: "#D97706",
     backgroundColor: "#FFFBEB",
+  },
+  dogClassBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#DCFCE7",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 5,
+  },
+  dogClassBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#16A34A",
+    letterSpacing: 0.3,
   },
   dogIneligibleReason: {
     fontSize: 11,

@@ -235,6 +235,9 @@ export type RemainingDog = {
   KP: string;
   sex?: string | null;
   color?: string | null;
+  date_of_birth?: string | null;
+  sire_name?: string | null;
+  dam_name?: string | null;
 };
 
 export async function fetchRemainingDogs(showId: string, userId?: number | null, token?: string | null): Promise<RemainingDog[]> {
@@ -257,12 +260,17 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
     KP: d.KP ?? "",
     sex: d.sex ?? null,
     color: d.color ?? null,
+    date_of_birth: d.date_of_birth ?? null,
+    sire_name: d.sire?.name ?? null,
+    dam_name: d.dam?.name ?? null,
   })).filter((d) => d.dog_name);
 }
 
 export type VerifyEntryResult = {
   eligible: boolean;
   reason?: string;
+  className?: string;
+  classId?: number;
 };
 
 export async function verifyEntry(
@@ -295,7 +303,11 @@ export async function verifyEntry(
   if (json.exception && json.success === undefined) {
     throw new Error("server-error");
   }
-  if (json.success) return { eligible: true };
+  if (json.success) return {
+    eligible: true,
+    className: json.data?.class_name ?? undefined,
+    classId: json.data?.class_id ?? undefined,
+  };
   const reason =
     (typeof json.error === "string" ? json.error : null) ??
     json.error?.message ??
