@@ -50,7 +50,16 @@ function MatingRow({ mating, onPress }: {
       </View>
 
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={1}>{mating.kennel_name}</Text>
+        <View style={styles.kennelNameRow}>
+          {mating.kennel_image ? (
+            <Image source={{ uri: mating.kennel_image }} style={styles.kennelAvatar} />
+          ) : (
+            <View style={[styles.kennelAvatar, styles.kennelAvatarPlaceholder]}>
+              <Ionicons name="home-outline" size={13} color={COLORS.primary} />
+            </View>
+          )}
+          <Text style={styles.itemName} numberOfLines={1}>{mating.kennel_name}</Text>
+        </View>
 
         <View style={styles.dogRow}>
           {mating.sire.imageUrl ? (
@@ -62,7 +71,11 @@ function MatingRow({ mating, onPress }: {
           )}
           <View style={styles.dogRowInfo}>
             <Text style={styles.dogName} numberOfLines={1}>{mating.sire.name.trim()}</Text>
-            {mating.sire.hair ? <Text style={styles.dogHair}>{mating.sire.hair}</Text> : null}
+            {(mating.sire.hair || mating.sire.color) ? (
+              <Text style={styles.dogHair} numberOfLines={1}>
+                {[mating.sire.hair, mating.sire.color].filter(Boolean).join(" · ")}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -76,7 +89,11 @@ function MatingRow({ mating, onPress }: {
           )}
           <View style={styles.dogRowInfo}>
             <Text style={styles.dogName} numberOfLines={1}>{mating.dam.name.trim()}</Text>
-            {mating.dam.hair ? <Text style={styles.dogHair}>{mating.dam.hair}</Text> : null}
+            {(mating.dam.hair || mating.dam.color) ? (
+              <Text style={styles.dogHair} numberOfLines={1}>
+                {[mating.dam.hair, mating.dam.color].filter(Boolean).join(" · ")}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -284,13 +301,19 @@ export default function RecentMatingsScreen() {
 
                 {/* Header */}
                 <View style={styles.previewHeader}>
-                  <View style={styles.previewDateBlock}>
-                    <Text style={styles.previewDateDay}>{date.day}</Text>
-                    <Text style={styles.previewDateMonth}>{date.month}</Text>
-                    <Text style={styles.previewDateYear}>{date.year}</Text>
-                  </View>
+                  {previewMating.kennel_image ? (
+                    <Image source={{ uri: previewMating.kennel_image }} style={styles.previewKennelImage} />
+                  ) : (
+                    <View style={[styles.previewKennelImage, styles.previewKennelImagePlaceholder]}>
+                      <Ionicons name="home-outline" size={26} color={COLORS.primary} />
+                    </View>
+                  )}
                   <View style={styles.previewHeadInfo}>
                     <Text style={styles.previewName} numberOfLines={2}>{previewMating.kennel_name}</Text>
+                    <View style={styles.previewCityRow}>
+                      <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
+                      <Text style={styles.previewCity}>{date.full}</Text>
+                    </View>
                     {previewMating.city ? (
                       <View style={styles.previewCityRow}>
                         <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
@@ -329,6 +352,7 @@ export default function RecentMatingsScreen() {
                     <View style={styles.previewDogMeta}>
                       {previewMating.sire.KP ? <Text style={styles.previewDogSub}>KP {previewMating.sire.KP}</Text> : null}
                       {previewMating.sire.hair ? <Text style={styles.previewDogHair}>{previewMating.sire.hair}</Text> : null}
+                      {previewMating.sire.color ? <Text style={styles.previewDogColor}>{previewMating.sire.color}</Text> : null}
                     </View>
                   </View>
                   <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
@@ -357,6 +381,7 @@ export default function RecentMatingsScreen() {
                     <View style={styles.previewDogMeta}>
                       {previewMating.dam.KP ? <Text style={styles.previewDogSub}>KP {previewMating.dam.KP}</Text> : null}
                       {previewMating.dam.hair ? <Text style={styles.previewDogHair}>{previewMating.dam.hair}</Text> : null}
+                      {previewMating.dam.color ? <Text style={styles.previewDogColor}>{previewMating.dam.color}</Text> : null}
                     </View>
                   </View>
                   <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
@@ -515,7 +540,16 @@ const styles = StyleSheet.create({
   dateYear: { fontSize: 9, fontWeight: "600", color: COLORS.textMuted, letterSpacing: 0.3, marginTop: 1 },
 
   itemInfo: { flex: 1 },
-  itemName: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 2 },
+  kennelNameRow: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 2 },
+  kennelAvatar: {
+    width: 26, height: 26, borderRadius: 13,
+    borderWidth: 1, borderColor: COLORS.border, flexShrink: 0,
+  },
+  kennelAvatarPlaceholder: {
+    backgroundColor: `${COLORS.primary}10`,
+    justifyContent: "center", alignItems: "center",
+  },
+  itemName: { flex: 1, fontSize: 15, fontWeight: "700", color: COLORS.text },
 
   dogRow: {
     flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6,
@@ -588,16 +622,14 @@ const styles = StyleSheet.create({
   applyButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 
   previewHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: 16, gap: 14 },
-  previewDateBlock: {
-    width: 68, alignItems: "center",
-    backgroundColor: `${COLORS.primary}10`,
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: 12,
-    flexShrink: 0,
+  previewKennelImage: {
+    width: 64, height: 64, borderRadius: 32,
+    borderWidth: 1, borderColor: COLORS.border, flexShrink: 0,
   },
-  previewDateDay: { fontSize: 24, fontWeight: "800", color: COLORS.primary, lineHeight: 28 },
-  previewDateMonth: { fontSize: 11, fontWeight: "700", color: COLORS.primary, textTransform: "uppercase", letterSpacing: 0.4 },
-  previewDateYear: { fontSize: 10, fontWeight: "600", color: COLORS.primary, letterSpacing: 0.3, marginTop: 2 },
+  previewKennelImagePlaceholder: {
+    backgroundColor: `${COLORS.primary}10`,
+    justifyContent: "center", alignItems: "center",
+  },
   previewHeadInfo: { flex: 1, justifyContent: "center" },
   previewName: { fontSize: 17, fontWeight: "700", color: COLORS.text, marginBottom: 4 },
   previewCityRow: { flexDirection: "row", alignItems: "center", gap: 3, marginBottom: 6 },
@@ -638,6 +670,12 @@ const styles = StyleSheet.create({
   previewDogHair: {
     fontSize: FONT_SIZES.xs, color: COLORS.primary,
     backgroundColor: `${COLORS.primary}10`,
+    paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  previewDogColor: {
+    fontSize: FONT_SIZES.xs, color: "#92400e",
+    backgroundColor: "#fef3c7",
     paddingHorizontal: 6, paddingVertical: 1,
     borderRadius: BORDER_RADIUS.full,
   },

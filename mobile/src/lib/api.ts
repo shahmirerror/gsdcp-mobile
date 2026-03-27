@@ -290,12 +290,14 @@ export type MatingDog = {
   foreign_reg_no: string | null;
   hair: string | null;
   imageUrl: string | null;
+  color: string | null;
 };
 
 export type RecentMating = {
   id: string;
   kennel_id: string;
   kennel_name: string;
+  kennel_image: string | null;
   sire: MatingDog;
   dam: MatingDog;
   mating_date: string;
