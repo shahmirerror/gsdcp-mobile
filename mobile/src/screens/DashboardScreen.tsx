@@ -171,7 +171,7 @@ export default function DashboardScreen() {
                 <View style={styles.litterTextWrap}>
                   <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
                   <Text style={styles.litterPairing}>
-                    {mating.sire_name.trim()} × {mating.dam_name.trim()}
+                    {mating.sire.name.trim()} × {mating.dam.name.trim()}
                   </Text>
                   <View style={styles.litterMeta}>
                     <Ionicons
