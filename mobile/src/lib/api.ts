@@ -275,8 +275,10 @@ export async function verifyEntry(
     Accept: "application/json",
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const payload = { show_id: Number(showId), dog_id: Number(dogId) };
-  console.log("[verifyEntry payload]", JSON.stringify(payload), "showId raw:", showId, "dogId raw:", dogId);
+  const payload = {
+    show_id: Number(String(showId).replace(/^show-/, "")),
+    dog_id: Number(String(dogId).replace(/^dog-/, "")),
+  };
   const res = await fetch(`${BASE_URL}/verify-entry`, {
     method: "POST",
     headers,
