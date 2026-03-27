@@ -601,6 +601,7 @@ export type KennelOwner = {
   phone: string | null;
   email: string | null;
   membership_no: string | null;
+  imageUrl?: string | null;
 };
 
 export type KennelFull = Kennel & {

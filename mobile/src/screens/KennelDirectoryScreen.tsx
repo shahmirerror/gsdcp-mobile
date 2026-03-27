@@ -30,6 +30,42 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
+function OwnerRow({ owner, styles }: { owner: KennelOwner; styles: any }) {
+  const [imgErr, setImgErr] = useState(false);
+  const hasImg = !!owner.imageUrl && !owner.imageUrl.includes("user-not-found") && !imgErr;
+  const initials = owner.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <View style={styles.ownerRow}>
+      {hasImg ? (
+        <Image
+          source={{ uri: owner.imageUrl! }}
+          style={styles.ownerAvatarImg}
+          resizeMode="cover"
+          onError={() => setImgErr(true)}
+        />
+      ) : (
+        <View style={styles.ownerAvatar}>
+          <Text style={styles.ownerAvatarText}>{initials}</Text>
+        </View>
+      )}
+      <View style={styles.ownerInfo}>
+        <Text style={styles.ownerName}>{owner.name}</Text>
+        <View style={styles.ownerMeta}>
+          {owner.membership_no ? (
+            <Text style={styles.ownerMetaText}>#{owner.membership_no}</Text>
+          ) : null}
+          {owner.phone ? (
+            <Text style={styles.ownerMetaText}>{owner.phone}</Text>
+          ) : null}
+          {owner.email ? (
+            <Text style={styles.ownerMetaText} numberOfLines={1}>{owner.email}</Text>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function KennelListItem({
   kennel,
   onPress,
@@ -339,25 +375,7 @@ export default function KennelDirectoryScreen() {
                     <View style={styles.previewDivider} />
                     <Text style={styles.ownersHeading}>Owners</Text>
                     {previewKennel.owners.map((owner: KennelOwner, idx: number) => (
-                      <View key={idx} style={styles.ownerRow}>
-                        <View style={styles.ownerAvatar}>
-                          <Ionicons name="person" size={14} color={COLORS.primary} />
-                        </View>
-                        <View style={styles.ownerInfo}>
-                          <Text style={styles.ownerName}>{owner.name}</Text>
-                          <View style={styles.ownerMeta}>
-                            {owner.membership_no ? (
-                              <Text style={styles.ownerMetaText}>#{owner.membership_no}</Text>
-                            ) : null}
-                            {owner.phone ? (
-                              <Text style={styles.ownerMetaText}>{owner.phone}</Text>
-                            ) : null}
-                            {owner.email ? (
-                              <Text style={styles.ownerMetaText} numberOfLines={1}>{owner.email}</Text>
-                            ) : null}
-                          </View>
-                        </View>
-                      </View>
+                      <OwnerRow key={idx} owner={owner} styles={styles} />
                     ))}
                   </>
                 ) : null}
@@ -842,13 +860,24 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   ownerAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: `${COLORS.primary}15`,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: `${COLORS.primary}18`,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
+  },
+  ownerAvatarImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginTop: 1,
+  },
+  ownerAvatarText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
   ownerInfo: {
     flex: 1,
