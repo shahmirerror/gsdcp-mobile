@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
-import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry } from "../lib/api";
+import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 
 const heroBg = require("../../assets/hero-bg.jpg");
@@ -189,8 +189,10 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
     setSubmitting(true);
     try {
       const count = selectedDogs.length;
-      // Placeholder — wire up to your entry submission API endpoint
-      await new Promise(res => setTimeout(res, 1000));
+      const classes = selectedDogs.map(
+        (d) => dogVerifyStatus[d.id]?.className ?? ""
+      );
+      await submitEntry(show.id, user!.id, selectedDogs, classes, user?.token);
       setSubmittedCount(count);
       setSubmitSuccess(true);
       setSelectedDogs([]);

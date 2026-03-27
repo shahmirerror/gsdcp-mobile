@@ -326,6 +326,58 @@ export async function verifyEntry(
   return { eligible: false, reason };
 }
 
+export type SubmitEntryPayload = {
+  show_id: number;
+  user_id: number;
+  dogs: number[];
+  sex: string[];
+  classes: string[];
+};
+
+export async function submitEntry(
+  showId: string,
+  userId: number,
+  dogs: { id: string; sex?: string | null }[],
+  classes: string[],
+  token?: string | null,
+): Promise<void> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const payload: SubmitEntryPayload = {
+    show_id: Number(String(showId).replace(/^show-/, "")),
+    user_id: userId,
+    dogs: dogs.map((d) => Number(String(d.id).replace(/^dog-/, ""))),
+    sex: dogs.map((d) => d.sex ?? ""),
+    classes,
+  };
+  const res = await fetch(`${BASE_URL}/submit-entry`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception && json.success === undefined) {
+    throw new Error("A server error occurred. Please try again.");
+  }
+  if (json.success === false) {
+    const msg =
+      (typeof json.error === "string" ? json.error : null) ??
+      json.error?.message ??
+      json.message ??
+      "Submission failed. Please try again.";
+    throw new Error(msg);
+  }
+}
+
 export type Breeder = {
   id: string;
   name: string;
