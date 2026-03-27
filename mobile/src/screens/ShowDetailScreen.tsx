@@ -210,7 +210,29 @@ function MeetingEntryTab({ show }: { show: ShowDetail }) {
   );
 }
 
+function isEntriesClosed(lastDate: string | null): boolean {
+  if (!lastDate) return false;
+  const deadline = new Date(lastDate);
+  deadline.setHours(23, 59, 59, 999);
+  return Date.now() > deadline.getTime();
+}
+
 function EntryFormTab({ show }: { show: ShowDetail }) {
+  if (isEntriesClosed(show.last_date_of_entry)) {
+    return (
+      <View style={styles.entryEmptyWrap}>
+        <View style={[styles.emptyIconWrap, { backgroundColor: "#F3F4F620" }]}>
+          <Ionicons name="lock-closed-outline" size={32} color={COLORS.textMuted} />
+        </View>
+        <Text style={styles.emptyTitle}>Entries Are Closed</Text>
+        <Text style={styles.emptyDesc}>
+          The entry deadline for this event has passed.
+          {show.last_date_of_entry ? ` Entries closed on ${formatDate(show.last_date_of_entry)}.` : ""}
+        </Text>
+      </View>
+    );
+  }
+
   if (show.event_type === "Meeting") return <MeetingEntryTab show={show} />;
 
   const { user } = useAuth();
