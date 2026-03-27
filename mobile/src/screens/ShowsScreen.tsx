@@ -86,6 +86,9 @@ function ShowListItem({ show, onPress }: { show: Show; onPress: () => void }) {
             <Text style={styles.dateMonth}>
               {MONTHS[parseInt(show.dates[0].split("-")[1], 10) - 1]}
             </Text>
+            <Text style={styles.dateYear}>
+              {show.dates[0].split("-")[0]}
+            </Text>
           </>
         ) : (
           <Text style={styles.dateMonth}>TBA</Text>
@@ -577,6 +580,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: COLORS.primary,
     textTransform: "uppercase",
+  },
+  dateYear: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: COLORS.textMuted,
   },
   itemInfo: {
     flex: 1,
