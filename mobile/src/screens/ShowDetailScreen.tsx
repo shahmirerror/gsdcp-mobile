@@ -122,10 +122,11 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
   const [submittedCount, setSubmittedCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
 
-  const { data: availableDogs = [], isLoading: dogsLoading, isError: dogsError } = useQuery<RemainingDog[]>({
+  const { data: availableDogs = [], isLoading: dogsLoading, isError: dogsError, refetch: refetchDogs } = useQuery<RemainingDog[]>({
     queryKey: ["remaining-dogs", show.id, user?.id],
     queryFn: () => fetchRemainingDogs(show.id, user?.token),
     enabled: !!user,
+    retry: 1,
   });
 
   const selectedIds = useMemo(() => new Set(selectedDogs.map(d => d.id)), [selectedDogs]);
@@ -185,11 +186,18 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
   if (dogsError) {
     return (
       <View style={styles.entryEmptyWrap}>
-        <View style={styles.emptyIconWrap}>
+        <View style={[styles.emptyIconWrap, { backgroundColor: "#FEE2E220" }]}>
           <Ionicons name="alert-circle-outline" size={32} color="#DC2626" />
         </View>
         <Text style={styles.emptyTitle}>Could Not Load Dogs</Text>
-        <Text style={styles.emptyDesc}>Unable to fetch eligible dogs. Please try again later.</Text>
+        <Text style={styles.emptyDesc}>The server returned an error. Please try again or contact support if the problem persists.</Text>
+        <TouchableOpacity
+          style={[styles.retryBtn, { marginTop: 16 }]}
+          onPress={() => refetchDogs()}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.retryBtnText}>Try Again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
