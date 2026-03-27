@@ -260,6 +260,39 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
   })).filter((d) => d.dog_name);
 }
 
+export type VerifyEntryResult = {
+  eligible: boolean;
+  reason?: string;
+};
+
+export async function verifyEntry(
+  showId: string,
+  dogId: string,
+  userId: number,
+  token?: string | null,
+): Promise<VerifyEntryResult> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/verify-entry`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      show_id: Number(showId),
+      dog_id: Number(dogId),
+      user_id: userId,
+    }),
+  });
+  const json = await res.json();
+  if (json.success) return { eligible: true };
+  return {
+    eligible: false,
+    reason: json.error?.message ?? "Dog is not eligible for this show",
+  };
+}
+
 export type Breeder = {
   id: string;
   name: string;

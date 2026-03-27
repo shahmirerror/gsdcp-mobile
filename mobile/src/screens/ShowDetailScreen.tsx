@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
-import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog } from "../lib/api";
+import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 
 const heroBg = require("../../assets/hero-bg.jpg");
@@ -118,9 +118,11 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submittedCount, setSubmittedCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
+  const [verifyErrors, setVerifyErrors] = useState<{ dog_name: string; reason: string }[]>([]);
 
   const { data: availableDogs = [], isLoading: dogsLoading, isError: dogsError, refetch: refetchDogs } = useQuery<RemainingDog[]>({
     queryKey: ["remaining-dogs", show.id, user?.id],
@@ -155,6 +157,31 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
   const handleSubmit = async () => {
     if (selectedDogs.length === 0) { setSubmitError("Please select at least one dog to enter."); return; }
     setSubmitError("");
+    setVerifyErrors([]);
+
+    // Phase 1: verify all dogs in parallel
+    setVerifying(true);
+    try {
+      const results = await Promise.all(
+        selectedDogs.map(async (dog) => {
+          const result = await verifyEntry(show.id, dog.id, user!.id, user?.token);
+          return { dog_name: dog.dog_name, ...result };
+        })
+      );
+      const failures = results.filter((r) => !r.eligible);
+      if (failures.length > 0) {
+        setVerifyErrors(failures.map((f) => ({ dog_name: f.dog_name, reason: f.reason ?? "Not eligible" })));
+        setVerifying(false);
+        return;
+      }
+    } catch (e: any) {
+      setSubmitError("Verification failed. Please check your connection and try again.");
+      setVerifying(false);
+      return;
+    }
+    setVerifying(false);
+
+    // Phase 2: submit
     setSubmitting(true);
     try {
       const count = selectedDogs.length;
@@ -235,6 +262,23 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
           <Text style={styles.errorBannerText}>{submitError}</Text>
         </View>
       ) : null}
+
+      {verifyErrors.length > 0 && (
+        <View style={styles.verifyErrorBlock}>
+          <View style={styles.verifyErrorHeader}>
+            <Ionicons name="close-circle" size={16} color="#DC2626" />
+            <Text style={styles.verifyErrorTitle}>
+              {verifyErrors.length === 1 ? "1 dog is not eligible" : `${verifyErrors.length} dogs are not eligible`}
+            </Text>
+          </View>
+          {verifyErrors.map((err, i) => (
+            <View key={i} style={styles.verifyErrorRow}>
+              <Text style={styles.verifyErrorDog}>{err.dog_name}</Text>
+              <Text style={styles.verifyErrorReason}>{err.reason}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {selectedDogs.length > 0 && (
         <View style={styles.selectedDogsSection}>
@@ -321,12 +365,17 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
       )}
 
       <TouchableOpacity
-        style={[styles.submitBtn, (selectedDogs.length === 0 || submitting) && styles.submitBtnDisabled]}
+        style={[styles.submitBtn, (selectedDogs.length === 0 || submitting || verifying) && styles.submitBtnDisabled]}
         onPress={handleSubmit}
         activeOpacity={0.8}
-        disabled={selectedDogs.length === 0 || submitting}
+        disabled={selectedDogs.length === 0 || submitting || verifying}
       >
-        {submitting ? (
+        {verifying ? (
+          <>
+            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.submitBtnText}>Verifying…</Text>
+          </>
+        ) : submitting ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
           <>
@@ -1271,5 +1320,37 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#DC2626",
     flex: 1,
+  },
+  verifyErrorBlock: {
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  verifyErrorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  verifyErrorTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  verifyErrorRow: {
+    paddingLeft: 22,
+    gap: 2,
+  },
+  verifyErrorDog: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  verifyErrorReason: {
+    fontSize: 12,
+    color: "#DC2626",
   },
 });
