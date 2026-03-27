@@ -353,7 +353,7 @@ export async function submitEntry(
     sex: dogs.map((d) => d.sex ?? ""),
     classes,
   };
-  const res = await fetch(`https://gsdcp.org/mobile/show-entry`, {
+  const res = await fetch(`${BASE_URL}/show-entry`, {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
