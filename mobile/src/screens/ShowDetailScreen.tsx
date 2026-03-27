@@ -124,7 +124,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
 
   const { data: availableDogs = [], isLoading: dogsLoading, isError: dogsError, refetch: refetchDogs } = useQuery<RemainingDog[]>({
     queryKey: ["remaining-dogs", show.id, user?.id],
-    queryFn: () => fetchRemainingDogs(show.id, user?.token),
+    queryFn: () => fetchRemainingDogs(show.id, user?.id, user?.token),
     enabled: !!user,
     retry: 1,
   });

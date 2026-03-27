@@ -237,10 +237,12 @@ export type RemainingDog = {
   color?: string | null;
 };
 
-export async function fetchRemainingDogs(showId: string, token?: string | null): Promise<RemainingDog[]> {
+export async function fetchRemainingDogs(showId: string, userId?: number | null, token?: string | null): Promise<RemainingDog[]> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${BASE_URL}/fetch-remaining-dogs?show_id=${showId}`, { headers });
+  const params = new URLSearchParams({ show_id: showId });
+  if (userId != null) params.set("user_id", String(userId));
+  const res = await fetch(`${BASE_URL}/fetch-remaining-dogs?${params.toString()}`, { headers });
   const json = await res.json();
   if (!json.success) throw new Error(json.message ?? "Failed to fetch remaining dogs");
   return json.data;
