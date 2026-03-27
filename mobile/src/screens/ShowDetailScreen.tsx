@@ -116,11 +116,12 @@ type OwnedDog = { id: string; dog_name: string; KP: string; sex?: string; color?
 
 function EntryFormTab({ show }: { show: ShowDetail }) {
   const { user } = useAuth();
-  const [selectedDog, setSelectedDog] = useState<OwnedDog | null>(null);
+  const [selectedDogs, setSelectedDogs] = useState<OwnedDog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submittedCount, setSubmittedCount] = useState(0);
   const [submitError, setSubmitError] = useState("");
 
   const ownedDogs: OwnedDog[] = (user?.myDogs ?? []).map((d: any) => ({
@@ -131,23 +132,40 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
     color: d.color ?? undefined,
   })).filter((d: OwnedDog) => d.dog_name);
 
+  const selectedIds = useMemo(() => new Set(selectedDogs.map(d => d.id)), [selectedDogs]);
+
   const filteredDogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return ownedDogs;
-    return ownedDogs.filter(d =>
+    const available = ownedDogs.filter(d => !selectedIds.has(d.id));
+    if (!q) return available;
+    return available.filter(d =>
       d.dog_name.toLowerCase().includes(q) || d.KP.toLowerCase().includes(q)
     );
-  }, [searchQuery, ownedDogs]);
+  }, [searchQuery, ownedDogs, selectedIds]);
+
+  const addDog = (dog: OwnedDog) => {
+    setSelectedDogs(prev => [...prev, dog]);
+    setSearchQuery("");
+    setListOpen(false);
+    setSubmitError("");
+  };
+
+  const removeDog = (id: string) => {
+    setSelectedDogs(prev => prev.filter(d => d.id !== id));
+    setSubmitError("");
+  };
 
   const handleSubmit = async () => {
-    if (!selectedDog) { setSubmitError("Please select a dog to enter."); return; }
+    if (selectedDogs.length === 0) { setSubmitError("Please select at least one dog to enter."); return; }
     setSubmitError("");
     setSubmitting(true);
     try {
+      const count = selectedDogs.length;
       // Placeholder — wire up to your entry submission API endpoint
       await new Promise(res => setTimeout(res, 1000));
+      setSubmittedCount(count);
       setSubmitSuccess(true);
-      setSelectedDog(null);
+      setSelectedDogs([]);
       setSearchQuery("");
       setTimeout(() => setSubmitSuccess(false), 5000);
     } catch (e: any) {
@@ -156,6 +174,8 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
       setSubmitting(false);
     }
   };
+
+  const allSelected = ownedDogs.length > 0 && selectedDogs.length === ownedDogs.length;
 
   if (ownedDogs.length === 0) {
     return (
@@ -171,12 +191,16 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
 
   return (
     <View style={styles.entryCard}>
-      <Text style={styles.cardHeading}>Enter a Dog</Text>
+      <Text style={styles.cardHeading}>Enter Dogs</Text>
 
       {submitSuccess && (
         <View style={styles.successBanner}>
           <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
-          <Text style={styles.successText}>Entry submitted successfully.</Text>
+          <Text style={styles.successText}>
+            {submittedCount === 1
+              ? "Entry submitted successfully."
+              : `${submittedCount} entries submitted successfully.`}
+          </Text>
         </View>
       )}
 
@@ -187,83 +211,106 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
         </View>
       ) : null}
 
-      <Text style={styles.fieldLabel}>Select Dog <Text style={styles.required}>*</Text></Text>
-
-      {selectedDog ? (
-        <View style={styles.selectedDogCard}>
-          <View style={styles.selectedDogAvatar}>
-            <Ionicons name="paw" size={20} color={COLORS.primary} />
-          </View>
-          <View style={styles.selectedDogInfo}>
-            <Text style={styles.selectedDogName}>{selectedDog.dog_name}</Text>
-            <Text style={styles.selectedDogSub}>KP {selectedDog.KP || "—"}{selectedDog.color ? ` · ${selectedDog.color}` : ""}</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => { setSelectedDog(null); setSearchQuery(""); setListOpen(false); setSubmitError(""); }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close-circle" size={22} color={COLORS.textMuted} />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={[styles.searchInputWrap, listOpen && styles.searchInputWrapOpen]}>
-          <Ionicons name="search-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 6 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name or KP…"
-            placeholderTextColor={COLORS.textMuted}
-            value={searchQuery}
-            onChangeText={t => { setSearchQuery(t); setListOpen(true); }}
-            onFocus={() => setListOpen(true)}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          )}
+      {selectedDogs.length > 0 && (
+        <View style={styles.selectedDogsSection}>
+          <Text style={styles.fieldLabel}>
+            Selected Dogs{" "}
+            <Text style={styles.selectedDogsCount}>({selectedDogs.length})</Text>
+          </Text>
+          {selectedDogs.map((dog) => (
+            <View key={dog.id} style={styles.selectedDogCard}>
+              <View style={styles.selectedDogAvatar}>
+                <Ionicons name="paw" size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.selectedDogInfo}>
+                <Text style={styles.selectedDogName}>{dog.dog_name}</Text>
+                <Text style={styles.selectedDogSub}>KP {dog.KP || "—"}{dog.color ? ` · ${dog.color}` : ""}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => removeDog(dog.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
       )}
 
-      {listOpen && !selectedDog && (
-        <View style={styles.dropdownList}>
-          {filteredDogs.length > 0 ? filteredDogs.map((dog, i) => (
-            <TouchableOpacity
-              key={dog.id || i}
-              style={[styles.dropdownItem, i < filteredDogs.length - 1 && styles.dropdownItemBorder]}
-              onPress={() => { setSelectedDog(dog); setListOpen(false); setSearchQuery(""); setSubmitError(""); }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.dropdownItemAvatar}>
-                <Ionicons name="paw" size={14} color={COLORS.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.dropdownItemName}>{dog.dog_name}</Text>
-                <Text style={styles.dropdownItemSub}>KP {dog.KP || "—"}{dog.sex ? ` · ${dog.sex}` : ""}</Text>
-              </View>
-            </TouchableOpacity>
-          )) : (
-            <View style={styles.dropdownEmpty}>
-              <Text style={styles.dropdownEmptyText}>No dogs match "{searchQuery}"</Text>
+      {!allSelected && (
+        <>
+          <Text style={styles.fieldLabel}>
+            {selectedDogs.length === 0
+              ? <>Select Dog <Text style={styles.required}>*</Text></>
+              : "Add Another Dog"}
+          </Text>
+
+          <View style={[styles.searchInputWrap, listOpen && styles.searchInputWrapOpen]}>
+            <Ionicons name="search-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name or KP…"
+              placeholderTextColor={COLORS.textMuted}
+              value={searchQuery}
+              onChangeText={t => { setSearchQuery(t); setListOpen(true); }}
+              onFocus={() => setListOpen(true)}
+              autoCorrect={false}
+              autoCapitalize="none"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {listOpen && (
+            <View style={styles.dropdownList}>
+              {filteredDogs.length > 0 ? filteredDogs.map((dog, i) => (
+                <TouchableOpacity
+                  key={dog.id || i}
+                  style={[styles.dropdownItem, i < filteredDogs.length - 1 && styles.dropdownItemBorder]}
+                  onPress={() => addDog(dog)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.dropdownItemAvatar}>
+                    <Ionicons name="paw" size={14} color={COLORS.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dropdownItemName}>{dog.dog_name}</Text>
+                    <Text style={styles.dropdownItemSub}>KP {dog.KP || "—"}{dog.sex ? ` · ${dog.sex}` : ""}</Text>
+                  </View>
+                  <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
+                </TouchableOpacity>
+              )) : (
+                <View style={styles.dropdownEmpty}>
+                  <Text style={styles.dropdownEmptyText}>
+                    {searchQuery ? `No dogs match "${searchQuery}"` : "All your dogs have been added"}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
-        </View>
+        </>
       )}
 
       <TouchableOpacity
-        style={[styles.submitBtn, (!selectedDog || submitting) && styles.submitBtnDisabled]}
+        style={[styles.submitBtn, (selectedDogs.length === 0 || submitting) && styles.submitBtnDisabled]}
         onPress={handleSubmit}
         activeOpacity={0.8}
-        disabled={!selectedDog || submitting}
+        disabled={selectedDogs.length === 0 || submitting}
       >
         {submitting ? (
           <ActivityIndicator size="small" color="#fff" />
         ) : (
           <>
             <Ionicons name="send" size={16} color="#fff" />
-            <Text style={styles.submitBtnText}>Submit Entry</Text>
+            <Text style={styles.submitBtnText}>
+              {selectedDogs.length > 1
+                ? `Submit ${selectedDogs.length} Entries`
+                : "Submit Entry"}
+            </Text>
           </>
         )}
       </TouchableOpacity>
@@ -1043,6 +1090,14 @@ const styles = StyleSheet.create({
   },
   required: {
     color: COLORS.error ?? "#DC2626",
+  },
+  selectedDogsSection: {
+    marginBottom: 4,
+  },
+  selectedDogsCount: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.primary,
   },
   selectedDogCard: {
     flexDirection: "row",
