@@ -243,9 +243,12 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
   const params = new URLSearchParams({ show_id: showId });
   if (userId != null) params.set("user_id", String(userId));
   const res = await fetch(`${BASE_URL}/fetch-remaining-dogs?${params.toString()}`, { headers });
-  const json = await res.json();
+  const text = await res.text();
+  if (!text || !text.trim().startsWith("{")) return [];
+  let json: any;
+  try { json = JSON.parse(text); } catch { return []; }
   if (!json.success) throw new Error(json.message ?? "Failed to fetch remaining dogs");
-  return json.data;
+  return Array.isArray(json.data) ? json.data : [];
 }
 
 export type Breeder = {
