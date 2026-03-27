@@ -403,12 +403,24 @@ export function stripHtml(html: string): string {
     .replace(/&nbsp;/g, " ")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&ndash;/g, "–")
     .replace(/&mdash;/g, "—")
-    .replace(/&uuml;/g, "ü")
-    .replace(/&auml;/g, "ä")
-    .replace(/&ouml;/g, "ö")
-    .replace(/&apos;/g, "'")
+    .replace(/&hellip;/g, "…")
+    .replace(/&uuml;/gi, "ü")
+    .replace(/&auml;/gi, "ä")
+    .replace(/&ouml;/gi, "ö")
+    .replace(/&szlig;/g, "ß")
+    .replace(/&Uuml;/g, "Ü")
+    .replace(/&Auml;/g, "Ä")
+    .replace(/&Ouml;/g, "Ö")
+    .replace(/&eacute;/g, "é")
+    .replace(/&egrave;/g, "è")
+    .replace(/&ecirc;/g, "ê")
+    .replace(/&agrave;/g, "à")
+    .replace(/&ccedil;/g, "ç")
+    .replace(/&ntilde;/g, "ñ")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/li>/gi, "\n")
@@ -425,6 +437,7 @@ export type JudgeItem = {
   judge_id: string;
   full_name: string;
   credentials: string;
+  description: string;
   imageUrl: string;
 };
 
