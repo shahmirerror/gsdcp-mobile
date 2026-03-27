@@ -291,8 +291,8 @@ export async function verifyEntry(
   } catch {
     throw new Error("invalid-response");
   }
-  // Server-side crash — not an eligibility result
-  if (res.status >= 500 || json.exception) {
+  // Only treat as server error if it's a PHP crash (has exception field, no success field)
+  if (json.exception && json.success === undefined) {
     throw new Error("server-error");
   }
   if (json.success) return { eligible: true };
