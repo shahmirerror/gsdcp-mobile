@@ -365,8 +365,11 @@ export async function submitEntry(
   } catch {
     throw new Error("Invalid response from server.");
   }
-  if (json.exception && json.success === undefined) {
-    throw new Error("A server error occurred. Please try again.");
+  if (json.exception) {
+    const msg = json.message
+      ? `Server error: ${json.message}`
+      : "A server error occurred. Please try again.";
+    throw new Error(msg);
   }
   if (json.success === false) {
     const msg =
