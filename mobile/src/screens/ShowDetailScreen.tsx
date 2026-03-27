@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
-import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry } from "../lib/api";
+import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry, fetchMeetingStatus, MeetingStatusResult, bookMeetingSeat } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 
 const heroBg = require("../../assets/hero-bg.jpg");
@@ -112,7 +112,107 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
   );
 }
 
+function MeetingEntryTab({ show }: { show: ShowDetail }) {
+  const { user } = useAuth();
+  const [booking, setBooking] = useState(false);
+  const [bookError, setBookError] = useState("");
+
+  const { data: meetingStatus, isLoading, isError, error, refetch } = useQuery<MeetingStatusResult>({
+    queryKey: ["meeting-status", show.id, user?.id],
+    queryFn: () => fetchMeetingStatus(show.id, user?.id, user?.token),
+    enabled: !!user,
+    retry: 1,
+  });
+
+  const handleBook = async () => {
+    if (!user) return;
+    setBookError("");
+    setBooking(true);
+    try {
+      await bookMeetingSeat(show.id, user.id, user.token);
+      refetch();
+    } catch (e: any) {
+      setBookError(e.message ?? "Booking failed. Please try again.");
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.meetingWrap}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.meetingWrap}>
+        <Ionicons name="alert-circle-outline" size={36} color="#DC2626" />
+        <Text style={styles.meetingErrorText}>
+          {(error as any)?.message ?? "Could not load meeting status."}
+        </Text>
+        <TouchableOpacity style={styles.meetingRetryBtn} onPress={() => refetch()} activeOpacity={0.8}>
+          <Text style={styles.meetingRetryBtnText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (meetingStatus?.status === "reserved") {
+    return (
+      <View style={styles.meetingWrap}>
+        <View style={styles.meetingSuccessIcon}>
+          <Ionicons name="checkmark-circle" size={52} color="#16A34A" />
+        </View>
+        <Text style={styles.meetingReservedTitle}>Seat Reserved</Text>
+        <Text style={styles.meetingReservedDesc}>Your seat is reserved for this meeting.</Text>
+      </View>
+    );
+  }
+
+  if (meetingStatus?.status === "no_seat_found") {
+    return (
+      <View style={styles.meetingWrap}>
+        <View style={[styles.meetingSuccessIcon, { backgroundColor: "#FEE2E220" }]}>
+          <Ionicons name="close-circle-outline" size={52} color="#DC2626" />
+        </View>
+        <Text style={[styles.meetingReservedTitle, { color: "#DC2626" }]}>No Seats Available</Text>
+        <Text style={styles.meetingReservedDesc}>
+          {meetingStatus.message || "No seats are available for this meeting."}
+        </Text>
+      </View>
+    );
+  }
+
+  // NOT_ENTERED — show "Book a seat" button
+  return (
+    <View style={styles.meetingWrap}>
+      <View style={styles.meetingSuccessIcon}>
+        <Ionicons name="calendar-outline" size={52} color={COLORS.primary} />
+      </View>
+      <Text style={styles.meetingReservedTitle}>Reserve Your Seat</Text>
+      <Text style={styles.meetingReservedDesc}>You have not yet booked a seat for this meeting.</Text>
+      {bookError ? <Text style={styles.meetingErrorText}>{bookError}</Text> : null}
+      <TouchableOpacity
+        style={styles.meetingBookBtn}
+        onPress={handleBook}
+        disabled={booking}
+        activeOpacity={0.85}
+      >
+        {booking
+          ? <ActivityIndicator size="small" color="#fff" />
+          : <Text style={styles.meetingBookBtnText}>Book a Seat</Text>
+        }
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function EntryFormTab({ show }: { show: ShowDetail }) {
+  if (show.event_type === "Meeting") return <MeetingEntryTab show={show} />;
+
   const { user } = useAuth();
   const [selectedDogs, setSelectedDogs] = useState<RemainingDog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1302,6 +1402,67 @@ const styles = StyleSheet.create({
   },
   dogErrorReason: {
     color: "#D97706",
+  },
+  meetingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 48,
+    gap: 12,
+  },
+  meetingSuccessIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: "#F0FDF4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  meetingReservedTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    textAlign: "center",
+  },
+  meetingReservedDesc: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    lineHeight: 21,
+  },
+  meetingErrorText: {
+    fontSize: 13,
+    color: "#DC2626",
+    textAlign: "center",
+    lineHeight: 19,
+  },
+  meetingBookBtn: {
+    marginTop: 12,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    alignItems: "center",
+  },
+  meetingBookBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  meetingRetryBtn: {
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  meetingRetryBtnText: {
+    color: COLORS.primary,
+    fontWeight: "600",
+    fontSize: 14,
   },
   dogVerifyBadge: {
     width: 26,

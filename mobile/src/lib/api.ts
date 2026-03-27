@@ -274,6 +274,79 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
   })).filter((d) => d.dog_name);
 }
 
+export type MeetingStatus = "reserved" | "not_entered" | "no_seat_found";
+
+export type MeetingStatusResult = {
+  status: MeetingStatus;
+  message: string;
+};
+
+export async function fetchMeetingStatus(
+  showId: string,
+  userId?: number | null,
+  token?: string | null,
+): Promise<MeetingStatusResult> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const params = new URLSearchParams({ show_id: showId });
+  if (userId != null) params.set("user_id", String(userId));
+  const res = await fetch(`${BASE_URL}/fetch-remaining-dogs?${params.toString()}`, { headers });
+  const text = await res.text();
+  if (!text || !text.trim().startsWith("{")) throw new Error("Invalid response from server.");
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("Invalid response from server."); }
+  const code: string = json.error?.code ?? json.code ?? "";
+  if (code === "NOT_ENTERED") {
+    return { status: "not_entered", message: json.error?.message || json.message || "" };
+  }
+  if (code === "NO_SEAT_FOUND") {
+    return {
+      status: "no_seat_found",
+      message: json.error?.message || json.message || "No seats are available for this meeting.",
+    };
+  }
+  return { status: "reserved", message: "Your seat is reserved for this meeting." };
+}
+
+export async function bookMeetingSeat(
+  showId: string,
+  userId: number,
+  token?: string | null,
+): Promise<void> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const payload = {
+    show_id: Number(String(showId).replace(/^show-/, "")),
+    user_id: userId,
+  };
+  const res = await fetch(`${BASE_URL}/show-entry`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) {
+    throw new Error(json.message ? `Server error: ${json.message}` : "A server error occurred. Please try again.");
+  }
+  if (json.success === false) {
+    const msg =
+      (typeof json.error === "string" ? json.error : null) ??
+      json.error?.message ??
+      json.message ??
+      "Booking failed. Please try again.";
+    throw new Error(msg);
+  }
+}
+
 export type VerifyEntryResult = {
   eligible: boolean;
   reason?: string;
