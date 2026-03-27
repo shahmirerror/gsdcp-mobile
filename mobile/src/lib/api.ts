@@ -248,7 +248,16 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
   let json: any;
   try { json = JSON.parse(text); } catch { return []; }
   if (!json.success) throw new Error(json.message ?? "Failed to fetch remaining dogs");
-  return Array.isArray(json.data) ? json.data : [];
+  // Response shape: { success: true, data: { dogs: [...] } }
+  const raw = json.data?.dogs ?? json.data;
+  const list: any[] = Array.isArray(raw) ? raw : [];
+  return list.map((d: any) => ({
+    id: String(d.id ?? "").replace(/^dog-/, ""),
+    dog_name: d.name ?? d.dog_name ?? "",
+    KP: d.KP ?? "",
+    sex: d.sex ?? null,
+    color: d.color ?? null,
+  })).filter((d) => d.dog_name);
 }
 
 export type Breeder = {
