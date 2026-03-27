@@ -578,6 +578,7 @@ export type Kennel = {
   imageUrl: string;
   activeSince: string;
   description: string | null;
+  owners?: KennelOwner[];
 };
 
 export async function fetchKennels(): Promise<Kennel[]> {

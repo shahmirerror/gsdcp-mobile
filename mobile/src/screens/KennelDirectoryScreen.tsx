@@ -19,7 +19,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchKennels, Kennel } from "../lib/api";
+import { fetchKennels, Kennel, KennelOwner } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelDirectory">;
@@ -334,6 +334,33 @@ export default function KennelDirectoryScreen() {
                     </View>
                   ))}
                 </View>
+                {previewKennel.owners && previewKennel.owners.length > 0 ? (
+                  <>
+                    <View style={styles.previewDivider} />
+                    <Text style={styles.ownersHeading}>Owners</Text>
+                    {previewKennel.owners.map((owner: KennelOwner, idx: number) => (
+                      <View key={idx} style={styles.ownerRow}>
+                        <View style={styles.ownerAvatar}>
+                          <Ionicons name="person" size={14} color={COLORS.primary} />
+                        </View>
+                        <View style={styles.ownerInfo}>
+                          <Text style={styles.ownerName}>{owner.name}</Text>
+                          <View style={styles.ownerMeta}>
+                            {owner.membership_no ? (
+                              <Text style={styles.ownerMetaText}>#{owner.membership_no}</Text>
+                            ) : null}
+                            {owner.phone ? (
+                              <Text style={styles.ownerMetaText}>{owner.phone}</Text>
+                            ) : null}
+                            {owner.email ? (
+                              <Text style={styles.ownerMetaText} numberOfLines={1}>{owner.email}</Text>
+                            ) : null}
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </>
+                ) : null}
                 <TouchableOpacity
                   style={styles.viewProfileBtn}
                   activeOpacity={0.8}
@@ -799,6 +826,47 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flex: 1,
     textAlign: "right",
+  },
+  ownersHeading: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  ownerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 10,
+  },
+  ownerAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  ownerInfo: {
+    flex: 1,
+  },
+  ownerName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  ownerMeta: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 2,
+  },
+  ownerMetaText: {
+    fontSize: 11,
+    color: COLORS.textMuted,
   },
   viewProfileBtn: {
     flexDirection: "row",
