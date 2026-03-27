@@ -198,6 +198,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
       setSelectedDogs([]);
       setDogVerifyStatus({});
       setSearchQuery("");
+      refetchDogs();
       setTimeout(() => setSubmitSuccess(false), 5000);
     } catch (e: any) {
       setSubmitError(e.message ?? "Submission failed. Please try again.");
