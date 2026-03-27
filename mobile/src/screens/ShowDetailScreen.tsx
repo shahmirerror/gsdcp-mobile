@@ -152,17 +152,19 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
     // Verify immediately in the background
     verifyEntry(show.id, dog.id, user!.id, user?.token)
       .then((result) => {
+        console.log("[verify]", dog.dog_name, result);
         setDogVerifyStatus(prev => ({
           ...prev,
           [dog.id]: result.eligible
             ? { status: "eligible" }
-            : { status: "ineligible", reason: result.reason },
+            : { status: "ineligible", reason: result.reason ?? "Not eligible for this show" },
         }));
       })
-      .catch(() => {
+      .catch((err) => {
+        console.log("[verify error]", dog.dog_name, err);
         setDogVerifyStatus(prev => ({
           ...prev,
-          [dog.id]: { status: "ineligible", reason: "Verification failed" },
+          [dog.id]: { status: "ineligible", reason: "Verification failed — check connection" },
         }));
       });
   };
@@ -286,7 +288,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
                 <View style={styles.selectedDogInfo}>
                   <Text style={styles.selectedDogName}>{dog.dog_name}</Text>
                   <Text style={styles.selectedDogSub}>KP {dog.KP || "—"}{dog.color ? ` · ${dog.color}` : ""}</Text>
-                  {isIneligible && vs.reason ? (
+                  {vs?.reason ? (
                     <Text style={styles.dogIneligibleReason}>{vs.reason}</Text>
                   ) : null}
                 </View>
@@ -1185,7 +1187,7 @@ const styles = StyleSheet.create({
   },
   selectedDogCard: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     borderWidth: 1,
     borderColor: COLORS.primary,
     borderRadius: 10,
