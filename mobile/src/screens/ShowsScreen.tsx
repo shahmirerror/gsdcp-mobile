@@ -11,13 +11,14 @@ import {
   Pressable,
   ScrollView,
   RefreshControl,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchShows, Show } from "../lib/api";
+import { fetchShows, Show, ShowJudge } from "../lib/api";
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -45,6 +46,31 @@ const STATUS_COLORS: Record<string, string> = {
   Current: "#22C55E",
   Past: "#9CA3AF",
 };
+
+function PreviewJudgeRow({ judge, onPress }: { judge: ShowJudge; onPress: () => void }) {
+  const [imgError, setImgError] = useState(false);
+  const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  const hasImg = !!judge.imageUrl && !imgError;
+  return (
+    <TouchableOpacity style={styles.judgeRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.judgeAvatarWrap}>
+        {hasImg ? (
+          <Image source={{ uri: judge.imageUrl! }} style={styles.judgeAvatarImg} onError={() => setImgError(true)} />
+        ) : (
+          <Text style={styles.judgeAvatarInitials}>{initials}</Text>
+        )}
+      </View>
+      <View style={styles.judgeLabelWrap}>
+        <Text style={styles.judgeLabel}>JUDGE</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.judgeName} numberOfLines={1}>{judge.full_name}</Text>
+        {judge.credentials ? <Text style={styles.judgeCredentials}>{judge.credentials}</Text> : null}
+      </View>
+      <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+    </TouchableOpacity>
+  );
+}
 
 function ShowListItem({ show, onPress }: { show: Show; onPress: () => void }) {
   const statusColor = STATUS_COLORS[show.status] || COLORS.textMuted;
@@ -311,12 +337,6 @@ export default function ShowsScreen() {
                     { label: "Location", value: previewShow.location },
                     { label: "Entries", value: String(previewShow.entryCount) },
                     { label: "Last Entry", value: previewShow.last_date_of_entry ? formatDate(previewShow.last_date_of_entry) : null },
-                    {
-                      label: previewShow.judges.length === 1 ? "Judge" : "Judges",
-                      value: previewShow.judges.length > 0
-                        ? previewShow.judges.map(j => j.full_name).join(", ")
-                        : null,
-                    },
                   ].filter(r => r.value).map(r => (
                     <View key={r.label} style={styles.previewRow}>
                       <Text style={styles.previewRowLabel}>{r.label}</Text>
@@ -324,6 +344,21 @@ export default function ShowsScreen() {
                     </View>
                   ))}
                 </View>
+                {previewShow.judges.length > 0 && (
+                  <>
+                    <View style={styles.previewDivider} />
+                    {previewShow.judges.map((judge, i) => (
+                      <View key={judge.id}>
+                        <PreviewJudgeRow
+                          judge={judge}
+                          onPress={() => { setPreviewShow(null); navigation.push("JudgeDetail", { id: judge.id, backLabel: previewShow.name }); }}
+                        />
+                        {i < previewShow.judges.length - 1 && <View style={styles.judgeRowDivider} />}
+                      </View>
+                    ))}
+                    <View style={styles.previewDivider} />
+                  </>
+                )}
                 <TouchableOpacity
                   style={styles.viewProfileBtn}
                   activeOpacity={0.8}
@@ -781,6 +816,41 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "right",
   },
+  judgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  judgeAvatarWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${COLORS.primary}12`,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+    overflow: "hidden",
+  },
+  judgeAvatarImg: { width: 48, height: 48, borderRadius: 24 },
+  judgeAvatarInitials: { fontSize: 16, fontWeight: "800", color: COLORS.primary },
+  judgeLabelWrap: {
+    width: 38,
+    height: 26,
+    backgroundColor: `${COLORS.primary}12`,
+    borderRadius: BORDER_RADIUS.sm,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  judgeLabel: { fontSize: 10, fontWeight: "800", color: COLORS.primary, letterSpacing: 0.6 },
+  judgeName: { fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text },
+  judgeCredentials: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 1 },
+  judgeRowDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: 4 },
+
   viewProfileBtn: {
     flexDirection: "row",
     alignItems: "center",
