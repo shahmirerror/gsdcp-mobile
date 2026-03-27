@@ -313,12 +313,22 @@ export async function fetchRecentMatings(): Promise<RecentMating[]> {
   });
 }
 
+export type DashboardMating = {
+  kennel_name: string;
+  sire_name: string;
+  dam_name: string;
+  sire_dog_id: string;
+  dam_dog_id: string;
+  mating_date: string;
+  city: string | null;
+};
+
 export type DashboardData = {
   totalDogs: number;
   totalKennels: number;
   totalShows: number;
   upcomingShows: Show[];
-  recentMatings: RecentMating[];
+  recentMatings: DashboardMating[];
 };
 
 export async function fetchDashboard(): Promise<DashboardData> {
