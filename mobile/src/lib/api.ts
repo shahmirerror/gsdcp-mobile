@@ -274,12 +274,25 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
   })).filter((d) => d.dog_name);
 }
 
+export type City = {
+  id: number;
+  city: string;
+  country: string;
+  status: string;
+};
+
+export async function fetchCities(): Promise<City[]> {
+  const res = await fetch(`${BASE_URL}/cities`, { headers: { Accept: "application/json" } });
+  const json = await res.json();
+  return json?.data?.cities ?? [];
+}
+
 export type UpdateProfilePayload = {
   user_id: number;
   phone?: string;
   email?: string;
   address?: string;
-  city?: string;
+  city_id?: number;
   password?: string;
   show_phone?: 0 | 1;
   show_email?: 0 | 1;

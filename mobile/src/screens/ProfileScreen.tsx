@@ -31,7 +31,7 @@ import {
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
   searchDogs, DogSearchResult,
   verifySire, verifyDam, SireVerification,
-  updateProfile,
+  updateProfile, fetchCities, City,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -203,12 +203,25 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [cityPickerOpen, setCityPickerOpen] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
+  const [cityId, setCityId] = useState<number | null>(null);
+  const [cityLabel, setCityLabel] = useState(member.city ?? "");
+
+  const { data: cities = [] } = useQuery<City[]>({
+    queryKey: ["cities"],
+    queryFn: fetchCities,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const filteredCities = cities.filter(c =>
+    c.city.toLowerCase().includes(citySearch.toLowerCase())
+  );
 
   const [form, setForm] = useState({
     phone: phone ?? "",
     email: email ?? "",
     address: address ?? "",
-    city: member.city ?? "",
     password: "",
     showPhone: true,
     showEmail: true,
@@ -219,11 +232,13 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       phone: phone ?? "",
       email: email ?? "",
       address: address ?? "",
-      city: member.city ?? "",
       password: "",
       showPhone: true,
       showEmail: true,
     });
+    setCityId(null);
+    setCityLabel(member.city ?? "");
+    setCitySearch("");
     setSaveError("");
     setSaveSuccess(false);
     setEditing(true);
@@ -238,17 +253,17 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       show_phone: form.showPhone ? 1 : 0,
       show_email: form.showEmail ? 1 : 0,
     };
-    if (form.phone.trim())    payload.phone   = form.phone.trim();
-    if (form.email.trim())    payload.email   = form.email.trim();
-    if (form.address.trim())  payload.address = form.address.trim();
-    if (form.city.trim())     payload.city    = form.city.trim();
+    if (form.phone.trim())    payload.phone    = form.phone.trim();
+    if (form.email.trim())    payload.email    = form.email.trim();
+    if (form.address.trim())  payload.address  = form.address.trim();
+    if (cityId !== null)      payload.city_id  = cityId;
     if (form.password.trim()) payload.password = form.password.trim();
     try {
       await updateProfile(payload, user.token);
       await updateUser({
         phone: form.phone.trim() || user.phone,
         email: form.email.trim() || user.email,
-        city:  form.city.trim()  || user.city,
+        city:  cityLabel || user.city,
       });
       refetchDetail();
       setSaveSuccess(true);
@@ -358,14 +373,65 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
           {/* City */}
           <View style={eStyles.fieldGroup}>
             <Text style={eStyles.fieldLabel}>City</Text>
-            <TextInput
-              style={eStyles.input}
-              value={form.city}
-              onChangeText={v => setForm(f => ({ ...f, city: v }))}
-              placeholder="City"
-              placeholderTextColor={COLORS.textMuted}
-            />
+            <TouchableOpacity
+              style={eStyles.cityPickerBtn}
+              activeOpacity={0.8}
+              onPress={() => { setCitySearch(""); setCityPickerOpen(true); }}
+            >
+              <Text style={cityLabel ? eStyles.cityPickerValue : eStyles.cityPickerPlaceholder} numberOfLines={1}>
+                {cityLabel || "Select city…"}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
           </View>
+
+          {/* City Picker Modal */}
+          <Modal visible={cityPickerOpen} animationType="slide" transparent onRequestClose={() => setCityPickerOpen(false)}>
+            <View style={eStyles.modalOverlay}>
+              <View style={eStyles.modalSheet}>
+                <View style={eStyles.modalHeader}>
+                  <Text style={eStyles.modalTitle}>Select City</Text>
+                  <TouchableOpacity onPress={() => setCityPickerOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close" size={22} color={COLORS.text} />
+                  </TouchableOpacity>
+                </View>
+                <View style={eStyles.modalSearchWrap}>
+                  <Ionicons name="search-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+                  <TextInput
+                    style={eStyles.modalSearchInput}
+                    value={citySearch}
+                    onChangeText={setCitySearch}
+                    placeholder="Search cities…"
+                    placeholderTextColor={COLORS.textMuted}
+                    autoFocus
+                  />
+                  {citySearch.length > 0 && (
+                    <TouchableOpacity onPress={() => setCitySearch("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                      <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <ScrollView style={eStyles.modalList} keyboardShouldPersistTaps="handled">
+                  {filteredCities.map(c => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[eStyles.modalCityRow, cityId === c.id && eStyles.modalCityRowActive]}
+                      activeOpacity={0.7}
+                      onPress={() => { setCityId(c.id); setCityLabel(c.city); setCityPickerOpen(false); }}
+                    >
+                      <Text style={[eStyles.modalCityName, cityId === c.id && eStyles.modalCityNameActive]}>{c.city}</Text>
+                      {cityId === c.id && <Ionicons name="checkmark" size={16} color={COLORS.primary} />}
+                    </TouchableOpacity>
+                  ))}
+                  {filteredCities.length === 0 && (
+                    <View style={{ padding: 24, alignItems: "center" }}>
+                      <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>No cities found</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
 
           {/* Password */}
           <View style={eStyles.fieldGroup}>
@@ -444,6 +510,40 @@ const eStyles = StyleSheet.create({
   errorBannerText: { fontSize: 13, color: "#DC2626", flex: 1 },
   successBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F0FDF4", borderRadius: 8, padding: 10, marginBottom: 12 },
   successBannerText: { fontSize: 13, color: "#16A34A", flex: 1 },
+  cityPickerBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: "#FAFAFA",
+  },
+  cityPickerValue: { fontSize: 14, color: COLORS.text, flex: 1 },
+  cityPickerPlaceholder: { fontSize: 14, color: COLORS.textMuted, flex: 1 },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  modalSheet: {
+    backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: "75%", paddingBottom: 24,
+  },
+  modalHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: "#F1F5F9",
+  },
+  modalTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  modalSearchWrap: {
+    flexDirection: "row", alignItems: "center",
+    margin: 12, paddingHorizontal: 12, paddingVertical: 9,
+    backgroundColor: "#F8FAFC", borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB",
+  },
+  modalSearchInput: { flex: 1, fontSize: 14, color: COLORS.text, padding: 0 },
+  modalList: { flexGrow: 0 },
+  modalCityRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingVertical: 13,
+    borderBottomWidth: 1, borderBottomColor: "#F8FAFC",
+  },
+  modalCityRowActive: { backgroundColor: `${COLORS.primary}08` },
+  modalCityName: { fontSize: 14, color: COLORS.text },
+  modalCityNameActive: { fontWeight: "700", color: COLORS.primary },
 });
 
 /* ── Tab: Kennel ────────────────────────────────────── */
