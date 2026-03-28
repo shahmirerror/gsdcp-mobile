@@ -31,6 +31,7 @@ type AuthContextType = {
   isLoading: boolean;
   login: (identifier: string, credential: string, mode?: "membership" | "username" | "otp") => Promise<void>;
   logout: () => void;
+  updateUser: (patch: Partial<AuthUser>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -117,8 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const updateUser = async (patch: Partial<AuthUser>) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -274,6 +274,52 @@ export async function fetchRemainingDogs(showId: string, userId?: number | null,
   })).filter((d) => d.dog_name);
 }
 
+export type UpdateProfilePayload = {
+  user_id: number;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  password?: string;
+  show_phone?: 0 | 1;
+  show_email?: 0 | 1;
+  photo?: string;
+};
+
+export async function updateProfile(
+  payload: UpdateProfilePayload,
+  token?: string | null,
+): Promise<void> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/profile/update-profile`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) {
+    throw new Error(json.message ?? "A server error occurred.");
+  }
+  if (json.success === false) {
+    const msg =
+      (typeof json.error === "string" ? json.error : null) ??
+      json.error?.message ??
+      json.message ??
+      "Update failed. Please try again.";
+    throw new Error(msg);
+  }
+}
+
 export type MeetingStatus = "reserved" | "not_entered" | "no_seat_found";
 
 export type MeetingStatusResult = {

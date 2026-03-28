@@ -31,9 +31,11 @@ import {
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
   searchDogs, DogSearchResult,
   verifySire, verifyDam, SireVerification,
+  updateProfile,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
+import { Switch } from "react-native";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -185,37 +187,264 @@ function DetailItem({ icon, label, value, valueColor }: {
 }
 
 /* ── Tab: Detail ────────────────────────────────────── */
-function DetailTab({ detail, fallbackMember, email, phone }: {
+function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
   detail: MemberDetail | undefined; fallbackMember?: Member;
   email: string | null; phone: string | null;
+  refetchDetail: () => void;
 }) {
+  const { user, updateUser } = useAuth();
   const member = detail?.member ?? fallbackMember;
   if (!member) return null;
   const statusLabel = member.membership_no.startsWith("P-") || member.membership_no.startsWith("D-") ? "Active" : "Temporary";
   const statusColor = statusLabel === "Active" ? COLORS.primary : "#F59E0B";
   const address = (detail?.member as any)?.address;
 
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const [form, setForm] = useState({
+    phone: phone ?? "",
+    email: email ?? "",
+    address: address ?? "",
+    city: member.city ?? "",
+    password: "",
+    showPhone: true,
+    showEmail: true,
+  });
+
+  function openEdit() {
+    setForm({
+      phone: phone ?? "",
+      email: email ?? "",
+      address: address ?? "",
+      city: member.city ?? "",
+      password: "",
+      showPhone: true,
+      showEmail: true,
+    });
+    setSaveError("");
+    setSaveSuccess(false);
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!user) return;
+    setSaveError("");
+    setSaving(true);
+    const payload: any = {
+      user_id: user.id,
+      show_phone: form.showPhone ? 1 : 0,
+      show_email: form.showEmail ? 1 : 0,
+    };
+    if (form.phone.trim())    payload.phone   = form.phone.trim();
+    if (form.email.trim())    payload.email   = form.email.trim();
+    if (form.address.trim())  payload.address = form.address.trim();
+    if (form.city.trim())     payload.city    = form.city.trim();
+    if (form.password.trim()) payload.password = form.password.trim();
+    try {
+      await updateProfile(payload, user.token);
+      await updateUser({
+        phone: form.phone.trim() || user.phone,
+        email: form.email.trim() || user.email,
+        city:  form.city.trim()  || user.city,
+      });
+      refetchDetail();
+      setSaveSuccess(true);
+      setEditing(false);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (e: any) {
+      setSaveError(e.message ?? "Update failed. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <View style={styles.card}>
       <View style={styles.cardHeadingRow}>
         <Text style={styles.cardHeading}>Membership Details</Text>
-        <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} data-testid="btn-edit-details">
-          <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
-          <Text style={styles.cardEditBtnText}>Edit</Text>
-        </TouchableOpacity>
+        {!editing && (
+          <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} onPress={openEdit} data-testid="btn-edit-details">
+            <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
+            <Text style={styles.cardEditBtnText}>Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <View style={styles.detailsGrid}>
-        <DetailItem icon="card"             label="Membership Number" value={member.membership_no} />
-        <DetailItem icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
-        {member.city    ? <DetailItem icon="location" label="City"    value={member.city!} />    : null}
-        {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} /> : null}
-        {address        ? <DetailItem icon="home"     label="Address" value={address} />          : null}
-        {email          ? <DetailItem icon="mail"     label="Email"   value={email} />            : null}
-        {phone          ? <DetailItem icon="call"     label="Phone"   value={phone} />            : null}
-      </View>
+
+      {saveSuccess && (
+        <View style={eStyles.successBanner}>
+          <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+          <Text style={eStyles.successBannerText}>Profile updated successfully.</Text>
+        </View>
+      )}
+
+      {!editing ? (
+        <View style={styles.detailsGrid}>
+          <DetailItem icon="card"             label="Membership Number" value={member.membership_no} />
+          <DetailItem icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
+          {member.city    ? <DetailItem icon="location" label="City"    value={member.city!} />    : null}
+          {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} /> : null}
+          {address        ? <DetailItem icon="home"     label="Address" value={address} />          : null}
+          {email          ? <DetailItem icon="mail"     label="Email"   value={email} />            : null}
+          {phone          ? <DetailItem icon="call"     label="Phone"   value={phone} />            : null}
+        </View>
+      ) : (
+        <View style={eStyles.editForm}>
+          {/* Phone */}
+          <View style={eStyles.fieldGroup}>
+            <View style={eStyles.fieldLabelRow}>
+              <Text style={eStyles.fieldLabel}>Phone Number</Text>
+              <View style={eStyles.visibilityRow}>
+                <Text style={eStyles.visibilityLabel}>Visible to others</Text>
+                <Switch
+                  value={form.showPhone}
+                  onValueChange={v => setForm(f => ({ ...f, showPhone: v }))}
+                  trackColor={{ false: "#E5E7EB", true: `${COLORS.primary}60` }}
+                  thumbColor={form.showPhone ? COLORS.primary : "#9CA3AF"}
+                />
+              </View>
+            </View>
+            <TextInput
+              style={eStyles.input}
+              value={form.phone}
+              onChangeText={v => setForm(f => ({ ...f, phone: v }))}
+              placeholder="Phone number"
+              keyboardType="phone-pad"
+              placeholderTextColor={COLORS.textMuted}
+            />
+          </View>
+
+          {/* Email */}
+          <View style={eStyles.fieldGroup}>
+            <View style={eStyles.fieldLabelRow}>
+              <Text style={eStyles.fieldLabel}>Email Address</Text>
+              <View style={eStyles.visibilityRow}>
+                <Text style={eStyles.visibilityLabel}>Visible to others</Text>
+                <Switch
+                  value={form.showEmail}
+                  onValueChange={v => setForm(f => ({ ...f, showEmail: v }))}
+                  trackColor={{ false: "#E5E7EB", true: `${COLORS.primary}60` }}
+                  thumbColor={form.showEmail ? COLORS.primary : "#9CA3AF"}
+                />
+              </View>
+            </View>
+            <TextInput
+              style={eStyles.input}
+              value={form.email}
+              onChangeText={v => setForm(f => ({ ...f, email: v }))}
+              placeholder="Email address"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholderTextColor={COLORS.textMuted}
+            />
+          </View>
+
+          {/* Address */}
+          <View style={eStyles.fieldGroup}>
+            <Text style={eStyles.fieldLabel}>Address</Text>
+            <TextInput
+              style={[eStyles.input, eStyles.inputMultiline]}
+              value={form.address}
+              onChangeText={v => setForm(f => ({ ...f, address: v }))}
+              placeholder="Street address"
+              multiline
+              numberOfLines={2}
+              placeholderTextColor={COLORS.textMuted}
+            />
+          </View>
+
+          {/* City */}
+          <View style={eStyles.fieldGroup}>
+            <Text style={eStyles.fieldLabel}>City</Text>
+            <TextInput
+              style={eStyles.input}
+              value={form.city}
+              onChangeText={v => setForm(f => ({ ...f, city: v }))}
+              placeholder="City"
+              placeholderTextColor={COLORS.textMuted}
+            />
+          </View>
+
+          {/* Password */}
+          <View style={eStyles.fieldGroup}>
+            <Text style={eStyles.fieldLabel}>New Password</Text>
+            <TextInput
+              style={eStyles.input}
+              value={form.password}
+              onChangeText={v => setForm(f => ({ ...f, password: v }))}
+              placeholder="Leave blank to keep current password"
+              secureTextEntry
+              placeholderTextColor={COLORS.textMuted}
+            />
+          </View>
+
+          {saveError ? (
+            <View style={eStyles.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={15} color="#DC2626" />
+              <Text style={eStyles.errorBannerText}>{saveError}</Text>
+            </View>
+          ) : null}
+
+          <View style={eStyles.btnRow}>
+            <TouchableOpacity style={eStyles.cancelBtn} onPress={() => setEditing(false)} activeOpacity={0.8} disabled={saving}>
+              <Text style={eStyles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={eStyles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
+              {saving
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={eStyles.saveBtnText}>Save Changes</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
+
+const eStyles = StyleSheet.create({
+  editForm: { gap: 16, marginTop: 8 },
+  fieldGroup: { gap: 6 },
+  fieldLabelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  fieldLabel: { fontSize: 12, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 },
+  visibilityRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  visibilityLabel: { fontSize: 11, color: COLORS.textMuted },
+  input: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: COLORS.text,
+    backgroundColor: "#FAFAFA",
+  },
+  inputMultiline: { minHeight: 64, textAlignVertical: "top" },
+  btnRow: { flexDirection: "row", gap: 10, marginTop: 4 },
+  cancelBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  cancelBtnText: { fontSize: 14, fontWeight: "600", color: COLORS.textMuted },
+  saveBtn: {
+    flex: 2,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  saveBtnText: { fontSize: 14, fontWeight: "700", color: "#fff" },
+  errorBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FEF2F2", borderRadius: 8, padding: 10 },
+  errorBannerText: { fontSize: 13, color: "#DC2626", flex: 1 },
+  successBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F0FDF4", borderRadius: 8, padding: 10, marginBottom: 12 },
+  successBannerText: { fontSize: 13, color: "#16A34A", flex: 1 },
+});
 
 /* ── Tab: Kennel ────────────────────────────────────── */
 function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undefined; navigation: any }) {
@@ -1982,7 +2211,7 @@ export default function ProfileScreen() {
       return <View style={styles.loadingWrap}><ActivityIndicator size="small" color={COLORS.primary} /></View>;
     }
     switch (activeTab) {
-      case "detail":               return <DetailTab detail={detail} fallbackMember={fallbackMember} email={user.email} phone={user.phone} />;
+      case "detail":               return <DetailTab detail={detail} fallbackMember={fallbackMember} email={user.email} phone={user.phone} refetchDetail={refetch} />;
       case "kennel":               return <KennelTab kennel={kennel} navigation={navigation} />;
       case "dogs":                 return <DogsTab dogs={ownedDogs} onDogPress={(dog) => navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })} />;
       case "stud":                 return <StudCertTab />;
