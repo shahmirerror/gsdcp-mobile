@@ -12,7 +12,9 @@ import {
   TextInput,
   Platform,
   Modal,
+  Alert,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,7 +33,7 @@ import {
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
   searchDogs, DogSearchResult,
   verifySire, verifyDam, SireVerification,
-  updateProfile, fetchCities, City, fetchProfileShow,
+  updateProfile, uploadProfilePhoto, fetchCities, City, fetchProfileShow,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -2345,8 +2347,9 @@ function LitterRegistrationTab() {
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const insets     = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("detail");
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const { data: detail, isLoading, refetch, isRefetching } = useQuery<MemberDetail>({
     queryKey: ["member-detail", user?.member_id],
@@ -2354,6 +2357,44 @@ export default function ProfileScreen() {
     enabled:  !!user?.member_id,
     retry: 1,
   });
+
+  async function handleChangePhoto() {
+    Alert.alert("Change Profile Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed to take a photo."); return; }
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+          if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed to pick a photo."); return; }
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+          if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
+  async function doUpload(uri: string) {
+    if (!user) return;
+    setPhotoUploading(true);
+    try {
+      await uploadProfilePhoto(uri, { id: user.id, phone: user.phone, email: user.email }, user.token);
+      const fresh = await fetchProfileShow(user.id);
+      if (fresh?.photo) await updateUser({ photo: fresh.photo });
+    } catch (e: any) {
+      Alert.alert("Upload failed", e.message ?? "Could not upload photo. Please try again.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
 
   if (!user) {
     return (
@@ -2407,7 +2448,7 @@ export default function ProfileScreen() {
 
       {/* ── Avatar & Identity ── */}
       <View style={styles.profileSection}>
-        <View style={styles.avatarOuter}>
+        <TouchableOpacity activeOpacity={0.85} onPress={handleChangePhoto} disabled={photoUploading} style={styles.avatarOuter}>
           {hasPhoto ? (
             <Image source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
           ) : (
@@ -2415,7 +2456,12 @@ export default function ProfileScreen() {
               <Text style={styles.avatarInitials}>{initials}</Text>
             </View>
           )}
-        </View>
+          <View style={styles.avatarCameraOverlay}>
+            {photoUploading
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Ionicons name="camera" size={18} color="#fff" />}
+          </View>
+        </TouchableOpacity>
         <Text style={styles.memberName}>{memberName}</Text>
         <View style={[styles.typeBadge, { backgroundColor: mType.bg }]}>
           <Text style={[styles.typeBadgeText, { color: mType.color }]}>{mType.label}</Text>
@@ -2617,6 +2663,11 @@ const styles = StyleSheet.create({
   avatarInner: { flex: 1, backgroundColor: "rgba(15,92,59,0.08)", justifyContent: "center", alignItems: "center" },
   avatarImage: { width: "100%", height: "100%" },
   avatarInitials: { fontSize: 42, fontWeight: "800", color: COLORS.primary },
+  avatarCameraOverlay: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    height: 36, backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center", alignItems: "center",
+  },
   memberName: {
     fontSize: 24, fontWeight: "800", color: "#0F172A",
     textAlign: "center", paddingHorizontal: SPACING.lg,

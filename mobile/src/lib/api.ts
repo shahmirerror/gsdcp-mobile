@@ -334,6 +334,33 @@ export async function updateProfile(
   }
 }
 
+export async function uploadProfilePhoto(
+  imageUri: string,
+  user: { id: number; phone: string | null; email: string | null; address?: string | null },
+  token?: string | null,
+): Promise<void> {
+  const form = new FormData();
+  form.append("user_id", String(user.id));
+  form.append("phone",   user.phone   ?? "");
+  form.append("email",   user.email   ?? "");
+  form.append("address", user.address ?? "");
+  const filename = imageUri.split("/").pop() ?? "photo.jpg";
+  const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
+  const mime     = ext === "png" ? "image/png" : "image/jpeg";
+  form.append("photo", { uri: imageUri, name: filename, type: mime } as any);
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/profile/update-profile`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+  let json: any = {};
+  try { json = JSON.parse(await res.text()); } catch { throw new Error("Invalid response from server."); }
+  if (json.exception)       throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) throw new Error(json.error?.message ?? json.message ?? "Photo upload failed.");
+}
+
 export type ProfileShowResult = {
   id: number;
   first_name: string;
