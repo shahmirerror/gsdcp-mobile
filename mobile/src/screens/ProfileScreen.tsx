@@ -236,7 +236,8 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       showPhone: true,
       showEmail: true,
     });
-    setCityId(null);
+    const matched = cities.find(c => c.city.toLowerCase() === (member.city ?? "").toLowerCase());
+    setCityId(matched?.id ?? null);
     setCityLabel(member.city ?? "");
     setCitySearch("");
     setSaveError("");
@@ -249,14 +250,14 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     setSaveError("");
     setSaving(true);
     const payload: any = {
-      user_id: user.id,
+      user_id:    user.id,
       show_phone: form.showPhone ? 1 : 0,
       show_email: form.showEmail ? 1 : 0,
+      phone:      form.phone.trim(),
+      email:      form.email.trim(),
+      address:    form.address.trim(),
+      city_id:    cityId,
     };
-    if (form.phone.trim())    payload.phone    = form.phone.trim();
-    if (form.email.trim())    payload.email    = form.email.trim();
-    if (form.address.trim())  payload.address  = form.address.trim();
-    if (cityId !== null)      payload.city_id  = cityId;
     if (form.password.trim()) payload.password = form.password.trim();
     try {
       await updateProfile(payload, user.token);
