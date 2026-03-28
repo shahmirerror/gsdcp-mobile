@@ -257,9 +257,15 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       showEmail:   checkEmail   !== "Hide",
       showAddress: checkAddress !== "Hide",
     });
-    const matched = cities.find(c => c.city.toLowerCase() === displayCity.toLowerCase());
-    setCityId(matched?.id ?? null);
-    setCityLabel(displayCity);
+    // Prefer city_id directly from auth context; fall back to name-matching the cities list
+    const directId = user?.city_id ?? null;
+    const matched  = cities.find(c =>
+      directId
+        ? c.id === directId
+        : c.city.toLowerCase() === displayCity.toLowerCase()
+    );
+    setCityId(matched?.id ?? directId);
+    setCityLabel(matched?.city ?? displayCity);
     setCitySearch("");
     setSaveError("");
     setSaveSuccess(false);
@@ -305,6 +311,7 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
           photo:           fresh.photo,
           // Don't overwrite city with null if backend doesn't return it — keep form value
           city:            fresh.city ?? cityLabel ?? user.city,
+          city_id:         fresh.city_id ?? cityId ?? user.city_id,
           country:         fresh.country,
           membership_no:   fresh.membership_no,
           membership_type: fresh.membership_type,
@@ -315,9 +322,10 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
         });
       } else {
         await updateUser({
-          phone: form.phone.trim() || user.phone,
-          email: form.email.trim() || user.email,
-          city:  cityLabel || user.city,
+          phone:   form.phone.trim() || user.phone,
+          email:   form.email.trim() || user.email,
+          city:    cityLabel || user.city,
+          city_id: cityId ?? user.city_id,
         });
       }
       refetchDetail();

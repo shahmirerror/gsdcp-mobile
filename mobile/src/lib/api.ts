@@ -343,6 +343,7 @@ export type ProfileShowResult = {
   phone: string | null;
   photo: string | null;
   city: string | null;
+  city_id: number | null;
   country: string | null;
   membership_no: string | null;
   membership_type: string | null;
@@ -372,6 +373,7 @@ export async function fetchProfileShow(
       phone:           p.phone      ?? null,
       photo:           p.photo      ?? null,
       city:            p.city ?? p.user_city?.city ?? null,
+      city_id:         p.user_city?.id ?? null,
       country:         p.country ?? p.user_city?.country ?? null,
       membership_no:   p.membership_no   ?? null,
       membership_type: p.membership_type ?? null,

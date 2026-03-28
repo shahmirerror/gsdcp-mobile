@@ -17,6 +17,7 @@ export type AuthUser = {
   email: string | null;
   phone: string | null;
   city: string | null;
+  city_id: number | null;
   country: string | null;
   role: string | null;
   role_id: string | null;
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email:           p.email ?? null,
       phone:           p.phone ?? null,
       city:            p.city ?? p.user_city?.city ?? null,
+      city_id:         p.user_city?.id ?? null,
       country:         p.country ?? p.user_city?.country ?? null,
       role:            p.role ?? p.user_role?.name ?? null,
       role_id:         p.role_id ?? null,
