@@ -310,7 +310,7 @@ export async function updateProfile(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${BASE_URL}/profile/update-profile`, {
-    method: "PUT",
+    method: "POST",
     headers,
     body: JSON.stringify(payload),
   });
