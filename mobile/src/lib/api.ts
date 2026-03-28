@@ -843,6 +843,8 @@ export type MemberKennel = {
 export type MemberDetail = {
   member: Member & {
     address: string | null;
+    email: string | null;
+    phone: string | null;
     check_email: "Show" | "Hide";
     check_phone: "Show" | "Hide";
     check_address: "Show" | "Hide";

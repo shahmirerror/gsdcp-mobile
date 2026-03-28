@@ -100,11 +100,40 @@ function DetailItem({
   );
 }
 
+/* ── LockedDetailItem ──────────────────────────────── */
+function LockedDetailItem({
+  icon,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+}) {
+  return (
+    <View style={styles.detailItem}>
+      <View style={styles.detailIconWrap}>
+        <Ionicons name={icon} size={18} color={COLORS.primary} />
+      </View>
+      <View style={styles.detailTextWrap}>
+        <Text style={styles.detailLabel}>{label}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 1 }}>
+          <Ionicons name="lock-closed" size={13} color="#94A3B8" />
+          <Text style={{ fontSize: 13, color: "#94A3B8", fontStyle: "italic" }}>Hidden by member</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /* ── Tab: Detail ───────────────────────────────────── */
 function DetailTab({ detail, passedMember }: { detail: MemberDetail | undefined; passedMember?: Member }) {
   const member = detail?.member ?? passedMember;
   if (!member) return null;
-  const showAddress = (detail?.member as any)?.check_address === "Show" && (detail?.member as any)?.address;
+
+  const dm = detail?.member;
+  const checkPhone   = dm?.check_phone   ?? "Hide";
+  const checkEmail   = dm?.check_email   ?? "Hide";
+  const checkAddress = dm?.check_address ?? "Hide";
+
   const statusLabel = member.membership_no.startsWith("P-") ? "Active" : "Temporary";
   const statusColor = member.membership_no.startsWith("P-") ? COLORS.primary : "#F59E0B";
 
@@ -112,11 +141,28 @@ function DetailTab({ detail, passedMember }: { detail: MemberDetail | undefined;
     <View style={styles.card}>
       <Text style={styles.cardHeading}>Membership Status</Text>
       <View style={styles.detailsGrid}>
-        <DetailItem icon="card"                   label="Membership Number" value={member.membership_no} />
-        <DetailItem icon="checkmark-circle"       label="Status"            value={statusLabel} valueColor={statusColor} />
-        {member.city    ? <DetailItem icon="location"  label="City"    value={member.city!}    /> : null}
-        {member.country ? <DetailItem icon="flag"      label="Country" value={member.country!} /> : null}
-        {showAddress    ? <DetailItem icon="home"      label="Address" value={(detail?.member as any).address} /> : null}
+        <DetailItem icon="card"             label="Membership Number" value={member.membership_no} />
+        <DetailItem icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
+        {member.city    ? <DetailItem icon="location" label="City"    value={member.city!}    /> : null}
+        {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} /> : null}
+
+        {checkPhone === "Show" && dm?.phone
+          ? <DetailItem icon="call" label="Phone" value={dm.phone} />
+          : checkPhone === "Hide"
+          ? <LockedDetailItem icon="call" label="Phone" />
+          : null}
+
+        {checkEmail === "Show" && dm?.email
+          ? <DetailItem icon="mail" label="Email" value={dm.email} />
+          : checkEmail === "Hide"
+          ? <LockedDetailItem icon="mail" label="Email" />
+          : null}
+
+        {checkAddress === "Show" && dm?.address
+          ? <DetailItem icon="home" label="Address" value={dm.address} />
+          : checkAddress === "Hide"
+          ? <LockedDetailItem icon="home" label="Address" />
+          : null}
       </View>
     </View>
   );
