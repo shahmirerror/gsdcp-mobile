@@ -274,6 +274,9 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
           membership_no:   fresh.membership_no,
           membership_type: fresh.membership_type,
           role:            fresh.role,
+          role_id:         fresh.role_id,
+          myDogs:          fresh.myDogs,
+          myKennel:        fresh.myKennel,
         });
       } else {
         await updateUser({

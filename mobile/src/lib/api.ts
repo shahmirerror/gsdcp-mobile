@@ -347,6 +347,8 @@ export type ProfileShowResult = {
   membership_type: string | null;
   role: string | null;
   role_id: string | null;
+  myDogs: any[];
+  myKennel: any | null;
 };
 
 export async function fetchProfileShow(
@@ -373,7 +375,9 @@ export async function fetchProfileShow(
       membership_no:   p.membership_no   ?? null,
       membership_type: p.membership_type ?? null,
       role:            p.role ?? p.user_role?.name ?? null,
-      role_id:         p.role_id ?? null,
+      role_id:         String(p.role_id ?? ""),
+      myDogs:          json.data?.myDogs  ?? [],
+      myKennel:        json.data?.myKennel ?? null,
     };
   } catch {
     return null;
