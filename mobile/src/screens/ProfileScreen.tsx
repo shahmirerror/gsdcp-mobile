@@ -31,7 +31,7 @@ import {
   LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
   searchDogs, DogSearchResult,
   verifySire, verifyDam, SireVerification,
-  updateProfile, fetchCities, City,
+  updateProfile, fetchCities, City, fetchProfileShow,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -260,11 +260,28 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     if (form.password.trim()) payload.password = form.password.trim();
     try {
       await updateProfile(payload, user.token);
-      await updateUser({
-        phone: form.phone.trim() || user.phone,
-        email: form.email.trim() || user.email,
-        city:  cityLabel || user.city,
-      });
+      const fresh = await fetchProfileShow(user.id, user.token);
+      if (fresh) {
+        await updateUser({
+          first_name:      fresh.first_name,
+          last_name:       fresh.last_name,
+          name:            [fresh.first_name, fresh.last_name].filter(Boolean).join(" "),
+          email:           fresh.email,
+          phone:           fresh.phone,
+          photo:           fresh.photo,
+          city:            fresh.city,
+          country:         fresh.country,
+          membership_no:   fresh.membership_no,
+          membership_type: fresh.membership_type,
+          role:            fresh.role,
+        });
+      } else {
+        await updateUser({
+          phone: form.phone.trim() || user.phone,
+          email: form.email.trim() || user.email,
+          city:  cityLabel || user.city,
+        });
+      }
       refetchDetail();
       setSaveSuccess(true);
       setEditing(false);

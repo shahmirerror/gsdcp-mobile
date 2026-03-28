@@ -333,6 +333,54 @@ export async function updateProfile(
   }
 }
 
+export type ProfileShowResult = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  photo: string | null;
+  city: string | null;
+  country: string | null;
+  membership_no: string | null;
+  membership_type: string | null;
+  role: string | null;
+  role_id: string | null;
+};
+
+export async function fetchProfileShow(
+  userId: number,
+  token?: string | null,
+): Promise<ProfileShowResult | null> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  try {
+    const res = await fetch(`${BASE_URL}/profile/show?user_id=${userId}`, { headers });
+    const text = await res.text();
+    const json = JSON.parse(text);
+    if (!json.success) return null;
+    const p = json.data?.myProfile ?? json.data?.profile ?? json.data ?? {};
+    return {
+      id:              p.id         ?? userId,
+      first_name:      p.first_name ?? "",
+      last_name:       p.last_name  ?? "",
+      username:        p.username   ?? "",
+      email:           p.email      ?? null,
+      phone:           p.phone      ?? null,
+      photo:           p.photo      ?? null,
+      city:            p.city ?? p.user_city?.city ?? null,
+      country:         p.country ?? p.user_city?.country ?? null,
+      membership_no:   p.membership_no   ?? null,
+      membership_type: p.membership_type ?? null,
+      role:            p.role ?? p.user_role?.name ?? null,
+      role_id:         p.role_id ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export type MeetingStatus = "reserved" | "not_entered" | "no_seat_found";
 
 export type MeetingStatusResult = {
