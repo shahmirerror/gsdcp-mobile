@@ -2359,6 +2359,15 @@ export default function ProfileScreen() {
   });
 
   async function handleChangePhoto() {
+    if (Platform.OS === "web") {
+      // Alert.alert is a no-op on web — open the file picker directly
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true, aspect: [1, 1], quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
+      return;
+    }
     Alert.alert("Change Profile Photo", "Choose a source", [
       {
         text: "Camera",
