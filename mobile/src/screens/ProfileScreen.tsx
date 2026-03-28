@@ -200,16 +200,23 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
   const detailMember = detail?.member as any;
 
   // Local display state — updated immediately after save so UI refreshes without waiting for refetch
-  const [displayPhone,   setDisplayPhone]   = useState(phone ?? "");
-  const [displayEmail,   setDisplayEmail]   = useState(email ?? "");
-  const [displayAddress, setDisplayAddress] = useState(detailMember?.address ?? "");
-  const [displayCity,    setDisplayCity]    = useState(member.city ?? "");
+  const [displayPhone,    setDisplayPhone]    = useState(phone ?? "");
+  const [displayEmail,    setDisplayEmail]    = useState(email ?? "");
+  const [displayAddress,  setDisplayAddress]  = useState(detailMember?.address ?? "");
+  const [displayCity,     setDisplayCity]     = useState(member.city ?? "");
+  // Check/visibility state — updated immediately after save so re-opening edit shows correct toggles
+  const [checkPhone,   setCheckPhone]   = useState<string>(detailMember?.check_phone   ?? "Show");
+  const [checkEmail,   setCheckEmail]   = useState<string>(detailMember?.check_email   ?? "Show");
+  const [checkAddress, setCheckAddress] = useState<string>(detailMember?.check_address ?? "Show");
 
   // Keep display state in sync when detail/props refresh from server
   useEffect(() => { setDisplayPhone(phone ?? ""); },                [phone]);
   useEffect(() => { setDisplayEmail(email ?? ""); },                [email]);
   useEffect(() => { setDisplayAddress(detailMember?.address ?? ""); }, [detailMember?.address]);
   useEffect(() => { setDisplayCity(member.city ?? ""); },            [member.city]);
+  useEffect(() => { if (detailMember?.check_phone   != null) setCheckPhone(detailMember.check_phone);   }, [detailMember?.check_phone]);
+  useEffect(() => { if (detailMember?.check_email   != null) setCheckEmail(detailMember.check_email);   }, [detailMember?.check_email]);
+  useEffect(() => { if (detailMember?.check_address != null) setCheckAddress(detailMember.check_address); }, [detailMember?.check_address]);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -235,9 +242,9 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     email:       email ?? "",
     address:     detailMember?.address ?? "",
     password:    "",
-    showPhone:   detailMember?.check_phone   !== "Hide",
-    showEmail:   detailMember?.check_email   !== "Hide",
-    showAddress: detailMember?.check_address !== "Hide",
+    showPhone:   true,
+    showEmail:   true,
+    showAddress: true,
   });
 
   function openEdit() {
@@ -246,9 +253,9 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       email:       displayEmail,
       address:     displayAddress,
       password:    "",
-      showPhone:   detailMember?.check_phone   !== "Hide",
-      showEmail:   detailMember?.check_email   !== "Hide",
-      showAddress: detailMember?.check_address !== "Hide",
+      showPhone:   checkPhone   !== "Hide",
+      showEmail:   checkEmail   !== "Hide",
+      showAddress: checkAddress !== "Hide",
     });
     const matched = cities.find(c => c.city.toLowerCase() === displayCity.toLowerCase());
     setCityId(matched?.id ?? null);
@@ -276,11 +283,14 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     if (form.password.trim()) payload.password = form.password.trim();
     try {
       await updateProfile(payload, user.token);
-      // Update local display state immediately — no need to wait for refetch
+      // Update local display + check state immediately — no need to wait for refetch
       setDisplayPhone(form.phone.trim());
       setDisplayEmail(form.email.trim());
       setDisplayAddress(form.address.trim());
       setDisplayCity(cityLabel);
+      setCheckPhone(form.showPhone   ? "Show" : "Hide");
+      setCheckEmail(form.showEmail   ? "Show" : "Hide");
+      setCheckAddress(form.showAddress ? "Show" : "Hide");
       const fresh = await fetchProfileShow(user.id);
       if (fresh) {
         await updateUser({
