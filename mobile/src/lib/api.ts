@@ -347,7 +347,7 @@ export async function uploadProfilePhoto(
   const filename = imageUri.split("/").pop() ?? "photo.jpg";
   const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
   const mime     = ext === "png" ? "image/png" : "image/jpeg";
-  form.append("photo", { uri: imageUri, name: filename, type: mime } as any);
+  form.append("new_photo", { uri: imageUri, name: filename, type: mime } as any);
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${BASE_URL}/profile/update-profile`, {
