@@ -344,10 +344,19 @@ export async function uploadProfilePhoto(
   form.append("phone",   user.phone   ?? "");
   form.append("email",   user.email   ?? "");
   form.append("address", user.address ?? "");
-  const filename = imageUri.split("/").pop() ?? "photo.jpg";
+  const filename = imageUri.split("/").pop()?.split("?")[0] ?? "photo.jpg";
   const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
   const mime     = ext === "png" ? "image/png" : "image/jpeg";
-  form.append("new_photo", { uri: imageUri, name: filename, type: mime } as any);
+  // On web imageUri is a blob/data URL — fetch it to a Blob first.
+  // On native, use the { uri, name, type } shorthand that RN's FormData accepts.
+  try {
+    const resp = await fetch(imageUri);
+    const blob = await resp.blob();
+    form.append("new_photo", new File([blob], filename, { type: mime }), filename);
+  } catch {
+    form.append("new_photo", { uri: imageUri, name: filename, type: mime } as any);
+  }
+  console.log("[PhotoUpload] uploading", filename, mime, "to", `${BASE_URL}/profile/update-profile`);
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${BASE_URL}/profile/update-profile`, {
@@ -355,8 +364,10 @@ export async function uploadProfilePhoto(
     headers,
     body: form,
   });
+  const raw = await res.text();
+  console.log("[PhotoUpload] response:", raw.substring(0, 200));
   let json: any = {};
-  try { json = JSON.parse(await res.text()); } catch { throw new Error("Invalid response from server."); }
+  try { json = JSON.parse(raw); } catch { throw new Error("Invalid response from server."); }
   if (json.exception)       throw new Error(json.message ?? "A server error occurred.");
   if (json.success === false) throw new Error(json.error?.message ?? json.message ?? "Photo upload failed.");
 }

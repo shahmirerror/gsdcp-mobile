@@ -2362,7 +2362,7 @@ export default function ProfileScreen() {
     if (Platform.OS === "web") {
       // Alert.alert is a no-op on web — open the file picker directly
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true, aspect: [1, 1], quality: 0.8,
       });
       if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
@@ -2374,7 +2374,7 @@ export default function ProfileScreen() {
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed to take a photo."); return; }
-          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaType.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
           if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
         },
       },
@@ -2383,7 +2383,7 @@ export default function ProfileScreen() {
         onPress: async () => {
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed to pick a photo."); return; }
-          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaType.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
           if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
         },
       },
