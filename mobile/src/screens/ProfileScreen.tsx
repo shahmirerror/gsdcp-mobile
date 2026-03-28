@@ -260,7 +260,7 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     if (form.password.trim()) payload.password = form.password.trim();
     try {
       await updateProfile(payload, user.token);
-      const fresh = await fetchProfileShow(user.id, user.token);
+      const fresh = await fetchProfileShow(user.id);
       if (fresh) {
         await updateUser({
           first_name:      fresh.first_name,

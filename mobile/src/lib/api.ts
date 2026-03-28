@@ -351,15 +351,14 @@ export type ProfileShowResult = {
 
 export async function fetchProfileShow(
   userId: number,
-  token?: string | null,
 ): Promise<ProfileShowResult | null> {
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
   try {
-    const res = await fetch(`${BASE_URL}/profile/show?user_id=${userId}`, { headers });
+    const res = await fetch(`${BASE_URL}/profile/show?user_id=${userId}`, {
+      headers: { Accept: "application/json" },
+    });
     const text = await res.text();
     const json = JSON.parse(text);
-    if (!json.success) return null;
+    if (json.exception || !json.success) return null;
     const p = json.data?.myProfile ?? json.data?.profile ?? json.data ?? {};
     return {
       id:              p.id         ?? userId,
