@@ -278,11 +278,13 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       phone:         form.phone.trim(),
       email:         form.email.trim(),
       address:       form.address.trim(),
-      city_id:       cityId,
     };
+    if (cityId != null) payload.city_id = cityId;
     if (form.password.trim()) payload.password = form.password.trim();
+    console.log("[ProfileSave] payload:", JSON.stringify(payload));
     try {
       await updateProfile(payload, user.token);
+      console.log("[ProfileSave] update-profile succeeded");
       // Update local display + check state immediately — no need to wait for refetch
       setDisplayPhone(form.phone.trim());
       setDisplayEmail(form.email.trim());
@@ -292,6 +294,7 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       setCheckEmail(form.showEmail   ? "Show" : "Hide");
       setCheckAddress(form.showAddress ? "Show" : "Hide");
       const fresh = await fetchProfileShow(user.id);
+      console.log("[ProfileSave] profile/show fresh:", JSON.stringify(fresh));
       if (fresh) {
         await updateUser({
           first_name:      fresh.first_name,
@@ -300,7 +303,8 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
           email:           fresh.email,
           phone:           fresh.phone,
           photo:           fresh.photo,
-          city:            fresh.city,
+          // Don't overwrite city with null if backend doesn't return it — keep form value
+          city:            fresh.city ?? cityLabel ?? user.city,
           country:         fresh.country,
           membership_no:   fresh.membership_no,
           membership_type: fresh.membership_type,

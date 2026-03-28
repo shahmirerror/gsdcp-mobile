@@ -294,8 +294,9 @@ export type UpdateProfilePayload = {
   address?: string;
   city_id?: number;
   password?: string;
-  show_phone?: 0 | 1;
-  show_email?: 0 | 1;
+  check_phone?: "Show" | "Hide";
+  check_email?: "Show" | "Hide";
+  check_address?: "Show" | "Hide";
   photo?: string;
 };
 
