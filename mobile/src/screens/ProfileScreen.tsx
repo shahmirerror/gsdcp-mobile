@@ -197,7 +197,19 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
   if (!member) return null;
   const statusLabel = member.membership_no.startsWith("P-") || member.membership_no.startsWith("D-") ? "Active" : "Temporary";
   const statusColor = statusLabel === "Active" ? COLORS.primary : "#F59E0B";
-  const address = (detail?.member as any)?.address;
+  const detailMember = detail?.member as any;
+
+  // Local display state — updated immediately after save so UI refreshes without waiting for refetch
+  const [displayPhone,   setDisplayPhone]   = useState(phone ?? "");
+  const [displayEmail,   setDisplayEmail]   = useState(email ?? "");
+  const [displayAddress, setDisplayAddress] = useState(detailMember?.address ?? "");
+  const [displayCity,    setDisplayCity]    = useState(member.city ?? "");
+
+  // Keep display state in sync when detail/props refresh from server
+  useEffect(() => { setDisplayPhone(phone ?? ""); },                [phone]);
+  useEffect(() => { setDisplayEmail(email ?? ""); },                [email]);
+  useEffect(() => { setDisplayAddress(detailMember?.address ?? ""); }, [detailMember?.address]);
+  useEffect(() => { setDisplayCity(member.city ?? ""); },            [member.city]);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -219,26 +231,28 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
   );
 
   const [form, setForm] = useState({
-    phone: phone ?? "",
-    email: email ?? "",
-    address: address ?? "",
-    password: "",
-    showPhone: true,
-    showEmail: true,
+    phone:       phone ?? "",
+    email:       email ?? "",
+    address:     detailMember?.address ?? "",
+    password:    "",
+    showPhone:   detailMember?.check_phone   !== "Hide",
+    showEmail:   detailMember?.check_email   !== "Hide",
+    showAddress: detailMember?.check_address !== "Hide",
   });
 
   function openEdit() {
     setForm({
-      phone: phone ?? "",
-      email: email ?? "",
-      address: address ?? "",
-      password: "",
-      showPhone: true,
-      showEmail: true,
+      phone:       displayPhone,
+      email:       displayEmail,
+      address:     displayAddress,
+      password:    "",
+      showPhone:   detailMember?.check_phone   !== "Hide",
+      showEmail:   detailMember?.check_email   !== "Hide",
+      showAddress: detailMember?.check_address !== "Hide",
     });
-    const matched = cities.find(c => c.city.toLowerCase() === (member.city ?? "").toLowerCase());
+    const matched = cities.find(c => c.city.toLowerCase() === displayCity.toLowerCase());
     setCityId(matched?.id ?? null);
-    setCityLabel(member.city ?? "");
+    setCityLabel(displayCity);
     setCitySearch("");
     setSaveError("");
     setSaveSuccess(false);
@@ -250,17 +264,23 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     setSaveError("");
     setSaving(true);
     const payload: any = {
-      user_id:    user.id,
-      show_phone: form.showPhone ? 1 : 0,
-      show_email: form.showEmail ? 1 : 0,
-      phone:      form.phone.trim(),
-      email:      form.email.trim(),
-      address:    form.address.trim(),
-      city_id:    cityId,
+      user_id:       user.id,
+      check_phone:   form.showPhone   ? "Show" : "Hide",
+      check_email:   form.showEmail   ? "Show" : "Hide",
+      check_address: form.showAddress ? "Show" : "Hide",
+      phone:         form.phone.trim(),
+      email:         form.email.trim(),
+      address:       form.address.trim(),
+      city_id:       cityId,
     };
     if (form.password.trim()) payload.password = form.password.trim();
     try {
       await updateProfile(payload, user.token);
+      // Update local display state immediately — no need to wait for refetch
+      setDisplayPhone(form.phone.trim());
+      setDisplayEmail(form.email.trim());
+      setDisplayAddress(form.address.trim());
+      setDisplayCity(cityLabel);
       const fresh = await fetchProfileShow(user.id);
       if (fresh) {
         await updateUser({
@@ -320,11 +340,11 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
         <View style={styles.detailsGrid}>
           <DetailItem icon="card"             label="Membership Number" value={member.membership_no} />
           <DetailItem icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
-          {member.city    ? <DetailItem icon="location" label="City"    value={member.city!} />    : null}
-          {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} /> : null}
-          {address        ? <DetailItem icon="home"     label="Address" value={address} />          : null}
-          {email          ? <DetailItem icon="mail"     label="Email"   value={email} />            : null}
-          {phone          ? <DetailItem icon="call"     label="Phone"   value={phone} />            : null}
+          {displayCity    ? <DetailItem icon="location" label="City"    value={displayCity} />       : null}
+          {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} />  : null}
+          {displayAddress ? <DetailItem icon="home"     label="Address" value={displayAddress} />    : null}
+          {displayEmail   ? <DetailItem icon="mail"     label="Email"   value={displayEmail} />      : null}
+          {displayPhone   ? <DetailItem icon="call"     label="Phone"   value={displayPhone} />      : null}
         </View>
       ) : (
         <View style={eStyles.editForm}>
@@ -379,7 +399,18 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
 
           {/* Address */}
           <View style={eStyles.fieldGroup}>
-            <Text style={eStyles.fieldLabel}>Address</Text>
+            <View style={eStyles.fieldLabelRow}>
+              <Text style={eStyles.fieldLabel}>Address</Text>
+              <View style={eStyles.visibilityRow}>
+                <Text style={eStyles.visibilityLabel}>Visible to others</Text>
+                <Switch
+                  value={form.showAddress}
+                  onValueChange={v => setForm(f => ({ ...f, showAddress: v }))}
+                  trackColor={{ false: "#E5E7EB", true: `${COLORS.primary}60` }}
+                  thumbColor={form.showAddress ? COLORS.primary : "#9CA3AF"}
+                />
+              </View>
+            </View>
             <TextInput
               style={[eStyles.input, eStyles.inputMultiline]}
               value={form.address}
