@@ -16,7 +16,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { signInWithPhoneNumber, RecaptchaVerifier, ConfirmationResult } from "firebase/auth";
+import {
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
+  ConfirmationResult,
+} from "firebase/auth";
 import { firebaseAuth } from "../lib/firebase";
 import { checkPhoneRegistered } from "../lib/api";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
@@ -29,8 +33,8 @@ type SignInMode = "membership" | "username" | "otp";
 
 const MODES: { id: SignInMode; label: string; icon: string }[] = [
   { id: "membership", label: "Membership No.", icon: "card-outline" },
-  { id: "username",   label: "Username",        icon: "person-outline" },
-  { id: "otp",        label: "Phone OTP",        icon: "phone-portrait-outline" },
+  { id: "username", label: "Username", icon: "person-outline" },
+  { id: "otp", label: "Phone OTP", icon: "phone-portrait-outline" },
 ];
 
 /**
@@ -45,7 +49,11 @@ const MODES: { id: SignInMode; label: string; icon: string }[] = [
 function smartFormatMembershipNo(raw: string, prev: string): string {
   // Detect a backspace that would leave just the letter with no hyphen/digits.
   // In that state clear fully — otherwise the auto-hyphen would trap the user.
-  if (raw.length < prev.length && /^[A-Z]-$/.test(prev) && /^[A-Z]$/.test(raw)) {
+  if (
+    raw.length < prev.length &&
+    /^[A-Z]-$/.test(prev) &&
+    /^[A-Z]$/.test(raw)
+  ) {
     return "";
   }
 
@@ -90,14 +98,28 @@ function toApiPhone(raw: string): string {
 }
 
 /** Live status for the membership field */
-function memberNoStatus(value: string): { icon: string; text: string; color: string } | null {
+function memberNoStatus(
+  value: string,
+): { icon: string; text: string; color: string } | null {
   if (!value) return null;
   if (isValidMembershipNo(value))
-    return { icon: "checkmark-circle", text: "Valid membership number", color: "#16A34A" };
+    return {
+      icon: "checkmark-circle",
+      text: "Valid membership number",
+      color: "#16A34A",
+    };
   if (/^[A-Z]-$/.test(value))
-    return { icon: "information-circle-outline", text: "Now enter your membership digits", color: COLORS.textMuted };
+    return {
+      icon: "information-circle-outline",
+      text: "Now enter your membership digits",
+      color: COLORS.textMuted,
+    };
   if (/^[A-Z]-\d+$/.test(value) === false && value.length > 2)
-    return { icon: "alert-circle-outline", text: "Digits only after the hyphen (e.g. P-1234)", color: "#D97706" };
+    return {
+      icon: "alert-circle-outline",
+      text: "Digits only after the hyphen (e.g. P-1234)",
+      color: "#D97706",
+    };
   return null;
 }
 
@@ -123,16 +145,17 @@ export default function LoginRegisterScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [confirmationResult, setConfirmationResult] =
+    useState<ConfirmationResult | null>(null);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const memberPasswordRef  = useRef<TextInput>(null);
-  const userPasswordRef    = useRef<TextInput>(null);
-  const otpRef             = useRef<TextInput>(null);
-  const prevMemberNoRef    = useRef(""); // tracks last formatted value for backspace detection
+  const memberPasswordRef = useRef<TextInput>(null);
+  const userPasswordRef = useRef<TextInput>(null);
+  const otpRef = useRef<TextInput>(null);
+  const prevMemberNoRef = useRef(""); // tracks last formatted value for backspace detection
 
   const handleMemberNoChange = (raw: string) => {
     const formatted = smartFormatMembershipNo(raw, prevMemberNoRef.current);
@@ -141,7 +164,10 @@ export default function LoginRegisterScreen() {
   };
 
   const handleSendOtp = async () => {
-    if (!phone.trim()) { setError("Please enter your phone number"); return; }
+    if (!phone.trim()) {
+      setError("Please enter your phone number");
+      return;
+    }
     setError("");
     setSendingOtp(true);
     try {
@@ -181,34 +207,59 @@ export default function LoginRegisterScreen() {
     setError("");
 
     if (mode === "membership") {
-      if (!memberNo) { setError("Please enter your membership number"); return; }
-      if (!isValidMembershipNo(memberNo)) {
-        setError("Format: one uppercase letter, hyphen, then numbers (e.g. P-1234)");
+      if (!memberNo) {
+        setError("Please enter your membership number");
         return;
       }
-      if (!memberPassword) { setError("Please enter your password"); return; }
+      if (!isValidMembershipNo(memberNo)) {
+        setError(
+          "Format: one uppercase letter, hyphen, then numbers (e.g. P-1234)",
+        );
+        return;
+      }
+      if (!memberPassword) {
+        setError("Please enter your password");
+        return;
+      }
     } else if (mode === "username") {
-      if (!username.trim()) { setError("Please enter your username"); return; }
-      if (!userPassword) { setError("Please enter your password"); return; }
+      if (!username.trim()) {
+        setError("Please enter your username");
+        return;
+      }
+      if (!userPassword) {
+        setError("Please enter your password");
+        return;
+      }
     } else {
       // OTP mode: if OTP not sent yet, "CONTINUE" should trigger send
-      if (!otpSent) { await handleSendOtp(); return; }
-      if (!phone.trim()) { setError("Please enter your phone number"); return; }
-      if (!otpCode.trim()) { setError("Please enter the OTP"); return; }
+      if (!otpSent) {
+        await handleSendOtp();
+        return;
+      }
+      if (!phone.trim()) {
+        setError("Please enter your phone number");
+        return;
+      }
+      if (!otpCode.trim()) {
+        setError("Please enter the OTP");
+        return;
+      }
     }
 
     setLoading(true);
     try {
       if (mode === "otp") {
         // Step 3a: Verify OTP code with Firebase
-        if (!confirmationResult) throw new Error("Please request an OTP first.");
+        if (!confirmationResult)
+          throw new Error("Please request an OTP first.");
         await confirmationResult.confirm(otpCode.trim());
         // Step 3b: Tell authorize API the OTP was verified → get auth user back
         // API expects phone in +92-300-000-0000 format
         await login(toApiPhone(phone.trim()), "verified", "otp");
       } else {
         const identifier = mode === "membership" ? memberNo : username.trim();
-        const credential = mode === "membership" ? memberPassword : userPassword;
+        const credential =
+          mode === "membership" ? memberPassword : userPassword;
         await login(identifier, credential, mode);
       }
       // Auth state drives navigation — when isLoggedIn becomes true the
@@ -243,7 +294,11 @@ export default function LoginRegisterScreen() {
         bounces={false}
       >
         {/* ── Hero ── */}
-        <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
+        <ImageBackground
+          source={heroBg}
+          style={styles.heroBanner}
+          resizeMode="cover"
+        >
           <LinearGradient
             colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
             style={styles.heroGradient}
@@ -264,7 +319,11 @@ export default function LoginRegisterScreen() {
         {/* ── Brand ── */}
         <View style={styles.brandSection}>
           <View style={styles.logoOuter}>
-            <Image source={logo} style={styles.logoImage} resizeMode="contain" />
+            <Image
+              source={logo}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.clubTitle}>Member Sign In</Text>
           <Text style={styles.clubSubtitle}>
@@ -274,7 +333,6 @@ export default function LoginRegisterScreen() {
 
         {/* ── Form ── */}
         <View style={styles.formArea}>
-
           {/* ── Mode selector ── */}
           <View style={styles.modeBar}>
             {MODES.map((m) => {
@@ -293,7 +351,12 @@ export default function LoginRegisterScreen() {
                     color={active ? "#fff" : COLORS.textMuted}
                     style={{ marginBottom: 3 }}
                   />
-                  <Text style={[styles.modeTabText, active && styles.modeTabTextActive]}>
+                  <Text
+                    style={[
+                      styles.modeTabText,
+                      active && styles.modeTabTextActive,
+                    ]}
+                  >
                     {m.label}
                   </Text>
                 </TouchableOpacity>
@@ -316,17 +379,19 @@ export default function LoginRegisterScreen() {
                 <Text style={styles.fieldLabel}>MEMBERSHIP NUMBER</Text>
                 {(() => {
                   const status = memberNoStatus(memberNo);
-                  const valid  = isValidMembershipNo(memberNo);
+                  const valid = isValidMembershipNo(memberNo);
                   return (
                     <>
-                      <View style={[
-                        styles.fieldRow,
-                        valid
-                          ? styles.fieldRowValid
-                          : memberNo.length > 2 && !valid
-                            ? styles.fieldRowWarn
-                            : null,
-                      ]}>
+                      <View
+                        style={[
+                          styles.fieldRow,
+                          valid
+                            ? styles.fieldRowValid
+                            : memberNo.length > 2 && !valid
+                              ? styles.fieldRowWarn
+                              : null,
+                        ]}
+                      >
                         <Ionicons
                           name="card-outline"
                           size={18}
@@ -343,17 +408,35 @@ export default function LoginRegisterScreen() {
                           onChangeText={handleMemberNoChange}
                           returnKeyType="next"
                           maxLength={12}
-                          onSubmitEditing={() => memberPasswordRef.current?.focus()}
+                          onSubmitEditing={() =>
+                            memberPasswordRef.current?.focus()
+                          }
                           data-testid="input-membership-no"
                         />
                         {valid && (
-                          <Ionicons name="checkmark-circle" size={20} color="#16A34A" style={{ marginLeft: 4 }} />
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color="#16A34A"
+                            style={{ marginLeft: 4 }}
+                          />
                         )}
                       </View>
                       {status && (
                         <View style={styles.liveHint}>
-                          <Ionicons name={status.icon as any} size={13} color={status.color} />
-                          <Text style={[styles.liveHintText, { color: status.color }]}>{status.text}</Text>
+                          <Ionicons
+                            name={status.icon as any}
+                            size={13}
+                            color={status.color}
+                          />
+                          <Text
+                            style={[
+                              styles.liveHintText,
+                              { color: status.color },
+                            ]}
+                          >
+                            {status.text}
+                          </Text>
                         </View>
                       )}
                     </>
@@ -364,7 +447,12 @@ export default function LoginRegisterScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>PASSWORD</Text>
                 <View style={styles.fieldRow}>
-                  <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={18}
+                    color={COLORS.textMuted}
+                    style={styles.fieldIcon}
+                  />
                   <TextInput
                     ref={memberPasswordRef}
                     style={styles.fieldInput}
@@ -380,13 +468,26 @@ export default function LoginRegisterScreen() {
                     onSubmitEditing={handleLogin}
                     data-testid="input-member-password"
                   />
-                  <TouchableOpacity onPress={() => setShowMemberPassword(!showMemberPassword)} style={styles.eyeBtn} data-testid="btn-toggle-member-pw">
-                    <Ionicons name={showMemberPassword ? "eye-off-outline" : "eye-outline"} size={18} color={COLORS.textMuted} />
+                  <TouchableOpacity
+                    onPress={() => setShowMemberPassword(!showMemberPassword)}
+                    style={styles.eyeBtn}
+                    data-testid="btn-toggle-member-pw"
+                  >
+                    <Ionicons
+                      name={
+                        showMemberPassword ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={18}
+                      color={COLORS.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.forgotRow} data-testid="btn-forgot-password">
+              <TouchableOpacity
+                style={styles.forgotRow}
+                data-testid="btn-forgot-password"
+              >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
             </>
@@ -398,7 +499,12 @@ export default function LoginRegisterScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>USERNAME</Text>
                 <View style={styles.fieldRow}>
-                  <Ionicons name="person-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <Ionicons
+                    name="person-outline"
+                    size={18}
+                    color={COLORS.textMuted}
+                    style={styles.fieldIcon}
+                  />
                   <TextInput
                     style={styles.fieldInput}
                     placeholder="Enter your username"
@@ -417,7 +523,12 @@ export default function LoginRegisterScreen() {
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>PASSWORD</Text>
                 <View style={styles.fieldRow}>
-                  <Ionicons name="lock-closed-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
+                  <Ionicons
+                    name="lock-closed-outline"
+                    size={18}
+                    color={COLORS.textMuted}
+                    style={styles.fieldIcon}
+                  />
                   <TextInput
                     ref={userPasswordRef}
                     style={styles.fieldInput}
@@ -433,13 +544,26 @@ export default function LoginRegisterScreen() {
                     onSubmitEditing={handleLogin}
                     data-testid="input-user-password"
                   />
-                  <TouchableOpacity onPress={() => setShowUserPassword(!showUserPassword)} style={styles.eyeBtn} data-testid="btn-toggle-user-pw">
-                    <Ionicons name={showUserPassword ? "eye-off-outline" : "eye-outline"} size={18} color={COLORS.textMuted} />
+                  <TouchableOpacity
+                    onPress={() => setShowUserPassword(!showUserPassword)}
+                    style={styles.eyeBtn}
+                    data-testid="btn-toggle-user-pw"
+                  >
+                    <Ionicons
+                      name={
+                        showUserPassword ? "eye-off-outline" : "eye-outline"
+                      }
+                      size={18}
+                      color={COLORS.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.forgotRow} data-testid="btn-forgot-password-user">
+              <TouchableOpacity
+                style={styles.forgotRow}
+                data-testid="btn-forgot-password-user"
+              >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
             </>
@@ -449,10 +573,18 @@ export default function LoginRegisterScreen() {
           {mode === "otp" && (
             <>
               {/* Hidden reCAPTCHA anchor — kept for when this feature goes live */}
-              <View nativeID="recaptcha-container" style={{ width: 0, height: 0 }} />
+              <View
+                nativeID="recaptcha-container"
+                style={{ width: 0, height: 0 }}
+              />
 
               <View style={styles.comingSoonBox}>
-                <Ionicons name="phone-portrait-outline" size={40} color={COLORS.primary} style={{ marginBottom: 12 }} />
+                <Ionicons
+                  name="phone-portrait-outline"
+                  size={40}
+                  color={COLORS.primary}
+                  style={{ marginBottom: 12 }}
+                />
                 <Text style={styles.comingSoonTitle}>Phone OTP Sign In</Text>
                 <Text style={styles.comingSoonText}>
                   SMS-based one-time password sign in is coming soon.{"\n"}
@@ -464,7 +596,11 @@ export default function LoginRegisterScreen() {
 
           {/* ── Sign In button (hidden in OTP mode while coming soon) ── */}
           <TouchableOpacity
-            style={[styles.signInBtn, loading && { opacity: 0.65 }, mode === "otp" && { display: "none" }]}
+            style={[
+              styles.signInBtn,
+              loading && { opacity: 0.65 },
+              mode === "otp" && { display: "none" },
+            ]}
             onPress={handleLogin}
             disabled={loading}
             activeOpacity={0.85}
@@ -478,7 +614,11 @@ export default function LoginRegisterScreen() {
                   {mode === "otp" && !otpSent ? "CONTINUE" : "SIGN IN"}
                 </Text>
                 <Ionicons
-                  name={mode === "otp" && !otpSent ? "arrow-forward" : "log-in-outline"}
+                  name={
+                    mode === "otp" && !otpSent
+                      ? "arrow-forward"
+                      : "log-in-outline"
+                  }
                   size={20}
                   color="#fff"
                   style={{ marginLeft: 8 }}
@@ -496,15 +636,21 @@ export default function LoginRegisterScreen() {
 
           {/* ── Support ── */}
           <View style={styles.supportRow}>
-            <Text style={styles.supportQuestion}>Need assistance with your account?</Text>
-            <TouchableOpacity style={styles.supportBtn} data-testid="btn-contact-support">
+            <Text style={styles.supportQuestion}>
+              Need assistance with your account?
+            </Text>
+            <TouchableOpacity
+              style={styles.supportBtn}
+              data-testid="btn-contact-support"
+            >
               <Ionicons name="paw" size={13} color={COLORS.accent} />
               <Text style={styles.supportBtnText}>CONTACT SUPPORT</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={styles.footer}>
-            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN.{"\n"}ALL RIGHTS RESERVED.
+            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN.{"\n"}ALL RIGHTS
+            RESERVED.
           </Text>
         </View>
       </ScrollView>
@@ -517,12 +663,23 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f6f8f7" },
 
   heroBanner: { width: "100%", height: 256 },
-  heroGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: 256 },
+  heroGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 256,
+  },
   backButton: {
-    position: "absolute", left: 16,
-    width: 40, height: 40, borderRadius: 20,
+    position: "absolute",
+    left: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center", alignItems: "center", zIndex: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
 
   brandSection: {
@@ -532,24 +689,36 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   logoOuter: {
-    width: 136, height: 136, borderRadius: 68,
-    borderWidth: 4, borderColor: COLORS.accent,
-    backgroundColor: COLORS.primary,
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+    borderWidth: 4,
+    borderColor: COLORS.accent,
+    backgroundColor: COLORS.background,
     overflow: "hidden",
     marginBottom: SPACING.md,
-    justifyContent: "center", alignItems: "center",
+    justifyContent: "center",
+    alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 10, elevation: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
   },
   logoImage: { width: 100, height: 100 },
   clubTitle: {
-    fontSize: 22, fontWeight: "800", color: COLORS.primary,
-    letterSpacing: 0.5, marginTop: 8, marginBottom: 4,
+    fontSize: 22,
+    fontWeight: "800",
+    color: COLORS.primary,
+    letterSpacing: 0.5,
+    marginTop: 8,
+    marginBottom: 4,
   },
   clubSubtitle: {
-    fontSize: FONT_SIZES.sm, color: COLORS.textSecondary,
-    textAlign: "center", lineHeight: 20,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
   },
 
   formArea: { paddingHorizontal: 16 },
@@ -590,60 +759,89 @@ const styles = StyleSheet.create({
   modeTabTextActive: { color: "#fff" },
 
   errorBox: {
-    flexDirection: "row", alignItems: "center", gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     backgroundColor: "#FEF2F2",
-    borderWidth: 1, borderColor: "#FECACA",
+    borderWidth: 1,
+    borderColor: "#FECACA",
     borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md, marginBottom: SPACING.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   errorText: {
-    flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.error, fontWeight: "500",
+    flex: 1,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.error,
+    fontWeight: "500",
   },
 
   comingSoonBox: {
     alignItems: "center",
     backgroundColor: "#fff",
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.lg,
-    paddingVertical: 40, paddingHorizontal: 24,
+    paddingVertical: 40,
+    paddingHorizontal: 24,
     marginBottom: 24,
   },
   comingSoonTitle: {
-    fontSize: FONT_SIZES.lg, fontWeight: "800",
-    color: COLORS.primary, marginBottom: 10, letterSpacing: 0.3,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: "800",
+    color: COLORS.primary,
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
   comingSoonText: {
-    fontSize: FONT_SIZES.sm, color: COLORS.textSecondary,
-    textAlign: "center", lineHeight: 22,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
   },
 
   fieldGroup: { marginBottom: 18 },
   fieldLabel: {
-    fontSize: 11, fontWeight: "700",
-    color: COLORS.textSecondary, letterSpacing: 0.8, marginBottom: 4,
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
   fieldHint: {
-    flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 8,
   },
   hintText: {
-    fontSize: 11, color: COLORS.textMuted, fontStyle: "italic",
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
   },
   liveHint: {
-    flexDirection: "row", alignItems: "center", gap: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     marginTop: 6,
   },
   liveHintText: {
-    fontSize: 11, fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "600",
   },
   fieldRow: {
-    flexDirection: "row", alignItems: "center",
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     paddingHorizontal: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   fieldRowValid: {
     borderColor: "#16A34A",
@@ -655,15 +853,21 @@ const styles = StyleSheet.create({
   },
   fieldIcon: { marginRight: 10 },
   fieldInput: {
-    flex: 1, height: 52, fontSize: FONT_SIZES.lg, color: COLORS.text,
+    flex: 1,
+    height: 52,
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.text,
   },
   otpInput: {
-    letterSpacing: 6, fontWeight: "700", textAlign: "center",
+    letterSpacing: 6,
+    fontWeight: "700",
+    textAlign: "center",
   },
   eyeBtn: { padding: 8 },
 
   otpSendBtn: {
-    paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: BORDER_RADIUS.sm,
     backgroundColor: "rgba(15,92,58,0.1)",
     marginLeft: 6,
@@ -671,47 +875,72 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   otpSendBtnText: {
-    fontSize: 12, fontWeight: "700", color: COLORS.primary,
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
 
   forgotRow: {
-    alignSelf: "flex-end", marginTop: -6, marginBottom: 24,
+    alignSelf: "flex-end",
+    marginTop: -6,
+    marginBottom: 24,
   },
   forgotText: {
-    fontSize: FONT_SIZES.sm, fontWeight: "700", color: COLORS.accent,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "700",
+    color: COLORS.accent,
   },
 
   signInBtn: {
     backgroundColor: COLORS.primaryDark,
     borderRadius: BORDER_RADIUS.md,
-    height: 56, flexDirection: "row",
-    justifyContent: "center", alignItems: "center",
+    height: 56,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 28,
     shadowColor: COLORS.primaryDark,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signInBtnText: {
-    fontSize: FONT_SIZES.lg, fontWeight: "800", color: "#fff", letterSpacing: 1.5,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: "800",
+    color: "#fff",
+    letterSpacing: 1.5,
   },
 
   dividerRow: {
-    flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 20,
   },
   dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
   dividerLabel: {
-    fontSize: 10, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 1.5,
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    letterSpacing: 1.5,
   },
 
   supportRow: { alignItems: "center", gap: 8, marginBottom: 28 },
   supportQuestion: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary },
   supportBtn: { flexDirection: "row", alignItems: "center", gap: 6 },
   supportBtnText: {
-    fontSize: FONT_SIZES.sm, fontWeight: "800", color: COLORS.accent, letterSpacing: 0.8,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "800",
+    color: COLORS.accent,
+    letterSpacing: 0.8,
   },
 
   footer: {
-    fontSize: 9, color: COLORS.textMuted,
-    textAlign: "center", letterSpacing: 0.5, lineHeight: 16,
+    fontSize: 9,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    letterSpacing: 0.5,
+    lineHeight: 16,
   },
 });
