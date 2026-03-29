@@ -24,7 +24,7 @@ const TAB_CONFIG: Record<
   { label: string; icon: keyof typeof Ionicons.glyphMap; iconFocused: keyof typeof Ionicons.glyphMap }
 > = {
   DogsTab: { label: "Dogs", icon: "paw-outline", iconFocused: "paw" },
-  BreedersTab: { label: "Breeders", icon: "people-outline", iconFocused: "people" },
+  BreedersTab: { label: "Active Breeders", icon: "people-outline", iconFocused: "people" },
   HomeTab: { label: "Home", icon: "home-outline", iconFocused: "home" },
   ShowsTab: { label: "Shows", icon: "trophy-outline", iconFocused: "trophy" },
   ProfileTab: { label: "Profile", icon: "person-outline", iconFocused: "person" },

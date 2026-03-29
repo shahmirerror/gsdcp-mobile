@@ -233,7 +233,7 @@ export default function AppNavigator() {
         screenOptions={{ headerShown: false }}
       >
         <Tab.Screen name="DogsTab" component={DogsStackNavigator} options={{ title: "Dogs" }} />
-        <Tab.Screen name="BreedersTab" component={BreedersStackNavigator} options={{ title: "Breeders" }} />
+        <Tab.Screen name="BreedersTab" component={BreedersStackNavigator} options={{ title: "Active Breeders" }} />
         <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: "Home" }} />
         <Tab.Screen name="ShowsTab" component={ShowsStackNavigator} options={{ title: "Shows" }} />
         <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
