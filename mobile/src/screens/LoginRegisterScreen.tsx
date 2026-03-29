@@ -445,72 +445,26 @@ export default function LoginRegisterScreen() {
             </>
           )}
 
-          {/* ── MODE 3: Phone OTP ── */}
+          {/* ── MODE 3: Phone OTP (Coming Soon) ── */}
           {mode === "otp" && (
             <>
-              {/* Invisible reCAPTCHA anchor required by Firebase Phone Auth on web */}
+              {/* Hidden reCAPTCHA anchor — kept for when this feature goes live */}
               <View nativeID="recaptcha-container" style={{ width: 0, height: 0 }} />
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>REGISTERED PHONE NUMBER</Text>
-                <View style={styles.fieldRow}>
-                  <Ionicons name="call-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
-                  <TextInput
-                    style={styles.fieldInput}
-                    placeholder="+92 300 0000000"
-                    placeholderTextColor={COLORS.textMuted}
-                    keyboardType="phone-pad"
-                    value={phone}
-                    onChangeText={(v) => { setPhone(v); setOtpSent(false); setOtpCode(""); }}
-                    returnKeyType={otpSent ? "next" : "done"}
-                    onSubmitEditing={otpSent ? () => otpRef.current?.focus() : handleSendOtp}
-                    data-testid="input-phone"
-                  />
-                  <TouchableOpacity
-                    style={[styles.otpSendBtn, (!phone.trim() || sendingOtp) && { opacity: 0.5 }]}
-                    onPress={handleSendOtp}
-                    disabled={!phone.trim() || sendingOtp}
-                    activeOpacity={0.8}
-                    data-testid="btn-send-otp"
-                  >
-                    {sendingOtp
-                      ? <ActivityIndicator size="small" color={COLORS.primary} />
-                      : <Text style={styles.otpSendBtnText}>{otpSent ? "Resend" : "Send OTP"}</Text>
-                    }
-                  </TouchableOpacity>
-                </View>
-              </View>
 
-              {otpSent && (
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>ONE-TIME PASSWORD (OTP)</Text>
-                  <View style={styles.fieldHint}>
-                    <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
-                    <Text style={[styles.hintText, { color: "#16A34A" }]}>OTP sent to {toApiPhone(phone)}</Text>
-                  </View>
-                  <View style={styles.fieldRow}>
-                    <Ionicons name="keypad-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
-                    <TextInput
-                      ref={otpRef}
-                      style={[styles.fieldInput, styles.otpInput]}
-                      placeholder="• • • • • •"
-                      placeholderTextColor={COLORS.textMuted}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      value={otpCode}
-                      onChangeText={setOtpCode}
-                      returnKeyType="done"
-                      onSubmitEditing={handleLogin}
-                      data-testid="input-otp"
-                    />
-                  </View>
-                </View>
-              )}
+              <View style={styles.comingSoonBox}>
+                <Ionicons name="phone-portrait-outline" size={40} color={COLORS.primary} style={{ marginBottom: 12 }} />
+                <Text style={styles.comingSoonTitle}>Phone OTP Sign In</Text>
+                <Text style={styles.comingSoonText}>
+                  SMS-based one-time password sign in is coming soon.{"\n"}
+                  Please use your Membership Number or Username in the meantime.
+                </Text>
+              </View>
             </>
           )}
 
-          {/* ── Sign In button ── */}
+          {/* ── Sign In button (hidden in OTP mode while coming soon) ── */}
           <TouchableOpacity
-            style={[styles.signInBtn, loading && { opacity: 0.65 }]}
+            style={[styles.signInBtn, loading && { opacity: 0.65 }, mode === "otp" && { display: "none" }]}
             onPress={handleLogin}
             disabled={loading}
             activeOpacity={0.85}
@@ -644,6 +598,23 @@ const styles = StyleSheet.create({
   },
   errorText: {
     flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.error, fontWeight: "500",
+  },
+
+  comingSoonBox: {
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: 40, paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  comingSoonTitle: {
+    fontSize: FONT_SIZES.lg, fontWeight: "800",
+    color: COLORS.primary, marginBottom: 10, letterSpacing: 0.3,
+  },
+  comingSoonText: {
+    fontSize: FONT_SIZES.sm, color: COLORS.textSecondary,
+    textAlign: "center", lineHeight: 22,
   },
 
   fieldGroup: { marginBottom: 18 },
