@@ -36,13 +36,13 @@ import CustomTabBar from "./CustomTabBar";
 export type DogsStackParamList = {
   DogSearch: undefined;
   DogProfile: { id: string; name?: string };
-  BreederProfile: { id: string; name?: string };
+  BreederProfile: { id: string; name?: string; breederData?: any };
   MemberProfile: { id: string; member?: any };
 };
 
 export type BreedersStackParamList = {
   BreederDirectory: undefined;
-  BreederProfile: { id: string; name?: string };
+  BreederProfile: { id: string; name?: string; breederData?: any };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
 };

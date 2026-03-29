@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchBreeder, BreederDetail, BreederDog } from "../lib/api";
+import { fetchBreeder, BreederDetail, BreederDog, Breeder } from "../lib/api";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -120,10 +120,18 @@ function BreederDogItem({
 
 type TabKey = "info" | "bred" | "owned";
 
+function listBreederToDetail(b: Breeder): BreederDetail {
+  return {
+    breeder: b,
+    dogsBred: [],
+    dogsOwned: [],
+  };
+}
+
 export default function BreederProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { id, name } = route.params as { id: string; name?: string };
+  const { id, name, breederData } = route.params as { id: string; name?: string; breederData?: Breeder };
   const [activeTab, setActiveTab] = useState<TabKey>("info");
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<BreederDetail>({
@@ -131,11 +139,14 @@ export default function BreederProfileScreen() {
     queryFn: () => fetchBreeder(id),
   });
 
-  const breeder = data?.breeder;
-  const dogsBred = data?.dogsBred || [];
-  const dogsOwned = data?.dogsOwned || [];
+  const fallback = breederData ? listBreederToDetail(breederData) : null;
+  const resolved = data ?? fallback ?? null;
 
-  if (isLoading) {
+  const breeder = resolved?.breeder;
+  const dogsBred = resolved?.dogsBred || [];
+  const dogsOwned = resolved?.dogsOwned || [];
+
+  if (isLoading && !fallback) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -143,13 +154,11 @@ export default function BreederProfileScreen() {
     );
   }
 
-  if (isError || !breeder) {
+  if (!breeder) {
     return (
       <View style={styles.centered}>
         <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
-        <Text style={styles.errorText}>
-          {isError ? "Failed to load breeder details." : "Breeder not found."}
-        </Text>
+        <Text style={styles.errorText}>Breeder not found.</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
           <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
