@@ -297,58 +297,66 @@ export default function BreederDirectoryScreen() {
               <View style={styles.popupContent}>
                 <View style={styles.modalHandle} />
 
-                {/* Header row: avatar + name */}
-                <View style={styles.popupHeader}>
-                  {hasImg ? (
-                    <Image source={{ uri: b.imageUrl }} style={styles.popupAvatar} resizeMode="cover" />
+                {/* Kennel Row */}
+                <Text style={styles.popupRowLabel}>Kennel</Text>
+                <View style={styles.popupRow}>
+                  {hasKennelImg ? (
+                    <Image source={{ uri: b.kennelImage }} style={styles.popupAvatar} resizeMode="cover" />
                   ) : (
-                    <View style={[styles.popupAvatarFallback]}>
-                      <Text style={styles.popupAvatarText}>{popupInitials}</Text>
+                    <View style={styles.popupAvatarFallback}>
+                      <Ionicons name="home-outline" size={28} color={COLORS.primary} />
                     </View>
                   )}
                   <View style={styles.popupHeaderInfo}>
-                    <Text style={styles.popupName}>{b.name}</Text>
-                    <Text style={styles.popupKennel}>{b.kennelName}</Text>
+                    <Text style={styles.popupName}>{b.kennelName || "—"}</Text>
+                    {b.city ? <Text style={styles.popupKennel}>{b.city}</Text> : null}
                     {b.breederType ? (
                       <View style={[styles.badge, styles.badgeTier, { alignSelf: "flex-start", marginTop: 4 }]}>
-                        <Text style={[styles.badgeText, styles.badgeTierText]}>{b.breederType} Breeder</Text>
+                        <Text style={[styles.badgeText, styles.badgeTierText]}>{b.breederType}</Text>
                       </View>
                     ) : null}
                   </View>
                 </View>
 
-                {/* Kennel image if different from profile */}
-                {hasKennelImg && (
-                  <Image source={{ uri: b.kennelImage }} style={styles.popupKennelImage} resizeMode="cover" />
-                )}
+                <View style={styles.popupDivider} />
 
-                {/* Info rows */}
-                <View style={styles.popupInfoGrid}>
-                  {b.city ? (
-                    <View style={styles.popupInfoRow}>
-                      <Ionicons name="location-outline" size={16} color={COLORS.primary} />
-                      <Text style={styles.popupInfoText}>{b.city}</Text>
+                {/* Breeder Row */}
+                <Text style={styles.popupRowLabel}>Breeder</Text>
+                <View style={styles.popupRow}>
+                  {hasImg ? (
+                    <Image source={{ uri: b.imageUrl }} style={styles.popupAvatar} resizeMode="cover" />
+                  ) : (
+                    <View style={styles.popupAvatarFallback}>
+                      <Text style={styles.popupAvatarText}>{popupInitials}</Text>
                     </View>
-                  ) : null}
-                  {b.totalLitters > 0 ? (
-                    <View style={styles.popupInfoRow}>
-                      <Ionicons name="paw-outline" size={16} color={COLORS.primary} />
-                      <Text style={styles.popupInfoText}>{b.totalLitters} litters recorded</Text>
-                    </View>
-                  ) : null}
-                  {b.phone ? (
-                    <View style={styles.popupInfoRow}>
-                      <Ionicons name="call-outline" size={16} color={COLORS.primary} />
-                      <Text style={styles.popupInfoText}>{b.phone}</Text>
-                    </View>
-                  ) : null}
-                  {b.email ? (
-                    <View style={styles.popupInfoRow}>
-                      <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
-                      <Text style={styles.popupInfoText}>{b.email}</Text>
-                    </View>
-                  ) : null}
+                  )}
+                  <View style={styles.popupHeaderInfo}>
+                    <Text style={styles.popupName}>{b.name || "—"}</Text>
+                    {b.totalLitters > 0 ? (
+                      <Text style={styles.popupKennel}>{b.totalLitters} litters recorded</Text>
+                    ) : null}
+                  </View>
                 </View>
+
+                <View style={styles.popupDivider} />
+
+                {/* Extra contact info */}
+                {(b.phone || b.email) ? (
+                  <View style={styles.popupInfoGrid}>
+                    {b.phone ? (
+                      <View style={styles.popupInfoRow}>
+                        <Ionicons name="call-outline" size={16} color={COLORS.primary} />
+                        <Text style={styles.popupInfoText}>{b.phone}</Text>
+                      </View>
+                    ) : null}
+                    {b.email ? (
+                      <View style={styles.popupInfoRow}>
+                        <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
+                        <Text style={styles.popupInfoText}>{b.email}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
 
                 {/* Actions */}
                 <View style={styles.popupActions}>
@@ -734,6 +742,25 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  popupRowLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  popupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  popupDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: SPACING.md,
   },
   popupContent: {
     backgroundColor: "#fff",
