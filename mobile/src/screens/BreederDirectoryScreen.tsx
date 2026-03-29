@@ -297,9 +297,16 @@ export default function BreederDirectoryScreen() {
               <View style={styles.popupContent}>
                 <View style={styles.modalHandle} />
 
-                {/* Kennel Row */}
+                {/* Kennel Row — tappable link to profile */}
                 <Text style={styles.popupRowLabel}>Kennel</Text>
-                <View style={styles.popupRow}>
+                <TouchableOpacity
+                  style={styles.popupRow}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setSelectedBreeder(null);
+                    navigation.navigate("BreederProfile", { id: b.id, name: b.kennelName || b.name });
+                  }}
+                >
                   {hasKennelImg ? (
                     <Image source={{ uri: b.kennelImage }} style={styles.popupAvatar} resizeMode="cover" />
                   ) : (
@@ -308,15 +315,11 @@ export default function BreederDirectoryScreen() {
                     </View>
                   )}
                   <View style={styles.popupHeaderInfo}>
-                    <Text style={styles.popupName}>{b.kennelName || "—"}</Text>
+                    <Text style={[styles.popupName, styles.popupLink]}>{b.kennelName || "—"}</Text>
                     {b.city ? <Text style={styles.popupKennel}>{b.city}</Text> : null}
-                    {b.breederType ? (
-                      <View style={[styles.badge, styles.badgeTier, { alignSelf: "flex-start", marginTop: 4 }]}>
-                        <Text style={[styles.badgeText, styles.badgeTierText]}>{b.breederType}</Text>
-                      </View>
-                    ) : null}
                   </View>
-                </View>
+                  <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+                </TouchableOpacity>
 
                 <View style={styles.popupDivider} />
 
@@ -332,9 +335,16 @@ export default function BreederDirectoryScreen() {
                   )}
                   <View style={styles.popupHeaderInfo}>
                     <Text style={styles.popupName}>{b.name || "—"}</Text>
-                    {b.totalLitters > 0 ? (
-                      <Text style={styles.popupKennel}>{b.totalLitters} litters recorded</Text>
-                    ) : null}
+                    <View style={styles.popupBreederMeta}>
+                      {b.totalLitters > 0 ? (
+                        <Text style={styles.popupKennel}>{b.totalLitters} litters</Text>
+                      ) : null}
+                      {b.breederType ? (
+                        <View style={[styles.badge, styles.badgeTier]}>
+                          <Text style={[styles.badgeText, styles.badgeTierText]}>{b.breederType}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                 </View>
 
@@ -742,6 +752,17 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  popupLink: {
+    color: COLORS.primary,
+    textDecorationLine: "underline",
+  },
+  popupBreederMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    flexWrap: "wrap",
   },
   popupRowLabel: {
     fontSize: 10,
