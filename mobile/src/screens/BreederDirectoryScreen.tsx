@@ -330,7 +330,7 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("BreederProfile", { id: b.memberId, name: b.name });
+                    navigation.navigate("BreederProfile", { id: b.id, name: b.name });
                   }}
                 >
                   {hasImg ? (

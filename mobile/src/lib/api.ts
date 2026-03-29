@@ -713,54 +713,7 @@ export type BreederDetail = {
   dogsOwned: BreederDog[];
 };
 
-function mapBreederDog(item: any): BreederDog {
-  return {
-    id:              item.id ?? "",
-    name:            item.dog_name ?? item.name ?? "",
-    KP:              item.KP ?? null,
-    foreign_reg_no:  item.foreign_reg_no ?? null,
-    breed:           item.breed ?? "",
-    sex:             item.sex ?? "",
-    dateOfBirth:     item.dob ?? item.dateOfBirth ?? null,
-    color:           item.color ?? null,
-    imageUrl:        item.imageUrl ?? "",
-    owner:           item.owner ?? null,
-    breeder:         item.breeder ?? null,
-    sire:            item.sire ?? null,
-    dam:             item.dam ?? null,
-    titles:          item.titles ?? [],
-    microchipNumber: item.microchipNumber ?? null,
-  };
-}
-
 export async function fetchBreeder(id: string): Promise<BreederDetail> {
-  if (id.startsWith("member-")) {
-    const res = await fetch(`${BASE_URL}/members/${id}`);
-    const json = await res.json();
-    if (!json.success) throw new Error("Failed to fetch member");
-    const m = json.data.member ?? {};
-    const owned: BreederDog[] = (json.data.ownedDogs ?? []).map(mapBreederDog);
-    const bred: BreederDog[]  = (json.data.dogsBred  ?? []).map(mapBreederDog);
-    const breeder: Breeder = {
-      id:           m.id ?? id,
-      memberId:     m.id ?? id,
-      name:         m.member_name ?? "",
-      kennelName:   m.membership_no ? `Member ${m.membership_no}` : "",
-      location:     m.city ?? null,
-      city:         m.city ?? null,
-      country:      m.country ?? null,
-      phone:        m.check_phone === "Show" ? (m.phone ?? null) : null,
-      email:        m.check_email === "Show" ? (m.email ?? null) : null,
-      membership_no: m.membership_no ?? null,
-      imageUrl:     m.imageUrl ?? "",
-      kennelImage:  "",
-      activeSince:  null,
-      totalLitters: 0,
-      description:  m.address ?? null,
-      breederType:  null,
-    };
-    return { breeder, dogsBred: bred, dogsOwned: owned };
-  }
   const res = await fetch(`${BASE_URL}/breeders/${id}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch breeder");
