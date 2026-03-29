@@ -66,6 +66,29 @@ function isValidMembershipNo(value: string): boolean {
   return /^[A-Z]-\d+$/.test(value);
 }
 
+/**
+ * Strips spaces/dashes and returns the phone in E.164 format for Firebase.
+ * e.g. "+92 300 123 4567" → "+923001234567"
+ */
+function toE164(raw: string): string {
+  const cleaned = raw.replace(/[^\d+]/g, "");
+  return cleaned.startsWith("+") ? cleaned : `+${cleaned}`;
+}
+
+/**
+ * Formats phone for the GSDCP authorize API: +92-300-000-0000
+ * Works for any Pakistani mobile (10 digits after +92).
+ * Falls back to plain E.164 for other numbers.
+ */
+function toApiPhone(raw: string): string {
+  const e164 = toE164(raw);
+  const digits = e164.replace(/^\+/, "");
+  if (digits.startsWith("92") && digits.length === 12) {
+    return `+92-${digits.slice(2, 5)}-${digits.slice(5, 8)}-${digits.slice(8)}`;
+  }
+  return e164;
+}
+
 /** Live status for the membership field */
 function memberNoStatus(value: string): { icon: string; text: string; color: string } | null {
   if (!value) return null;
@@ -122,10 +145,10 @@ export default function LoginRegisterScreen() {
     setError("");
     setSendingOtp(true);
     try {
-      // Step 1: Confirm phone is registered with GSDCP
-      await checkPhoneRegistered(phone.trim());
+      // Step 1: Confirm phone is registered with GSDCP (API format: +92-300-000-0000)
+      await checkPhoneRegistered(toApiPhone(phone.trim()));
 
-      // Step 2: Send OTP via Firebase Phone Auth (web only for now)
+      // Step 2: Send OTP via Firebase Phone Auth (Firebase needs E.164: +923001234567)
       if (Platform.OS === "web") {
         if (!recaptchaVerifierRef.current) {
           recaptchaVerifierRef.current = new RecaptchaVerifier(
@@ -136,7 +159,7 @@ export default function LoginRegisterScreen() {
         }
         const result = await signInWithPhoneNumber(
           firebaseAuth,
-          phone.trim(),
+          toE164(phone.trim()),
           recaptchaVerifierRef.current,
         );
         setConfirmationResult(result);
@@ -181,7 +204,8 @@ export default function LoginRegisterScreen() {
         if (!confirmationResult) throw new Error("Please request an OTP first.");
         await confirmationResult.confirm(otpCode.trim());
         // Step 3b: Tell authorize API the OTP was verified → get auth user back
-        await login(phone.trim(), "verified", "otp");
+        // API expects phone in +92-300-000-0000 format
+        await login(toApiPhone(phone.trim()), "verified", "otp");
       } else {
         const identifier = mode === "membership" ? memberNo : username.trim();
         const credential = mode === "membership" ? memberPassword : userPassword;
@@ -461,7 +485,7 @@ export default function LoginRegisterScreen() {
                   <Text style={styles.fieldLabel}>ONE-TIME PASSWORD (OTP)</Text>
                   <View style={styles.fieldHint}>
                     <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
-                    <Text style={[styles.hintText, { color: "#16A34A" }]}>OTP sent to {phone}</Text>
+                    <Text style={[styles.hintText, { color: "#16A34A" }]}>OTP sent to {toApiPhone(phone)}</Text>
                   </View>
                   <View style={styles.fieldRow}>
                     <Ionicons name="keypad-outline" size={18} color={COLORS.textMuted} style={styles.fieldIcon} />
