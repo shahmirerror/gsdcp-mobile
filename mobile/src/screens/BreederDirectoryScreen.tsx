@@ -323,9 +323,16 @@ export default function BreederDirectoryScreen() {
 
                 <View style={styles.popupDivider} />
 
-                {/* Breeder Row */}
+                {/* Breeder Row — tappable link to member profile */}
                 <Text style={styles.popupRowLabel}>Breeder</Text>
-                <View style={styles.popupRow}>
+                <TouchableOpacity
+                  style={styles.popupRow}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setSelectedBreeder(null);
+                    navigation.navigate("BreederProfile", { id: b.memberId, name: b.name });
+                  }}
+                >
                   {hasImg ? (
                     <Image source={{ uri: b.imageUrl }} style={styles.popupAvatar} resizeMode="cover" />
                   ) : (
@@ -334,7 +341,7 @@ export default function BreederDirectoryScreen() {
                     </View>
                   )}
                   <View style={styles.popupHeaderInfo}>
-                    <Text style={styles.popupName}>{b.name || "—"}</Text>
+                    <Text style={[styles.popupName, styles.popupLink]}>{b.name || "—"}</Text>
                     <View style={styles.popupBreederMeta}>
                       {b.totalLitters > 0 ? (
                         <Text style={styles.popupKennel}>{b.totalLitters} litters</Text>
@@ -346,7 +353,8 @@ export default function BreederDirectoryScreen() {
                       ) : null}
                     </View>
                   </View>
-                </View>
+                  <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+                </TouchableOpacity>
 
                 <View style={styles.popupDivider} />
 
