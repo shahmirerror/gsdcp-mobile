@@ -1,4 +1,45 @@
-const BASE_URL = "https://gsdcp.org/api/mobile";
+const BASE_URL       = "https://gsdcp.org/api/mobile";
+const AUTHORIZE_URL  = `${BASE_URL}/authorize`;
+
+/**
+ * Step 1 of Phone OTP login: ping the authorize API with just the phone number
+ * to confirm it belongs to a registered member before sending an SMS.
+ * Throws if the backend explicitly says the phone is not found.
+ */
+export async function checkPhoneRegistered(phone: string): Promise<void> {
+  try {
+    const res = await fetch(AUTHORIZE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ login_type: "otp", phone }),
+    });
+    const raw = await res.text();
+    const json = raw ? JSON.parse(raw) : null;
+    const msg = (
+      json?.error?.message ?? json?.message ?? json?.error?.code ?? ""
+    ).toLowerCase();
+    if (
+      msg.includes("not found") ||
+      msg.includes("not registered") ||
+      msg.includes("no account") ||
+      msg.includes("invalid phone")
+    ) {
+      throw new Error("This phone number is not registered with GSDCP.");
+    }
+    // Any other response (including "OTP required" errors) just means the phone
+    // exists — proceed to send the OTP.
+  } catch (e: any) {
+    // Re-throw only our explicit "not registered" errors; ignore network/parse issues.
+    if (
+      e.message?.includes("not registered") ||
+      e.message?.includes("not found") ||
+      e.message?.includes("no account") ||
+      e.message?.includes("invalid phone")
+    ) {
+      throw e;
+    }
+  }
+}
 
 export type PaginationMeta = {
   perPage: number;

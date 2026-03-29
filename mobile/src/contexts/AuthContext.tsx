@@ -60,7 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let body: Record<string, string>;
 
     if (mode === "otp") {
-      body = { login_type: "otp", phone: identifier, otp: credential };
+      // credential is "verified" after Firebase confirms the OTP code.
+      // We just tell the backend the phone + that OTP was verified.
+      body = { login_type: "otp", phone: identifier, otp_verified: "true" };
     } else if (mode === "membership") {
       body = { login_type: "membership", membership_no: identifier, password: credential };
     } else {

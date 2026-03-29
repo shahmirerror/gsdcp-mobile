@@ -16,6 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { signInWithPhoneNumber, RecaptchaVerifier, ConfirmationResult } from "firebase/auth";
+import { firebaseAuth } from "../lib/firebase";
+import { checkPhoneRegistered } from "../lib/api";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -97,6 +100,8 @@ export default function LoginRegisterScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -112,15 +117,41 @@ export default function LoginRegisterScreen() {
     setMemberNo(formatted);
   };
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     if (!phone.trim()) { setError("Please enter your phone number"); return; }
     setError("");
     setSendingOtp(true);
-    setTimeout(() => {
-      setSendingOtp(false);
+    try {
+      // Step 1: Confirm phone is registered with GSDCP
+      await checkPhoneRegistered(phone.trim());
+
+      // Step 2: Send OTP via Firebase Phone Auth (web only for now)
+      if (Platform.OS === "web") {
+        if (!recaptchaVerifierRef.current) {
+          recaptchaVerifierRef.current = new RecaptchaVerifier(
+            firebaseAuth,
+            "recaptcha-container",
+            { size: "invisible" },
+          );
+        }
+        const result = await signInWithPhoneNumber(
+          firebaseAuth,
+          phone.trim(),
+          recaptchaVerifierRef.current,
+        );
+        setConfirmationResult(result);
+      }
+
       setOtpSent(true);
       otpRef.current?.focus();
-    }, 1500);
+    } catch (e: any) {
+      // Clean up the reCAPTCHA so it can be retried
+      recaptchaVerifierRef.current?.clear();
+      recaptchaVerifierRef.current = null;
+      setError(e.message ?? "Failed to send OTP. Please try again.");
+    } finally {
+      setSendingOtp(false);
+    }
   };
 
   const handleLogin = async () => {
@@ -137,19 +168,25 @@ export default function LoginRegisterScreen() {
       if (!username.trim()) { setError("Please enter your username"); return; }
       if (!userPassword) { setError("Please enter your password"); return; }
     } else {
+      // OTP mode: if OTP not sent yet, "CONTINUE" should trigger send
+      if (!otpSent) { await handleSendOtp(); return; }
       if (!phone.trim()) { setError("Please enter your phone number"); return; }
-      if (!otpSent) { setError("Please request an OTP first"); return; }
       if (!otpCode.trim()) { setError("Please enter the OTP"); return; }
     }
 
     setLoading(true);
     try {
-      const identifier =
-        mode === "membership" ? memberNo :
-        mode === "username"   ? username.trim() :
-        phone.trim();
-      const credential = mode === "otp" ? otpCode.trim() : (mode === "membership" ? memberPassword : userPassword);
-      await login(identifier, credential, mode);
+      if (mode === "otp") {
+        // Step 3a: Verify OTP code with Firebase
+        if (!confirmationResult) throw new Error("Please request an OTP first.");
+        await confirmationResult.confirm(otpCode.trim());
+        // Step 3b: Tell authorize API the OTP was verified → get auth user back
+        await login(phone.trim(), "verified", "otp");
+      } else {
+        const identifier = mode === "membership" ? memberNo : username.trim();
+        const credential = mode === "membership" ? memberPassword : userPassword;
+        await login(identifier, credential, mode);
+      }
       // Auth state drives navigation — when isLoggedIn becomes true the
       // ProfileStackNavigator automatically shows ProfileHome instead of LoginRegister.
     } catch (e: any) {
@@ -164,6 +201,9 @@ export default function LoginRegisterScreen() {
     setError("");
     setOtpSent(false);
     setOtpCode("");
+    setConfirmationResult(null);
+    recaptchaVerifierRef.current?.clear();
+    recaptchaVerifierRef.current = null;
   };
 
   return (
@@ -384,6 +424,8 @@ export default function LoginRegisterScreen() {
           {/* ── MODE 3: Phone OTP ── */}
           {mode === "otp" && (
             <>
+              {/* Invisible reCAPTCHA anchor required by Firebase Phone Auth on web */}
+              <View nativeID="recaptcha-container" style={{ width: 0, height: 0 }} />
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>REGISTERED PHONE NUMBER</Text>
                 <View style={styles.fieldRow}>
