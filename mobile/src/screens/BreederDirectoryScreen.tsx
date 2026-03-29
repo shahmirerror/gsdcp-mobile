@@ -91,6 +91,7 @@ export default function BreederDirectoryScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
   const [tempCountry, setTempCountry] = useState<string>("All");
+  const [selectedBreeder, setSelectedBreeder] = useState<Breeder | null>(null);
 
   const activeFilterCount =
     (cityFilter !== "All" ? 1 : 0) + (countryFilter !== "All" ? 1 : 0);
@@ -252,7 +253,7 @@ export default function BreederDirectoryScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
@@ -260,9 +261,7 @@ export default function BreederDirectoryScreen() {
           renderItem={({ item }) => (
             <BreederListItem
               breeder={item}
-              onPress={() =>
-                navigation.navigate("BreederProfile", { id: item.id, name: item.name })
-              }
+              onPress={() => setSelectedBreeder(item)}
             />
           )}
           ListEmptyComponent={
@@ -274,6 +273,109 @@ export default function BreederDirectoryScreen() {
           }
         />
       )}
+
+      {/* Breeder Quick-View Popup */}
+      <Modal
+        visible={!!selectedBreeder}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedBreeder(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedBreeder(null)} />
+          {selectedBreeder && (() => {
+            const b = selectedBreeder;
+            const hasImg = b.imageUrl && !b.imageUrl.includes("user-not-found");
+            const hasKennelImg = b.kennelImage && !b.kennelImage.includes("user-not-found");
+            const popupInitials = (b.name || "?")
+              .split(" ")
+              .map((w) => w[0] ?? "")
+              .join("")
+              .slice(0, 2)
+              .toUpperCase() || "?";
+            return (
+              <View style={styles.popupContent}>
+                <View style={styles.modalHandle} />
+
+                {/* Header row: avatar + name */}
+                <View style={styles.popupHeader}>
+                  {hasImg ? (
+                    <Image source={{ uri: b.imageUrl }} style={styles.popupAvatar} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.popupAvatarFallback]}>
+                      <Text style={styles.popupAvatarText}>{popupInitials}</Text>
+                    </View>
+                  )}
+                  <View style={styles.popupHeaderInfo}>
+                    <Text style={styles.popupName}>{b.name}</Text>
+                    <Text style={styles.popupKennel}>{b.kennelName}</Text>
+                    {b.breederType ? (
+                      <View style={[styles.badge, styles.badgeTier, { alignSelf: "flex-start", marginTop: 4 }]}>
+                        <Text style={[styles.badgeText, styles.badgeTierText]}>{b.breederType} Breeder</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+
+                {/* Kennel image if different from profile */}
+                {hasKennelImg && (
+                  <Image source={{ uri: b.kennelImage }} style={styles.popupKennelImage} resizeMode="cover" />
+                )}
+
+                {/* Info rows */}
+                <View style={styles.popupInfoGrid}>
+                  {b.city ? (
+                    <View style={styles.popupInfoRow}>
+                      <Ionicons name="location-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.popupInfoText}>{b.city}</Text>
+                    </View>
+                  ) : null}
+                  {b.totalLitters > 0 ? (
+                    <View style={styles.popupInfoRow}>
+                      <Ionicons name="paw-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.popupInfoText}>{b.totalLitters} litters recorded</Text>
+                    </View>
+                  ) : null}
+                  {b.phone ? (
+                    <View style={styles.popupInfoRow}>
+                      <Ionicons name="call-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.popupInfoText}>{b.phone}</Text>
+                    </View>
+                  ) : null}
+                  {b.email ? (
+                    <View style={styles.popupInfoRow}>
+                      <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.popupInfoText}>{b.email}</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                {/* Actions */}
+                <View style={styles.popupActions}>
+                  <TouchableOpacity
+                    style={styles.popupBtnOutline}
+                    onPress={() => setSelectedBreeder(null)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.popupBtnOutlineText}>Close</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.popupBtnPrimary}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedBreeder(null);
+                      navigation.navigate("BreederProfile", { id: b.id, name: b.name });
+                    }}
+                  >
+                    <Text style={styles.popupBtnPrimaryText}>View Full Profile</Text>
+                    <Ionicons name="arrow-forward" size={16} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })()}
+        </View>
+      </Modal>
 
       <Modal
         visible={showFilterModal}
@@ -632,5 +734,108 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "700",
+  },
+  popupContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    paddingTop: 12,
+  },
+  popupHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  popupAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: "#E8F5E9",
+  },
+  popupAvatarFallback: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  popupAvatarText: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  popupHeaderInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  popupName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  popupKennel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  popupKennelImage: {
+    width: "100%",
+    height: 140,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.md,
+    backgroundColor: "#F3F4F6",
+  },
+  popupInfoGrid: {
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  popupInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  popupInfoText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text,
+    flex: 1,
+  },
+  popupActions: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+  },
+  popupBtnOutline: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+  popupBtnOutlineText: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  popupBtnPrimary: {
+    flex: 2,
+    flexDirection: "row",
+    paddingVertical: 13,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  popupBtnPrimaryText: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: "700",
+    color: "#fff",
   },
 });
