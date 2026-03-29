@@ -162,12 +162,12 @@ export default function BreederProfileScreen() {
     !breeder.imageUrl.includes("user-not-found");
   const year = formatYear(breeder.activeSince ?? null);
 
-  const initials = breeder.name
+  const initials = (breeder.name || "?")
     .split(" ")
-    .map((w) => w[0])
+    .map((w) => w[0] ?? "")
     .join("")
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || "?";
 
   const handleDogPress = (dog: BreederDog) => {
     navigation.navigate("DogProfile", { id: dog.id, name: dog.name.trim() });
@@ -267,7 +267,7 @@ export default function BreederProfileScreen() {
                 {year ? (
                   <DetailItem icon="calendar" label="Active Since" value={year} />
                 ) : null}
-                <DetailItem icon="paw" label="Total Dogs" value={String(breeder.totalDogs)} />
+                <DetailItem icon="paw" label="Total Litters" value={String(breeder.totalLitters ?? 0)} />
               </View>
             </View>
 

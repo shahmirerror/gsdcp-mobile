@@ -34,12 +34,12 @@ function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () =
   const hasImage =
     breeder.imageUrl &&
     !breeder.imageUrl.includes("user-not-found");
-  const initials = breeder.name
+  const initials = (breeder.name || "?")
     .split(" ")
-    .map((w) => w[0])
+    .map((w) => w[0] ?? "")
     .join("")
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || "?";
   const year = formatYear(breeder.activeSince);
 
   return (
@@ -55,12 +55,19 @@ function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () =
         <Text style={styles.itemName} numberOfLines={1}>{breeder.name}</Text>
         <Text style={styles.itemSub} numberOfLines={1}>{breeder.kennelName}</Text>
         <View style={styles.badges}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{breeder.totalDogs} dogs</Text>
-          </View>
+          {breeder.totalLitters > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{breeder.totalLitters} litters</Text>
+            </View>
+          )}
           {breeder.location ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{breeder.location}</Text>
+            </View>
+          ) : null}
+          {breeder.breederType ? (
+            <View style={[styles.badge, styles.badgeTier]}>
+              <Text style={[styles.badgeText, styles.badgeTierText]}>{breeder.breederType}</Text>
             </View>
           ) : null}
           {year ? (
@@ -500,6 +507,15 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
+  },
+  badgeTier: {
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+  },
+  badgeTierText: {
+    color: "#92400E",
+    fontWeight: "700",
   },
   emptyState: {
     alignItems: "center",

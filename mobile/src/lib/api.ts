@@ -648,6 +648,7 @@ export async function submitEntry(
 
 export type Breeder = {
   id: string;
+  memberId: string;
   name: string;
   kennelName: string;
   location: string | null;
@@ -657,16 +658,35 @@ export type Breeder = {
   email: string | null;
   membership_no: string | null;
   imageUrl: string;
+  kennelImage: string;
   activeSince: string | null;
-  totalDogs: number;
+  totalLitters: number;
   description: string | null;
+  breederType: string | null;
 };
 
 export async function fetchBreeders(): Promise<Breeder[]> {
   const res = await fetch(`${BASE_URL}/breeders`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch breeders");
-  return json.data;
+  return (json.data as any[]).map((item) => ({
+    id:           item.kennel_id   ?? String(item.id ?? ""),
+    memberId:     item.member_id   ?? "",
+    name:         item.member_name ?? item.name ?? "",
+    kennelName:   item.kennel_name ?? item.kennelName ?? "",
+    location:     item.location    ?? item.city ?? null,
+    city:         item.city        ?? null,
+    country:      item.country     ?? null,
+    phone:        item.phone       ?? null,
+    email:        item.email       ?? null,
+    membership_no: item.membership_no ?? null,
+    imageUrl:     item.member_image ?? item.imageUrl ?? "",
+    kennelImage:  item.kennel_image ?? "",
+    activeSince:  item.activeSince  ?? null,
+    totalLitters: Number(item.no_of_litters ?? item.totalDogs ?? 0),
+    description:  item.description ?? null,
+    breederType:  item.breeder_type ?? null,
+  }));
 }
 
 export type BreederDog = {
