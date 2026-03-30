@@ -382,8 +382,14 @@ export default function BreederDirectoryScreen() {
                 <View style={styles.popupDivider} />
 
                 {/* Extra contact info */}
-                {(b.phone || b.email) ? (
+                {(b.phone || b.email || b.membership_no) ? (
                   <View style={styles.popupInfoGrid}>
+                    {b.membership_no ? (
+                      <View style={styles.popupInfoRow}>
+                        <Ionicons name="card-outline" size={16} color={COLORS.primary} />
+                        <Text style={styles.popupInfoText}>Member {b.membership_no}</Text>
+                      </View>
+                    ) : null}
                     {b.phone ? (
                       <View style={styles.popupInfoRow}>
                         <Ionicons name="call-outline" size={16} color={COLORS.primary} />
