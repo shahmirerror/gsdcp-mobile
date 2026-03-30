@@ -629,30 +629,53 @@ export default function DogProfileScreen() {
                       />
                     </TouchableOpacity>
 
-                    {isOpen && puppies.map((puppy: ProgenyPuppy, j: number) => {
-                      const isMale = (puppy.sex || "").toLowerCase() === "male";
-                      return (
-                        <TouchableOpacity
-                          key={puppy.id || j}
-                          style={[styles.puppyRow, j < (puppies.length - 1) && styles.puppyRowBorder]}
-                          onPress={() => navigation.push("DogProfile", { id: puppy.id, name: puppy.dog_name })}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[styles.puppyDot, isMale ? styles.puppyDotMale : styles.puppyDotFemale]}>
-                            <Text style={styles.puppyDotText}>{isMale ? "♂" : "♀"}</Text>
+                    {isOpen && (() => {
+                      const groups: Record<string, ProgenyPuppy[]> = {};
+                      puppies.forEach((puppy: ProgenyPuppy) => {
+                        const key = puppy.dob || "Unknown";
+                        if (!groups[key]) groups[key] = [];
+                        groups[key].push(puppy);
+                      });
+                      const sortedKeys = Object.keys(groups).sort((a, b) => {
+                        if (a === "Unknown") return 1;
+                        if (b === "Unknown") return -1;
+                        return b.localeCompare(a);
+                      });
+                      return sortedKeys.map((dobKey) => {
+                        const group = groups[dobKey];
+                        const label = dobKey === "Unknown" ? "Unknown DOB" : formatDob(dobKey);
+                        return (
+                          <View key={dobKey}>
+                            <View style={styles.puppyDobHeader}>
+                              <Text style={styles.puppyDobHeaderText}>{label}</Text>
+                            </View>
+                            {group.map((puppy: ProgenyPuppy, j: number) => {
+                              const isMale = (puppy.sex || "").toLowerCase() === "male";
+                              return (
+                                <TouchableOpacity
+                                  key={puppy.id || j}
+                                  style={[styles.puppyRow, j < (group.length - 1) && styles.puppyRowBorder]}
+                                  onPress={() => navigation.push("DogProfile", { id: puppy.id, name: puppy.dog_name })}
+                                  activeOpacity={0.7}
+                                >
+                                  <View style={[styles.puppyDot, isMale ? styles.puppyDotMale : styles.puppyDotFemale]}>
+                                    <Text style={styles.puppyDotText}>{isMale ? "♂" : "♀"}</Text>
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.puppyName} numberOfLines={1}>{puppy.dog_name}</Text>
+                                    <Text style={styles.puppyMeta}>
+                                      {puppy.show_title ? `${puppy.show_title} · ` : ""}
+                                      KP {puppy.KP || "-"}
+                                    </Text>
+                                  </View>
+                                  <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+                                </TouchableOpacity>
+                              );
+                            })}
                           </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.puppyName} numberOfLines={1}>{puppy.dog_name}</Text>
-                            <Text style={styles.puppyMeta}>
-                              {puppy.show_title ? `${puppy.show_title} · ` : ""}
-                              KP {puppy.KP || "-"}
-                              {puppy.dob ? ` · ${puppy.dob.slice(0, 4)}` : ""}
-                            </Text>
-                          </View>
-                          <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
-                        </TouchableOpacity>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </View>
                 );
               })}
@@ -1550,5 +1573,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 1,
+  },
+  puppyDobHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: COLORS.surface,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  puppyDobHeaderText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });
