@@ -178,10 +178,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
         const damPositions: string[] = pbs?.mother?.map(String) ??
           entry.positions.filter((_, i) => entry.sides[i] === "mother");
 
-        const genLabel = [
-          sirePositions.length > 0 ? `Sire: gen ${sirePositions.join(",")}` : "",
-          damPositions.length > 0 ? `Dam: gen ${damPositions.join(",")}` : "",
-        ].filter(Boolean).join("  ·  ");
+        const genLabel = `${sirePositions.join(",")} - ${damPositions.join(",")} (Sire - Dam)`;
 
         const patternLabel = entry.line_breeding_pattern
           ? entry.line_breeding_pattern.replace(/_/g, " ")
