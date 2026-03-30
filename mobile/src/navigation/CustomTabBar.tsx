@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -126,7 +127,8 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
     setTimeout(() => navigation.navigate(route as any), 220);
   };
 
-  const tabBarHeight = 60 + insets.bottom;
+  const effectiveBottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 14 : 0);
+  const tabBarHeight = 60 + effectiveBottomInset;
   const homeCenterX = screenWidth / 2;
   const menuBaseY = tabBarHeight + 8;
 
@@ -134,7 +136,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
   return (
     <>
-      <View style={[styles.tabBar, { paddingBottom: insets.bottom }]}>
+      <View style={[styles.tabBar, { height: tabBarHeight, paddingBottom: effectiveBottomInset }]}>
         {visibleRoutes.map((route) => {
           const globalIndex = state.routes.findIndex((r) => r.name === route.name);
           const isFocused = state.index === globalIndex;
@@ -275,7 +277,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
         <View
           style={[
             styles.tabBarOverlay,
-            { paddingBottom: insets.bottom, height: tabBarHeight },
+            { paddingBottom: effectiveBottomInset, height: tabBarHeight },
           ]}
         >
           {visibleRoutes.map((route) => {

@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "c4d35567-64f6-4c98-9ef7-709f164c6fd7"
+      }
+    },
+    "android": {
+      "package": "com.shahmirsindhu.gsdcpmobileworkspace"
+    }
+  }
+}

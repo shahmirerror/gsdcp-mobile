@@ -1,0 +1,4 @@
+{"name":"turtle-launcher","hostname":"launcher-android-5b5758b585-555xm","pid":1,"service":"launcher","phase":"FAIL_BUILD","level":30,"marker":"START_PHASE","msg":"Start phase FAIL_BUILD","time":"2026-03-30T10:06:36.489Z","v":0}
+{"name":"turtle-launcher","hostname":"launcher-android-5b5758b585-555xm","pid":1,"service":"launcher","phase":"FAIL_BUILD","level":50,"msg":"Build failed: An unexpected error happened.\nTry running the build again. Report the issue to https://expo.dev/contact if the problem persists.","time":"2026-03-30T10:06:36.489Z","v":0}
+{"name":"turtle-launcher","hostname":"launcher-android-5b5758b585-555xm","pid":1,"service":"launcher","phase":"FAIL_BUILD","level":30,"marker":"END_PHASE","result":"failed","msg":"End phase: FAIL_BUILD","time":"2026-03-30T10:06:36.489Z","v":0}
+
