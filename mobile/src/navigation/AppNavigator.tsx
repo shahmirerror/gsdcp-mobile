@@ -43,6 +43,7 @@ export type DogsStackParamList = {
 export type BreedersStackParamList = {
   BreederDirectory: undefined;
   BreederProfile: { id: string; name?: string; breederData?: any };
+  KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
 };
@@ -134,6 +135,7 @@ function BreedersStackNavigator() {
     <BreedersStack.Navigator screenOptions={{ headerShown: false }}>
       <BreedersStack.Screen name="BreederDirectory" component={BreederDirectoryScreen} />
       <BreedersStack.Screen name="BreederProfile" component={BreederProfileScreen} />
+      <BreedersStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <BreedersStack.Screen name="DogProfile" component={DogProfileScreen} />
       <BreedersStack.Screen name="MemberProfile" component={MemberProfileScreen} />
     </BreedersStack.Navigator>

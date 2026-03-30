@@ -304,7 +304,7 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("BreederProfile", { id: b.memberId, name: b.kennelName || b.name, breederData: b });
+                    navigation.navigate("KennelProfile", { id: b.id, name: b.kennelName || b.name });
                   }}
                 >
                   {hasKennelImg ? (
