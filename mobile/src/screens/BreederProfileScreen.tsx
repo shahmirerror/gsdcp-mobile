@@ -136,7 +136,7 @@ export default function BreederProfileScreen() {
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<BreederDetail>({
     queryKey: ["breeders", id],
-    queryFn: () => fetchBreeder(id),
+    queryFn: () => fetchBreeder(id, breederData),
   });
 
   const fallback = breederData ? listBreederToDetail(breederData) : null;

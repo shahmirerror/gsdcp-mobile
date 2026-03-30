@@ -304,7 +304,7 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("BreederProfile", { id: b.id, name: b.kennelName || b.name, breederData: b });
+                    navigation.navigate("BreederProfile", { id: b.memberId, name: b.kennelName || b.name, breederData: b });
                   }}
                 >
                   {hasKennelImg ? (
@@ -330,7 +330,7 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("BreederProfile", { id: b.id, name: b.name, breederData: b });
+                    navigation.navigate("BreederProfile", { id: b.memberId, name: b.name, breederData: b });
                   }}
                 >
                   {hasImg ? (
@@ -390,7 +390,7 @@ export default function BreederDirectoryScreen() {
                     activeOpacity={0.8}
                     onPress={() => {
                       setSelectedBreeder(null);
-                      navigation.navigate("BreederProfile", { id: b.id, name: b.name, breederData: b });
+                      navigation.navigate("BreederProfile", { id: b.memberId, name: b.name, breederData: b });
                     }}
                   >
                     <Text style={styles.popupBtnPrimaryText}>View Full Profile</Text>
