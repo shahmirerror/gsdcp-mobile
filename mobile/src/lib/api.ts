@@ -1468,6 +1468,30 @@ export async function verifyDam(dogId: string, userId: number, sireId?: string):
   return { eligible: true, message: "" };
 }
 
+export async function fetchVirtualBreeding(
+  sireId: string,
+  damId: string,
+): Promise<Pedigree> {
+  const sNum = Number(String(sireId).replace(/^dog-/, ""));
+  const dNum = Number(String(damId).replace(/^dog-/, ""));
+  const res = await fetch(`${BASE_URL}/dogs/virtual-breeding`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sire_id: sNum, dam_id: dNum }),
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("Invalid response from server."); }
+  if (json.exception || json.success === false) {
+    throw new Error(json.message ?? json.error?.message ?? "Failed to generate pedigree.");
+  }
+  const pedigree = json.data?.pedigree ?? json.pedigree ?? json.data ?? null;
+  if (!pedigree || typeof pedigree !== "object" || Array.isArray(pedigree)) {
+    throw new Error("No pedigree data returned from server.");
+  }
+  return pedigree as Pedigree;
+}
+
 export type DogSearchResult = {
   id: string;
   dog_name: string;
