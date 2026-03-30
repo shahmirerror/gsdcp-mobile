@@ -146,7 +146,7 @@ export default function BreederProfileScreen() {
   const dogsBred = resolved?.dogsBred || [];
   const dogsOwned = resolved?.dogsOwned || [];
 
-  if (isLoading && !fallback) {
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
