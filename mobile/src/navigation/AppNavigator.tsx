@@ -31,6 +31,7 @@ import VisitingJudgesScreen from "../screens/club/VisitingJudgesScreen";
 import NewsUpdatesScreen from "../screens/club/NewsUpdatesScreen";
 import JudgeDetailScreen from "../screens/club/JudgeDetailScreen";
 
+import VirtualBreedingScreen from "../screens/VirtualBreedingScreen";
 import CustomTabBar from "./CustomTabBar";
 
 export type DogsStackParamList = {
@@ -107,6 +108,7 @@ export type RootTabParamList = {
   MemberDirectoryTab: undefined;
   RecentMatingsTab: undefined;
   TheClubTab: undefined;
+  VirtualBreedingTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -243,6 +245,7 @@ export default function AppNavigator() {
         <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryStackNavigator} />
         <Tab.Screen name="RecentMatingsTab" component={RecentMatingsStackNavigator} />
         <Tab.Screen name="TheClubTab" component={TheClubStackNavigator} />
+        <Tab.Screen name="VirtualBreedingTab" component={VirtualBreedingScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );

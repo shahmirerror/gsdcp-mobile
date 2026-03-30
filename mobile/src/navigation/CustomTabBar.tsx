@@ -71,6 +71,16 @@ const MENU_ITEMS = [
     bg: COLORS.accent,
     border: "#A07C3A",
   },
+  {
+    label: "Virtual\nBreeding",
+    icon: "git-merge" as keyof typeof Ionicons.glyphMap,
+    route: "VirtualBreedingTab",
+    dx: 0,
+    dy: -190,
+    iconColor: "#fff",
+    bg: "#7C3AED",
+    border: "#5B21B6",
+  },
 ];
 
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
