@@ -1071,7 +1071,10 @@ function StudCertTab() {
     enabled: !!user,
     staleTime: 300_000,
   });
-  const sireOptions: DogOption[] = (memberDetail?.ownedDogs ?? [])
+  const allOwnedDogs: MemberOwnedDog[] = memberDetail?.ownedDogs?.length
+    ? memberDetail.ownedDogs
+    : (user?.myDogs as MemberOwnedDog[] ?? []);
+  const sireOptions: DogOption[] = allOwnedDogs
     .filter(d => (d.sex ?? "").toLowerCase() === "male")
     .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
@@ -1433,7 +1436,10 @@ function LitterInspectionTab() {
     enabled: !!user,
     staleTime: 300_000,
   });
-  const damOptions: DogOption[] = (inspMemberDetail?.ownedDogs ?? [])
+  const allInspOwnedDogs: MemberOwnedDog[] = inspMemberDetail?.ownedDogs?.length
+    ? inspMemberDetail.ownedDogs
+    : (user?.myDogs as MemberOwnedDog[] ?? []);
+  const damOptions: DogOption[] = allInspOwnedDogs
     .filter(d => (d.sex ?? "").toLowerCase() === "female")
     .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
@@ -1818,7 +1824,10 @@ function LitterRegistrationTab() {
     enabled: !!user,
     staleTime: 300_000,
   });
-  const regDamOptions: DogOption[] = (regMemberDetail?.ownedDogs ?? [])
+  const allRegOwnedDogs: MemberOwnedDog[] = regMemberDetail?.ownedDogs?.length
+    ? regMemberDetail.ownedDogs
+    : (user?.myDogs as MemberOwnedDog[] ?? []);
+  const regDamOptions: DogOption[] = allRegOwnedDogs
     .filter(d => (d.sex ?? "").toLowerCase() === "female")
     .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
