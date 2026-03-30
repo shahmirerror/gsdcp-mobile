@@ -775,7 +775,14 @@ function certDogToDog(d: DogCardShape, sex: string): Dog {
 }
 
 /* ── Dog search dropdown (used in stud cert form) ──── */
-type DogOption = { id: string; name: string; KP: string; owner?: string; sex?: string; color?: string };
+type DogOption = { id: string; name: string; KP: string | null; foreign_reg_no?: string | null; owner?: string; sex?: string; color?: string };
+
+function kpLabel(kp?: string | null, foreign?: string | null): string {
+  const k = (kp ?? "").trim();
+  if (k && k !== "0") return `KP ${k}`;
+  const f = (foreign ?? "").trim();
+  return f || "—";
+}
 
 const CAL_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const CAL_DOW    = ["Su","Mo","Tu","We","Th","Fr","Sa"];
@@ -957,7 +964,7 @@ function DogDropdown({
         setSearching(true);
         try {
           const dogs = await searchDogs(query, 1, 20, sexFilter);
-          setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, owner: d.owner, sex: d.sex, color: d.color })));
+          setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, owner: d.owner, sex: d.sex, color: d.color })));
         } catch { setResults([]); }
         finally { setSearching(false); }
       }, 350);
@@ -1010,7 +1017,7 @@ function DogDropdown({
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.text }}>{selected.name}</Text>
             <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
-              KP {selected.KP}{selected.color ? ` · ${selected.color}` : ""}
+              {kpLabel(selected.KP, selected.foreign_reg_no)}{selected.color ? ` · ${selected.color}` : ""}
             </Text>
           </View>
           <TouchableOpacity onPress={onClear} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -1112,7 +1119,7 @@ function DogDropdown({
                 />
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 1, flexWrap: "wrap" }}>
                   <HighlightText
-                    text={`KP ${dog.KP ?? ""}`}
+                    text={kpLabel(dog.KP, dog.foreign_reg_no)}
                     query={query}
                     style={{ fontSize: 11, color: COLORS.textMuted }}
                   />
@@ -1194,7 +1201,7 @@ function StudCertTab() {
     : (user?.myDogs as MemberOwnedDog[] ?? []);
   const sireOptions: DogOption[] = allOwnedDogs
     .filter(d => (d.sex ?? "").toLowerCase() === "male")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
 
   useEffect(() => {
     if (!selectedSire || !user) {
@@ -1559,7 +1566,7 @@ function LitterInspectionTab() {
     : (user?.myDogs as MemberOwnedDog[] ?? []);
   const damOptions: DogOption[] = allInspOwnedDogs
     .filter(d => (d.sex ?? "").toLowerCase() === "female")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
 
   const INSP_PER_PAGE = 10;
   const [allInspections, setAllInspections] = useState<LitterInspection[]>([]);
@@ -1947,7 +1954,7 @@ function LitterRegistrationTab() {
     : (user?.myDogs as MemberOwnedDog[] ?? []);
   const regDamOptions: DogOption[] = allRegOwnedDogs
     .filter(d => (d.sex ?? "").toLowerCase() === "female")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
 
   const REG_PER_PAGE = 10;
   const [allRegs, setAllRegs]             = useState<LitterRegistration[]>([]);

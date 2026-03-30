@@ -1471,7 +1471,8 @@ export async function verifyDam(dogId: string, userId: number, sireId?: string):
 export type DogSearchResult = {
   id: string;
   dog_name: string;
-  KP: string;
+  KP: string | null;
+  foreign_reg_no: string | null;
   sex: string;
   color: string;
   owner: string;

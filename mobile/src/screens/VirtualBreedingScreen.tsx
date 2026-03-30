@@ -19,11 +19,19 @@ import { searchDogs, DogSearchResult } from "../lib/api";
 type SelectedDog = {
   id: string;
   name: string;
-  KP: string;
+  KP: string | null;
+  foreign_reg_no?: string | null;
   sex: string;
   color: string;
   owner: string;
 };
+
+function kpLabel(kp?: string | null, foreign?: string | null): string {
+  const k = (kp ?? "").trim();
+  if (k && k !== "0") return `KP ${k}`;
+  const f = (foreign ?? "").trim();
+  return f || "—";
+}
 
 type ColorPrediction = { label: string; pct: number; hex: string };
 type TraitPrediction = { label: string; value: string; icon: keyof typeof Ionicons.glyphMap; color: string };
@@ -239,7 +247,7 @@ function DogSearchField({
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.selectedName} numberOfLines={1}>{selected.name}</Text>
-          <Text style={styles.selectedSub}>KP {selected.KP}{selected.color ? ` · ${selected.color}` : ""}</Text>
+          <Text style={styles.selectedSub}>{kpLabel(selected.KP, selected.foreign_reg_no)}{selected.color ? ` · ${selected.color}` : ""}</Text>
           {selected.owner ? <Text style={styles.selectedSub} numberOfLines={1}>{selected.owner}</Text> : null}
         </View>
         <TouchableOpacity onPress={onClear} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -292,7 +300,7 @@ function DogSearchField({
               style={[styles.dropRow, i < results.length - 1 && styles.dropRowBorder]}
               onPress={() => {
                 if (blurRef.current) clearTimeout(blurRef.current);
-                onSelect({ id: dog.id, name: dog.dog_name, KP: dog.KP, sex: dog.sex, color: dog.color, owner: dog.owner });
+                onSelect({ id: dog.id, name: dog.dog_name, KP: dog.KP, foreign_reg_no: dog.foreign_reg_no, sex: dog.sex, color: dog.color, owner: dog.owner });
                 setOpen(false); setQuery("");
               }}
               activeOpacity={0.65}
@@ -303,7 +311,7 @@ function DogSearchField({
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.dropName} numberOfLines={1}>{dog.dog_name}</Text>
                 <Text style={styles.dropSub} numberOfLines={1}>
-                  KP {dog.KP}{dog.color ? ` · ${dog.color}` : ""}{dog.owner ? ` · ${dog.owner}` : ""}
+                  {kpLabel(dog.KP, dog.foreign_reg_no)}{dog.color ? ` · ${dog.color}` : ""}{dog.owner ? ` · ${dog.owner}` : ""}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={13} color="#CBD5E1" />
