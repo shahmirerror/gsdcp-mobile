@@ -85,6 +85,11 @@ function MatingRow({
           <Text style={styles.dogRowName} numberOfLines={1}>
             {mating.sire_name.trim()}
           </Text>
+          {(mating.sire_KP || mating.sire_color) ? (
+            <Text style={styles.dogRowMeta} numberOfLines={1}>
+              {[mating.sire_KP ? `KP ${mating.sire_KP}` : null, mating.sire_color || null].filter(Boolean).join(" · ")}
+            </Text>
+          ) : null}
         </View>
         <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
       </TouchableOpacity>
@@ -105,6 +110,11 @@ function MatingRow({
           <Text style={styles.dogRowName} numberOfLines={1}>
             {mating.dam_name.trim()}
           </Text>
+          {(mating.dam_KP || mating.dam_color) ? (
+            <Text style={styles.dogRowMeta} numberOfLines={1}>
+              {[mating.dam_KP ? `KP ${mating.dam_KP}` : null, mating.dam_color || null].filter(Boolean).join(" · ")}
+            </Text>
+          ) : null}
         </View>
         <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
       </TouchableOpacity>
@@ -112,6 +122,13 @@ function MatingRow({
       <View style={styles.matingFooter}>
         <Ionicons name="calendar-outline" size={13} color={COLORS.textMuted} />
         <Text style={styles.matingDate}>{formatDate(mating.mating_date)}</Text>
+        {mating.puppies ? (
+          <>
+            <View style={styles.matingFooterDot} />
+            <Ionicons name="paw-outline" size={13} color={COLORS.textMuted} />
+            <Text style={styles.matingDate}>{mating.puppies} {Number(mating.puppies) === 1 ? "Puppy" : "Puppies"}</Text>
+          </>
+        ) : null}
       </View>
     </View>
   );
@@ -722,6 +739,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.text,
   },
+  dogRowMeta: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
   matingFooter: {
     flexDirection: "row",
     alignItems: "center",
@@ -735,6 +757,13 @@ const styles = StyleSheet.create({
   matingDate: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textMuted,
+  },
+  matingFooterDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: COLORS.textMuted,
+    marginHorizontal: 2,
   },
   emptyState: {
     alignItems: "center",

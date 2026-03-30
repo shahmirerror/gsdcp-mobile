@@ -136,7 +136,7 @@ export default function BreederProfileScreen() {
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<BreederDetail>({
     queryKey: ["breeders", id],
-    queryFn: () => fetchBreeder(id),
+    queryFn: () => fetchBreeder(id, breederData),
   });
 
   const fallback = breederData ? listBreederToDetail(breederData) : null;
@@ -146,7 +146,7 @@ export default function BreederProfileScreen() {
   const dogsBred = resolved?.dogsBred || [];
   const dogsOwned = resolved?.dogsOwned || [];
 
-  if (isLoading && !fallback) {
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />

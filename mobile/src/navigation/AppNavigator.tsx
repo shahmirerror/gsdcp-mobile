@@ -31,6 +31,7 @@ import VisitingJudgesScreen from "../screens/club/VisitingJudgesScreen";
 import NewsUpdatesScreen from "../screens/club/NewsUpdatesScreen";
 import JudgeDetailScreen from "../screens/club/JudgeDetailScreen";
 
+import VirtualBreedingScreen from "../screens/VirtualBreedingScreen";
 import CustomTabBar from "./CustomTabBar";
 
 export type DogsStackParamList = {
@@ -43,6 +44,7 @@ export type DogsStackParamList = {
 export type BreedersStackParamList = {
   BreederDirectory: undefined;
   BreederProfile: { id: string; name?: string; breederData?: any };
+  KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
 };
@@ -106,6 +108,7 @@ export type RootTabParamList = {
   MemberDirectoryTab: undefined;
   RecentMatingsTab: undefined;
   TheClubTab: undefined;
+  VirtualBreedingTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -134,6 +137,7 @@ function BreedersStackNavigator() {
     <BreedersStack.Navigator screenOptions={{ headerShown: false }}>
       <BreedersStack.Screen name="BreederDirectory" component={BreederDirectoryScreen} />
       <BreedersStack.Screen name="BreederProfile" component={BreederProfileScreen} />
+      <BreedersStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <BreedersStack.Screen name="DogProfile" component={DogProfileScreen} />
       <BreedersStack.Screen name="MemberProfile" component={MemberProfileScreen} />
     </BreedersStack.Navigator>
@@ -241,6 +245,7 @@ export default function AppNavigator() {
         <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryStackNavigator} />
         <Tab.Screen name="RecentMatingsTab" component={RecentMatingsStackNavigator} />
         <Tab.Screen name="TheClubTab" component={TheClubStackNavigator} />
+        <Tab.Screen name="VirtualBreedingTab" component={VirtualBreedingScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );

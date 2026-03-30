@@ -775,7 +775,14 @@ function certDogToDog(d: DogCardShape, sex: string): Dog {
 }
 
 /* ── Dog search dropdown (used in stud cert form) ──── */
-type DogOption = { id: string; name: string; KP: string; owner?: string; sex?: string; color?: string };
+type DogOption = { id: string; name: string; KP: string | null; foreign_reg_no?: string | null; owner?: string; sex?: string; color?: string };
+
+function kpLabel(kp?: string | null, foreign?: string | null): string {
+  const k = (kp ?? "").trim();
+  if (k && k !== "0") return `KP ${k}`;
+  const f = (foreign ?? "").trim();
+  return f || "—";
+}
 
 const CAL_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const CAL_DOW    = ["Su","Mo","Tu","We","Th","Fr","Sa"];
@@ -905,6 +912,22 @@ function CalendarDatePicker({ label, required, value, onChange, maxDate }: {
   );
 }
 
+/* Highlight the matched portion of a string */
+function HighlightText({ text, query, style }: { text: string; query: string; style?: any }) {
+  if (!query.trim()) return <Text style={style}>{text}</Text>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <Text style={style}>{text}</Text>;
+  return (
+    <Text style={style}>
+      {text.slice(0, idx)}
+      <Text style={[style, { backgroundColor: `${COLORS.primary}28`, color: COLORS.primary, fontWeight: "700" }]}>
+        {text.slice(idx, idx + query.length)}
+      </Text>
+      {text.slice(idx + query.length)}
+    </Text>
+  );
+}
+
 function DogDropdown({
   label, required, selected, onSelect, onClear, mode, localOptions, sexFilter,
 }: {
@@ -916,46 +939,88 @@ function DogDropdown({
   localOptions?: DogOption[];
   sexFilter?: string;
 }) {
-  const [query, setQuery]       = useState("");
-  const [results, setResults]   = useState<DogOption[]>([]);
+  const [query, setQuery]         = useState("");
+  const [results, setResults]     = useState<DogOption[]>([]);
   const [searching, setSearching] = useState(false);
-  const [open, setOpen]         = useState(false);
-  const debounceRef             = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [open, setOpen]           = useState(false);
+  const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (mode === "local") {
       const opts = localOptions ?? [];
-      if (!query.trim()) { setResults(opts.slice(0, 30)); return; }
+      if (!query.trim()) { setResults(opts.slice(0, 50)); return; }
       const q = query.toLowerCase();
-      setResults(opts.filter(d => (d.name ?? "").toLowerCase().includes(q) || (d.KP ?? "").toLowerCase().includes(q)).slice(0, 30));
+      setResults(
+        opts.filter(d =>
+          (d.name ?? "").toLowerCase().includes(q) ||
+          (d.KP  ?? "").toLowerCase().includes(q)
+        ).slice(0, 50)
+      );
     } else {
       if (!query.trim() || query.length < 2) { setResults([]); return; }
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         setSearching(true);
         try {
-          const dogs = await searchDogs(query, 1, 15, sexFilter);
-          setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, owner: d.owner, sex: d.sex, color: d.color })));
+          const dogs = await searchDogs(query, 1, 20, sexFilter);
+          setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, owner: d.owner, sex: d.sex, color: d.color })));
         } catch { setResults([]); }
         finally { setSearching(false); }
-      }, 400);
+      }, 350);
     }
   }, [query, mode, localOptions, sexFilter]);
+
+  const handleFocus = () => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    setOpen(true);
+  };
+  const handleBlur = () => {
+    blurTimerRef.current = setTimeout(() => setOpen(false), 180);
+  };
+  const handleSelect = (dog: DogOption) => {
+    if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+    onSelect(dog);
+    setOpen(false);
+    setQuery("");
+  };
+
+  const isMale   = (s?: string | null) => (s ?? "").toLowerCase() === "male";
+  const isFemale = (s?: string | null) => (s ?? "").toLowerCase() === "female";
+  const sexBg    = (s?: string | null) => isMale(s) ? `${COLORS.primary}18` : isFemale(s) ? "#F3E8FF" : "#F1F5F9";
+  const sexIcon  = (s?: string | null): any => isMale(s) ? "male" : isFemale(s) ? "female" : "paw";
+  const sexColor = (s?: string | null) => isMale(s) ? COLORS.primary : isFemale(s) ? "#9333EA" : COLORS.textMuted;
+
+  const showPanel = open && !selected;
+  const showResults = showPanel && results.length > 0;
+  const showRemoteHint = showPanel && mode === "remote" && query.length === 0;
+  const showKeepTyping = showPanel && mode === "remote" && query.length === 1;
+  const showNoResults  = showPanel && mode === "remote" && query.length >= 2 && !searching && results.length === 0;
+  const showLocalEmpty = showPanel && mode === "local" && !searching && results.length === 0;
 
   if (selected) {
     return (
       <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>{label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}</Text>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>
+          {label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
+        </Text>
         <View style={{
           flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.primary,
           borderRadius: 10, padding: 10, backgroundColor: `${COLORS.primary}08`, gap: 10,
         }}>
+          <View style={{
+            width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
+            backgroundColor: sexBg(selected.sex),
+          }}>
+            <Ionicons name={sexIcon(selected.sex)} size={16} color={sexColor(selected.sex)} />
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.text }}>{selected.name}</Text>
-            <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>KP {selected.KP}</Text>
-            {selected.color ? <Text style={{ fontSize: 11, color: COLORS.textMuted }}>{selected.color}</Text> : null}
+            <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
+              {kpLabel(selected.KP, selected.foreign_reg_no)}{selected.color ? ` · ${selected.color}` : ""}
+            </Text>
           </View>
-          <TouchableOpacity onPress={onClear} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity onPress={onClear} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close-circle" size={22} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
@@ -965,77 +1030,137 @@ function DogDropdown({
 
   return (
     <View style={{ marginBottom: 12 }}>
-      <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>{label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}</Text>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>
+        {label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
+      </Text>
+
+      {/* Input row */}
       <View style={{
-        flexDirection: "row", alignItems: "center", borderWidth: 1,
+        flexDirection: "row", alignItems: "center", borderWidth: 1.5,
         borderColor: open ? COLORS.primary : COLORS.border,
         borderRadius: 10, paddingHorizontal: 10, backgroundColor: "#fff",
+        shadowColor: open ? COLORS.primary : "transparent",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: open ? 0.12 : 0,
+        shadowRadius: 4,
+        elevation: open ? 2 : 0,
       }}>
-        <Ionicons name="search" size={15} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+        <Ionicons name="search" size={15} color={open ? COLORS.primary : COLORS.textMuted} style={{ marginRight: 6 }} />
         <TextInput
-          style={{ flex: 1, fontSize: 13, color: COLORS.text, paddingVertical: 10 }}
+          style={{ flex: 1, fontSize: 13, color: COLORS.text, paddingVertical: 11 }}
           value={query}
           onChangeText={setQuery}
-          onFocus={() => setOpen(true)}
-          placeholder={mode === "local" ? "Type to filter your dogs…" : "Type to search GSDCP database…"}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder={mode === "local" ? "Search by name or KP…" : "Search GSDCP database…"}
           placeholderTextColor={COLORS.textMuted}
+          returnKeyType="search"
+          autoCorrect={false}
+          autoCapitalize="none"
         />
         {searching
-          ? <ActivityIndicator size="small" color={COLORS.primary} />
+          ? <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 4 }} />
           : query.length > 0
-            ? <TouchableOpacity onPress={() => { setQuery(""); setResults([]); }} activeOpacity={0.7}>
+            ? <TouchableOpacity onPress={() => setQuery("")} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
               </TouchableOpacity>
-            : null}
+            : <Ionicons name={open ? "chevron-up" : "chevron-down"} size={14} color={COLORS.textMuted} />
+        }
       </View>
-      {open && results.length > 0 && (
+
+      {/* Dropdown panel */}
+      {showPanel && (
         <View style={{
-          borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, marginTop: 4,
-          backgroundColor: "#fff", overflow: "hidden",
+          borderWidth: 1, borderColor: COLORS.border, borderRadius: 10,
+          marginTop: 4, backgroundColor: "#fff",
+          shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.1, shadowRadius: 8, elevation: 6,
+          overflow: "hidden",
         }}>
-          {results.map((dog, i) => (
+          {/* Result count header */}
+          {showResults && (
+            <View style={{
+              flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+              paddingHorizontal: 12, paddingVertical: 7,
+              borderBottomWidth: 1, borderBottomColor: COLORS.border,
+              backgroundColor: "#F8FAFC",
+            }}>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600" }}>
+                {results.length} {results.length === 1 ? "dog" : "dogs"}{mode === "local" && query ? " matched" : ""}
+              </Text>
+              {mode === "local" && !query && (
+                <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Your registered dogs</Text>
+              )}
+            </View>
+          )}
+
+          {/* Results list */}
+          {showResults && results.map((dog, i) => (
             <TouchableOpacity
               key={dog.id}
-              onPress={() => { onSelect(dog); setOpen(false); setQuery(""); setResults([]); }}
-              activeOpacity={0.7}
+              onPress={() => handleSelect(dog)}
+              activeOpacity={0.65}
               style={[
-                { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
-                i < results.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+                { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 11, gap: 10 },
+                i < results.length - 1 && { borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
               ]}
             >
               <View style={{
-                width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center",
-                backgroundColor: dog.sex === "Male" ? `${COLORS.primary}18` : dog.sex === "Female" ? "#F3E8FF" : "#F1F5F9",
+                width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
+                backgroundColor: sexBg(dog.sex),
               }}>
-                <Ionicons
-                  name={dog.sex === "Male" ? "male" : dog.sex === "Female" ? "female" : "paw"}
-                  size={13}
-                  color={dog.sex === "Male" ? COLORS.primary : dog.sex === "Female" ? "#9333EA" : COLORS.textMuted}
-                />
+                <Ionicons name={sexIcon(dog.sex)} size={14} color={sexColor(dog.sex)} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }} numberOfLines={1}>{dog.name}</Text>
-                <Text style={{ fontSize: 11, color: COLORS.textMuted }}>KP {dog.KP}{dog.color ? ` · ${dog.color}` : ""}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <HighlightText
+                  text={dog.name ?? ""}
+                  query={query}
+                  style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }}
+                />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 1, flexWrap: "wrap" }}>
+                  <HighlightText
+                    text={kpLabel(dog.KP, dog.foreign_reg_no)}
+                    query={query}
+                    style={{ fontSize: 11, color: COLORS.textMuted }}
+                  />
+                  {dog.color ? <Text style={{ fontSize: 11, color: COLORS.textMuted }}>· {dog.color}</Text> : null}
+                  {dog.owner && mode === "remote" ? (
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted }} numberOfLines={1}>· {dog.owner}</Text>
+                  ) : null}
+                </View>
               </View>
               <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
             </TouchableOpacity>
           ))}
+
+          {/* Hints / empty states inside the panel */}
+          {showRemoteHint && (
+            <View style={{ alignItems: "center", paddingVertical: 20, gap: 6 }}>
+              <Ionicons name="search-outline" size={28} color={COLORS.textMuted} />
+              <Text style={{ fontSize: 13, color: COLORS.textMuted, fontWeight: "600" }}>Search the GSDCP database</Text>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Type a dog name or KP number</Text>
+            </View>
+          )}
+          {showKeepTyping && (
+            <View style={{ alignItems: "center", paddingVertical: 16, gap: 4 }}>
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Keep typing to search…</Text>
+            </View>
+          )}
+          {showNoResults && (
+            <View style={{ alignItems: "center", paddingVertical: 20, gap: 6 }}>
+              <Ionicons name="paw-outline" size={28} color={COLORS.textMuted} />
+              <Text style={{ fontSize: 13, color: COLORS.textMuted, fontWeight: "600" }}>No dogs found</Text>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Try a different name or KP</Text>
+            </View>
+          )}
+          {showLocalEmpty && (
+            <View style={{ alignItems: "center", paddingVertical: 20, gap: 6 }}>
+              <Ionicons name="paw-outline" size={28} color={COLORS.textMuted} />
+              <Text style={{ fontSize: 13, color: COLORS.textMuted, fontWeight: "600" }}>No matching dogs</Text>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Try a different name or KP</Text>
+            </View>
+          )}
         </View>
-      )}
-      {open && mode === "remote" && query.length === 0 && (
-        <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4, paddingHorizontal: 4 }}>
-          Type a dog's name or KP number to search…
-        </Text>
-      )}
-      {open && mode === "remote" && query.length > 0 && query.length < 2 && (
-        <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4, paddingHorizontal: 4 }}>
-          Keep typing to search…
-        </Text>
-      )}
-      {open && mode === "remote" && query.length >= 2 && !searching && results.length === 0 && (
-        <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 4, paddingHorizontal: 4 }}>
-          No dogs found for "{query}"
-        </Text>
       )}
     </View>
   );
@@ -1071,9 +1196,12 @@ function StudCertTab() {
     enabled: !!user,
     staleTime: 300_000,
   });
-  const sireOptions: DogOption[] = (memberDetail?.ownedDogs ?? [])
-    .filter(d => d.sex === "Male")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+  const allOwnedDogs: MemberOwnedDog[] = memberDetail?.ownedDogs?.length
+    ? memberDetail.ownedDogs
+    : (user?.myDogs as MemberOwnedDog[] ?? []);
+  const sireOptions: DogOption[] = allOwnedDogs
+    .filter(d => (d.sex ?? "").toLowerCase() === "male")
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
 
   useEffect(() => {
     if (!selectedSire || !user) {
@@ -1433,9 +1561,12 @@ function LitterInspectionTab() {
     enabled: !!user,
     staleTime: 300_000,
   });
-  const damOptions: DogOption[] = (inspMemberDetail?.ownedDogs ?? [])
-    .filter(d => d.sex === "Female")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+  const allInspOwnedDogs: MemberOwnedDog[] = inspMemberDetail?.ownedDogs?.length
+    ? inspMemberDetail.ownedDogs
+    : (user?.myDogs as MemberOwnedDog[] ?? []);
+  const damOptions: DogOption[] = allInspOwnedDogs
+    .filter(d => (d.sex ?? "").toLowerCase() === "female")
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
 
   const INSP_PER_PAGE = 10;
   const [allInspections, setAllInspections] = useState<LitterInspection[]>([]);
@@ -1818,9 +1949,12 @@ function LitterRegistrationTab() {
     enabled: !!user,
     staleTime: 300_000,
   });
-  const regDamOptions: DogOption[] = (regMemberDetail?.ownedDogs ?? [])
-    .filter(d => d.sex === "Female")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
+  const allRegOwnedDogs: MemberOwnedDog[] = regMemberDetail?.ownedDogs?.length
+    ? regMemberDetail.ownedDogs
+    : (user?.myDogs as MemberOwnedDog[] ?? []);
+  const regDamOptions: DogOption[] = allRegOwnedDogs
+    .filter(d => (d.sex ?? "").toLowerCase() === "female")
+    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
 
   const REG_PER_PAGE = 10;
   const [allRegs, setAllRegs]             = useState<LitterRegistration[]>([]);

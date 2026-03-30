@@ -125,6 +125,9 @@ export type LineBreedingEntry = {
   dog_name: string;
   positions: string[];
   sides: string[];
+  positions_by_side?: { father?: string[]; mother?: string[] } | null;
+  line_breeding_pattern?: string | null;
+  irregular_side_only?: boolean;
   litter_letter: string | null;
   kennel?: string | null;
   dogs?: LineBreedingDog[];
@@ -704,7 +707,7 @@ export type BreederDog = {
   sire: string | null;
   dam: string | null;
   titles: string[];
-  microchipNumber: string | null;
+  microchip: string | null;
 };
 
 export type BreederDetail = {
@@ -713,11 +716,36 @@ export type BreederDetail = {
   dogsOwned: BreederDog[];
 };
 
-export async function fetchBreeder(id: string): Promise<BreederDetail> {
-  const res = await fetch(`${BASE_URL}/breeders/${id}`);
+export async function fetchBreeder(id: string, listBreeder?: Breeder): Promise<BreederDetail> {
+  const numericId = id.replace(/^(kennel|breeder|member)-/, "");
+  const res = await fetch(`${BASE_URL}/breeders/${numericId}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch breeder");
-  return json.data;
+  const detail: BreederDetail = json.data;
+  const apiTotalLitters: number = json.data?.totalLitters ?? 0;
+  if (detail?.breeder && listBreeder) {
+    detail.breeder = {
+      ...listBreeder,
+      ...detail.breeder,
+      id:           listBreeder.id,
+      memberId:     listBreeder.memberId,
+      name:         detail.breeder.name        || listBreeder.name,
+      kennelName:   detail.breeder.kennelName  || listBreeder.kennelName,
+      city:         detail.breeder.city        || listBreeder.city,
+      country:      detail.breeder.country     || listBreeder.country,
+      imageUrl:     detail.breeder.imageUrl && !detail.breeder.imageUrl.includes("user-not-found")
+                      ? detail.breeder.imageUrl
+                      : listBreeder.imageUrl,
+      breederType:  listBreeder.breederType,
+      totalLitters: apiTotalLitters || listBreeder.totalLitters,
+    };
+  } else if (detail?.breeder) {
+    detail.breeder = {
+      ...detail.breeder,
+      totalLitters: apiTotalLitters,
+    } as Breeder;
+  }
+  return detail;
 }
 
 export type MatingDog = {
@@ -754,22 +782,12 @@ export async function fetchRecentMatings(): Promise<RecentMating[]> {
   });
 }
 
-export type DashboardMating = {
-  kennel_name: string;
-  sire_name: string;
-  dam_name: string;
-  sire_dog_id: string;
-  dam_dog_id: string;
-  mating_date: string;
-  city: string | null;
-};
-
 export type DashboardData = {
   totalDogs: number;
   totalKennels: number;
   totalShows: number;
   upcomingShows: Show[];
-  recentMatings: DashboardMating[];
+  recentMatings: RecentMating[];
 };
 
 export async function fetchDashboard(): Promise<DashboardData> {
@@ -802,10 +820,17 @@ export async function fetchKennels(): Promise<Kennel[]> {
 
 export type KennelMating = {
   sire_name: string;
+  sire_KP: string | null;
+  sire_color: string | null;
+  sire_microchip: string | null;
   dam_name: string;
+  dam_KP: string | null;
+  dam_color: string | null;
+  dam_microchip: string | null;
   mating_date: string;
   sire_dog_id: string;
   dam_dog_id: string;
+  puppies: string | null;
 };
 
 export type KennelOwner = {
@@ -1446,10 +1471,46 @@ export async function verifyDam(dogId: string, userId: number, sireId?: string):
   return { eligible: true, message: "" };
 }
 
+export type VirtualBreedingResult = {
+  pedigree: Pedigree;
+  lineBreeding: LineBreedingEntry[];
+};
+
+export async function fetchVirtualBreeding(
+  sireId: string,
+  damId: string,
+): Promise<VirtualBreedingResult> {
+  const sNum = Number(String(sireId).replace(/^dog-/, ""));
+  const dNum = Number(String(damId).replace(/^dog-/, ""));
+  const res = await fetch(`${BASE_URL}/dogs/virtual-breeding`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ sire_id: sNum, dam_id: dNum }),
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { throw new Error("Invalid response from server."); }
+  if (json.exception || json.success === false) {
+    throw new Error(json.message ?? json.error?.message ?? "Failed to generate pedigree.");
+  }
+  const data = json.data ?? json;
+  const pedigree = data?.pedigree ?? null;
+  if (!pedigree || typeof pedigree !== "object" || Array.isArray(pedigree)) {
+    throw new Error("No pedigree data returned from server.");
+  }
+  const lineBreeding: LineBreedingEntry[] = Array.isArray(data?.lineBreeding)
+    ? data.lineBreeding
+    : Array.isArray(data?.line_breeding)
+    ? data.line_breeding
+    : [];
+  return { pedigree: pedigree as Pedigree, lineBreeding };
+}
+
 export type DogSearchResult = {
   id: string;
   dog_name: string;
-  KP: string;
+  KP: string | null;
+  foreign_reg_no: string | null;
   sex: string;
   color: string;
   owner: string;

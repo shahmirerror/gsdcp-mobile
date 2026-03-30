@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +8,9 @@ import {
   ActivityIndicator,
   Dimensions,
   RefreshControl,
+  Modal,
+  Pressable,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -14,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchDashboard, fetchNews, stripHtml, NewsItem } from "../lib/api";
+import { fetchDashboard, fetchNews, stripHtml, NewsItem, RecentMating } from "../lib/api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -27,18 +31,26 @@ function getCurrentSeason(): string {
   return month >= 7 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
 }
 
-function formatMatingDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function parseMatingDate(dateStr: string): { day: string; month: string; year: string; full: string } {
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return { day: "?", month: "???", year: "?", full: dateStr };
+  const day = parseInt(parts[2], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const year = parts[0];
+  return {
+    day: String(day),
+    month: MONTHS[monthIdx] ?? "???",
+    year,
+    full: `${day} ${MONTHS[monthIdx]} ${year}`,
+  };
 }
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
 
   const { data: dashboard, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/dashboard"],
@@ -51,6 +63,7 @@ export default function DashboardScreen() {
   });
 
   const recentNews = (newsData ?? []).slice(0, 2);
+  const recentMatings = (dashboard?.recentMatings ?? []).slice(0, 3);
 
   const season = getCurrentSeason();
 
@@ -73,8 +86,9 @@ export default function DashboardScreen() {
   ];
 
   return (
+    <View style={styles.container}>
     <ScrollView
-      style={styles.container}
+      style={{ flex: 1 }}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 24 }}
       refreshControl={
@@ -153,50 +167,45 @@ export default function DashboardScreen() {
           <View style={styles.loadingCard}>
             <ActivityIndicator size="small" color={COLORS.primary} />
           </View>
-        ) : dashboard?.recentMatings && dashboard.recentMatings.length > 0 ? (
+        ) : recentMatings.length > 0 ? (
           <View style={styles.activityCard}>
-            {dashboard.recentMatings.map((mating, i) => (
-              <View
-                key={String(i)}
-                style={[
-                  styles.litterItem,
-                  i < dashboard.recentMatings.length - 1 &&
-                    styles.litterItemBorder,
-                ]}
-                data-testid={`card-litter-${i}`}
-              >
-                <View style={styles.litterIconWrap}>
-                  <Ionicons name="heart" size={14} color={COLORS.accent} />
-                </View>
-                <View style={styles.litterTextWrap}>
-                  <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
-                  <Text style={styles.litterPairing}>
-                    {mating.sire_name.trim()} × {mating.dam_name.trim()}
-                  </Text>
-                  <View style={styles.litterMeta}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={11}
-                      color={COLORS.textMuted}
-                    />
-                    <Text style={styles.litterMetaText}>
-                      {formatMatingDate(mating.mating_date)}
-                    </Text>
-                    {mating.city ? (
-                      <>
-                        <Text style={styles.litterMetaDot}>·</Text>
-                        <Ionicons
-                          name="location-outline"
-                          size={11}
-                          color={COLORS.textMuted}
-                        />
-                        <Text style={styles.litterMetaText}>{mating.city}</Text>
-                      </>
-                    ) : null}
+            {recentMatings.map((mating, i) => {
+              const date = parseMatingDate(mating.mating_date);
+              return (
+                <TouchableOpacity
+                  key={mating.id}
+                  style={[
+                    styles.litterItem,
+                    i < recentMatings.length - 1 && styles.litterItemBorder,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => setPreviewMating(mating)}
+                  data-testid={`card-litter-${i}`}
+                >
+                  <View style={styles.litterIconWrap}>
+                    <Ionicons name="heart" size={14} color={COLORS.accent} />
                   </View>
-                </View>
-              </View>
-            ))}
+                  <View style={styles.litterTextWrap}>
+                    <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
+                    <Text style={styles.litterPairing}>
+                      {mating.sire.name.trim()} × {mating.dam.name.trim()}
+                    </Text>
+                    <View style={styles.litterMeta}>
+                      <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} />
+                      <Text style={styles.litterMetaText}>{date.full}</Text>
+                      {mating.city ? (
+                        <>
+                          <Text style={styles.litterMetaDot}>·</Text>
+                          <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
+                          <Text style={styles.litterMetaText}>{mating.city}</Text>
+                        </>
+                      ) : null}
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ) : (
           <View style={styles.activityCard}>
@@ -279,7 +288,7 @@ export default function DashboardScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>News & Updates</Text>
           <TouchableOpacity
-            onPress={() => navigation.navigate("ClubTab")}
+            onPress={() => navigation.navigate("TheClubTab", { screen: "NewsUpdates" })}
             activeOpacity={0.7}
             data-testid="link-view-all-news"
           >
@@ -294,9 +303,11 @@ export default function DashboardScreen() {
         ) : recentNews.length > 0 ? (
           <View style={styles.activityCard}>
             {recentNews.map((item: NewsItem, i: number) => (
-              <View
+              <TouchableOpacity
                 key={item.id}
                 style={[styles.newsItem, i < recentNews.length - 1 && styles.newsItemBorder]}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("TheClubTab", { screen: "NewsUpdates" })}
                 data-testid={`card-news-dash-${item.id}`}
               >
                 <View style={styles.newsIconWrap}>
@@ -308,7 +319,7 @@ export default function DashboardScreen() {
                     {stripHtml(item.content)}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         ) : (
@@ -318,6 +329,127 @@ export default function DashboardScreen() {
         )}
       </View>
     </ScrollView>
+
+    {/* Mating preview modal */}
+    <Modal visible={!!previewMating} animationType="slide" transparent onRequestClose={() => setPreviewMating(null)}>
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setPreviewMating(null)} />
+        {previewMating && (() => {
+          const date = parseMatingDate(previewMating.mating_date);
+          return (
+            <View style={styles.modalContent}>
+              <View style={styles.modalHandle} />
+
+              <View style={styles.previewHeader}>
+                {previewMating.kennel_image ? (
+                  <Image source={{ uri: previewMating.kennel_image }} style={styles.previewKennelImage} />
+                ) : (
+                  <View style={[styles.previewKennelImage, styles.previewKennelImagePlaceholder]}>
+                    <Ionicons name="home-outline" size={26} color={COLORS.primary} />
+                  </View>
+                )}
+                <View style={styles.previewHeadInfo}>
+                  <Text style={styles.previewName} numberOfLines={2}>{previewMating.kennel_name}</Text>
+                  <View style={styles.previewCityRow}>
+                    <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
+                    <Text style={styles.previewCity}>{date.full}</Text>
+                  </View>
+                  {previewMating.city ? (
+                    <View style={styles.previewCityRow}>
+                      <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
+                      <Text style={styles.previewCity}>{previewMating.city}</Text>
+                    </View>
+                  ) : null}
+                  {previewMating.litter_on_ground && (
+                    <View style={styles.previewLitterBadge}>
+                      <Ionicons name="paw" size={11} color="#fff" />
+                      <Text style={styles.previewLitterText}>Litter on Ground</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.previewDivider} />
+
+              <TouchableOpacity
+                style={styles.previewDogRow}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setPreviewMating(null);
+                  navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: previewMating.sire.id, name: previewMating.sire.name.trim() } });
+                }}
+              >
+                {previewMating.sire.imageUrl ? (
+                  <Image source={{ uri: previewMating.sire.imageUrl }} style={styles.previewDogImage} />
+                ) : (
+                  <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
+                    <Text style={styles.previewDogInitial}>S</Text>
+                  </View>
+                )}
+                <View style={styles.previewDogLabelWrap}>
+                  <Text style={styles.previewDogLabel}>SIRE</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.sire.name.trim()}</Text>
+                  <View style={styles.previewDogMeta}>
+                    {previewMating.sire.KP ? <Text style={styles.previewDogSub}>KP {previewMating.sire.KP}</Text> : null}
+                    {previewMating.sire.hair ? <Text style={styles.previewDogHair}>{previewMating.sire.hair}</Text> : null}
+                    {previewMating.sire.color ? <Text style={styles.previewDogColor}>{previewMating.sire.color}</Text> : null}
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+
+              <View style={styles.previewRowDivider} />
+
+              <TouchableOpacity
+                style={styles.previewDogRow}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setPreviewMating(null);
+                  navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: previewMating.dam.id, name: previewMating.dam.name.trim() } });
+                }}
+              >
+                {previewMating.dam.imageUrl ? (
+                  <Image source={{ uri: previewMating.dam.imageUrl }} style={styles.previewDogImage} />
+                ) : (
+                  <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
+                    <Text style={styles.previewDogInitial}>D</Text>
+                  </View>
+                )}
+                <View style={styles.previewDogLabelWrap}>
+                  <Text style={styles.previewDogLabel}>DAM</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.previewDogName} numberOfLines={1}>{previewMating.dam.name.trim()}</Text>
+                  <View style={styles.previewDogMeta}>
+                    {previewMating.dam.KP ? <Text style={styles.previewDogSub}>KP {previewMating.dam.KP}</Text> : null}
+                    {previewMating.dam.hair ? <Text style={styles.previewDogHair}>{previewMating.dam.hair}</Text> : null}
+                    {previewMating.dam.color ? <Text style={styles.previewDogColor}>{previewMating.dam.color}</Text> : null}
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+
+              <View style={[styles.previewDivider, { marginTop: 16 }]} />
+
+              <TouchableOpacity
+                style={styles.viewProfileBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setPreviewMating(null);
+                  navigation.navigate("BreedersTab", { screen: "KennelProfile", params: { id: previewMating.kennel_id, name: previewMating.kennel_name } });
+                }}
+              >
+                <Ionicons name="home" size={16} color="#fff" />
+                <Text style={styles.viewProfileBtnText}>View Kennel Profile</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
+      </View>
+    </Modal>
+    </View>
   );
 }
 
@@ -637,4 +769,56 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     lineHeight: 17,
   },
+
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
+  modalContent: {
+    backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 24, paddingBottom: 36, paddingTop: 12,
+  },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB", alignSelf: "center", marginBottom: 16 },
+
+  previewHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: 16, gap: 14 },
+  previewKennelImage: { width: 64, height: 64, borderRadius: 32, borderWidth: 1, borderColor: COLORS.border, flexShrink: 0 },
+  previewKennelImagePlaceholder: { backgroundColor: `${COLORS.primary}10`, justifyContent: "center", alignItems: "center" },
+  previewHeadInfo: { flex: 1, justifyContent: "center" },
+  previewName: { fontSize: 17, fontWeight: "700", color: COLORS.text, marginBottom: 4 },
+  previewCityRow: { flexDirection: "row", alignItems: "center", gap: 3, marginBottom: 6 },
+  previewCity: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
+  previewLitterBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: COLORS.primary, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: BORDER_RADIUS.full, alignSelf: "flex-start",
+  },
+  previewLitterText: { fontSize: 11, fontWeight: "700", color: "#fff" },
+
+  previewDivider: { height: 1, backgroundColor: COLORS.border, marginBottom: 4 },
+  previewRowDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: 4 },
+
+  previewDogRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12, paddingHorizontal: 4 },
+  previewDogImage: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, flexShrink: 0 },
+  previewDogImagePlaceholder: { backgroundColor: `${COLORS.primary}12`, justifyContent: "center", alignItems: "center" },
+  previewDogLabelWrap: {
+    width: 38, height: 26, backgroundColor: `${COLORS.primary}12`,
+    borderRadius: BORDER_RADIUS.sm, justifyContent: "center", alignItems: "center", flexShrink: 0,
+  },
+  previewDogLabel: { fontSize: 10, fontWeight: "800", color: COLORS.primary, letterSpacing: 0.6 },
+  previewDogInitial: { fontSize: 16, fontWeight: "700", color: COLORS.primary },
+  previewDogName: { fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text },
+  previewDogMeta: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2, flexWrap: "wrap" },
+  previewDogSub: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted },
+  previewDogHair: {
+    fontSize: FONT_SIZES.xs, color: COLORS.primary,
+    backgroundColor: `${COLORS.primary}10`, paddingHorizontal: 6, paddingVertical: 1, borderRadius: BORDER_RADIUS.full,
+  },
+  previewDogColor: {
+    fontSize: FONT_SIZES.xs, color: "#92400e",
+    backgroundColor: "#fef3c7", paddingHorizontal: 6, paddingVertical: 1, borderRadius: BORDER_RADIUS.full,
+  },
+
+  viewProfileBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8, backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md, paddingVertical: 14,
+  },
+  viewProfileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });

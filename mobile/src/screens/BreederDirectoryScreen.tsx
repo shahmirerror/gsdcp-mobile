@@ -24,6 +24,14 @@ import type { BreedersStackParamList } from "../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<BreedersStackParamList, "BreederDirectory">;
 
+function tierBadgeStyles(tier: string): { bg: object; text: object } {
+  const t = tier.toLowerCase();
+  if (t === "gold")   return { bg: styles.badgeGold,   text: styles.badgeGoldText };
+  if (t === "silver") return { bg: styles.badgeSilver, text: styles.badgeSilverText };
+  if (t === "bronze") return { bg: styles.badgeBronze, text: styles.badgeBronzeText };
+  return { bg: styles.badgeTier, text: styles.badgeTierText };
+}
+
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const year = new Date(dateStr).getFullYear();
@@ -65,11 +73,14 @@ function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () =
               <Text style={styles.badgeText}>{breeder.location}</Text>
             </View>
           ) : null}
-          {breeder.breederType ? (
-            <View style={[styles.badge, styles.badgeTier]}>
-              <Text style={[styles.badgeText, styles.badgeTierText]}>{breeder.breederType}</Text>
-            </View>
-          ) : null}
+          {breeder.breederType ? (() => {
+            const ts = tierBadgeStyles(breeder.breederType);
+            return (
+              <View style={[styles.badge, ts.bg]}>
+                <Text style={[styles.badgeText, ts.text]}>{breeder.breederType}</Text>
+              </View>
+            );
+          })() : null}
           {year ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Since {year}</Text>
@@ -92,6 +103,7 @@ export default function BreederDirectoryScreen() {
   const [tempCity, setTempCity] = useState<string>("All");
   const [tempCountry, setTempCountry] = useState<string>("All");
   const [selectedBreeder, setSelectedBreeder] = useState<Breeder | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   const activeFilterCount =
     (cityFilter !== "All" ? 1 : 0) + (countryFilter !== "All" ? 1 : 0);
@@ -187,6 +199,14 @@ export default function BreederDirectoryScreen() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          style={styles.infoButton}
+          onPress={() => setShowInfoModal(true)}
+          activeOpacity={0.7}
+          data-testid="btn-info-breeders"
+        >
+          <Ionicons name="information-circle-outline" size={22} color={COLORS.textSecondary} />
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
           onPress={openFilters}
@@ -304,7 +324,7 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("BreederProfile", { id: b.id, name: b.kennelName || b.name, breederData: b });
+                    navigation.navigate("KennelProfile", { id: b.id, name: b.kennelName || b.name });
                   }}
                 >
                   {hasKennelImg ? (
@@ -330,7 +350,7 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("BreederProfile", { id: b.id, name: b.name, breederData: b });
+                    navigation.navigate("BreederProfile", { id: b.memberId, name: b.name, breederData: b });
                   }}
                 >
                   {hasImg ? (
@@ -342,15 +362,21 @@ export default function BreederDirectoryScreen() {
                   )}
                   <View style={styles.popupHeaderInfo}>
                     <Text style={[styles.popupName, styles.popupLink]}>{b.name || "—"}</Text>
+                    {b.membership_no ? (
+                      <Text style={styles.popupMemberNo}>Member {b.membership_no}</Text>
+                    ) : null}
                     <View style={styles.popupBreederMeta}>
                       {b.totalLitters > 0 ? (
                         <Text style={styles.popupKennel}>{b.totalLitters} litters</Text>
                       ) : null}
-                      {b.breederType ? (
-                        <View style={[styles.badge, styles.badgeTier]}>
-                          <Text style={[styles.badgeText, styles.badgeTierText]}>{b.breederType}</Text>
-                        </View>
-                      ) : null}
+                      {b.breederType ? (() => {
+                        const ts = tierBadgeStyles(b.breederType);
+                        return (
+                          <View style={[styles.badge, ts.bg]}>
+                            <Text style={[styles.badgeText, ts.text]}>{b.breederType}</Text>
+                          </View>
+                        );
+                      })() : null}
                     </View>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
@@ -390,7 +416,7 @@ export default function BreederDirectoryScreen() {
                     activeOpacity={0.8}
                     onPress={() => {
                       setSelectedBreeder(null);
-                      navigation.navigate("BreederProfile", { id: b.id, name: b.name, breederData: b });
+                      navigation.navigate("BreederProfile", { id: b.memberId, name: b.name, breederData: b });
                     }}
                   >
                     <Text style={styles.popupBtnPrimaryText}>View Full Profile</Text>
@@ -400,6 +426,48 @@ export default function BreederDirectoryScreen() {
               </View>
             );
           })()}
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showInfoModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowInfoModal(false)} />
+          <View style={[styles.popupContent, { paddingBottom: 28 }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.infoModalHeader}>
+              <Ionicons name="ribbon-outline" size={32} color={COLORS.primary} />
+              <Text style={styles.infoModalTitle}>Active Breeders</Text>
+            </View>
+            <Text style={styles.infoModalBody}>
+              This directory lists GSDCP-registered kennel owners who are actively breeding German Shepherd Dogs.
+            </Text>
+            <View style={styles.infoTierList}>
+              <View style={styles.infoTierRow}>
+                <View style={[styles.badge, styles.badgeGold]}><Text style={[styles.badgeText, styles.badgeGoldText]}>Gold</Text></View>
+                <Text style={styles.infoTierDesc}>Top-tier breeders with an outstanding breeding record and club standing.</Text>
+              </View>
+              <View style={styles.infoTierRow}>
+                <View style={[styles.badge, styles.badgeSilver]}><Text style={[styles.badgeText, styles.badgeSilverText]}>Silver</Text></View>
+                <Text style={styles.infoTierDesc}>Established breeders with a strong history of quality litters.</Text>
+              </View>
+              <View style={styles.infoTierRow}>
+                <View style={[styles.badge, styles.badgeBronze]}><Text style={[styles.badgeText, styles.badgeBronzeText]}>Bronze</Text></View>
+                <Text style={styles.infoTierDesc}>Active breeders building their reputation within the club.</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.infoModalClose}
+              onPress={() => setShowInfoModal(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.infoModalCloseText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
 
@@ -645,6 +713,91 @@ const styles = StyleSheet.create({
     color: "#92400E",
     fontWeight: "700",
   },
+  badgeGold: {
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  badgeGoldText: {
+    color: "#92400E",
+    fontWeight: "700",
+  },
+  badgeSilver: {
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#94A3B8",
+  },
+  badgeSilverText: {
+    color: "#334155",
+    fontWeight: "700",
+  },
+  badgeBronze: {
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#C2844B",
+  },
+  badgeBronzeText: {
+    color: "#7C3910",
+    fontWeight: "700",
+  },
+  infoButton: {
+    width: 38,
+    height: 38,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  infoModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  infoModalTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  infoModalBody: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  infoTierList: {
+    paddingHorizontal: 20,
+    gap: 12,
+    paddingBottom: 20,
+  },
+  infoTierRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  infoTierDesc: {
+    flex: 1,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  infoModalClose: {
+    marginHorizontal: 20,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  infoModalCloseText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: FONT_SIZES.md,
+  },
   emptyState: {
     alignItems: "center",
     paddingTop: 60,
@@ -837,6 +990,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginTop: 2,
+  },
+  popupMemberNo: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
   popupKennelImage: {
     width: "100%",
