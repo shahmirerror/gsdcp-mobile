@@ -704,7 +704,7 @@ export type BreederDog = {
   sire: string | null;
   dam: string | null;
   titles: string[];
-  microchipNumber: string | null;
+  microchip: string | null;
 };
 
 export type BreederDetail = {
@@ -719,22 +719,28 @@ export async function fetchBreeder(id: string, listBreeder?: Breeder): Promise<B
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch breeder");
   const detail: BreederDetail = json.data;
+  const apiTotalLitters: number = json.data?.totalLitters ?? 0;
   if (detail?.breeder && listBreeder) {
     detail.breeder = {
       ...listBreeder,
       ...detail.breeder,
-      id:          listBreeder.id,
-      memberId:    listBreeder.memberId,
-      name:        detail.breeder.name        || listBreeder.name,
-      kennelName:  detail.breeder.kennelName  || listBreeder.kennelName,
-      city:        detail.breeder.city        || listBreeder.city,
-      country:     detail.breeder.country     || listBreeder.country,
-      imageUrl:    detail.breeder.imageUrl && !detail.breeder.imageUrl.includes("user-not-found")
-                     ? detail.breeder.imageUrl
-                     : listBreeder.imageUrl,
-      breederType: listBreeder.breederType,
-      totalLitters: listBreeder.totalLitters,
+      id:           listBreeder.id,
+      memberId:     listBreeder.memberId,
+      name:         detail.breeder.name        || listBreeder.name,
+      kennelName:   detail.breeder.kennelName  || listBreeder.kennelName,
+      city:         detail.breeder.city        || listBreeder.city,
+      country:      detail.breeder.country     || listBreeder.country,
+      imageUrl:     detail.breeder.imageUrl && !detail.breeder.imageUrl.includes("user-not-found")
+                      ? detail.breeder.imageUrl
+                      : listBreeder.imageUrl,
+      breederType:  listBreeder.breederType,
+      totalLitters: apiTotalLitters || listBreeder.totalLitters,
     };
+  } else if (detail?.breeder) {
+    detail.breeder = {
+      ...detail.breeder,
+      totalLitters: apiTotalLitters,
+    } as Breeder;
   }
   return detail;
 }
