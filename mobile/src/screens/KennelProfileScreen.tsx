@@ -85,6 +85,11 @@ function MatingRow({
           <Text style={styles.dogRowName} numberOfLines={1}>
             {mating.sire_name.trim()}
           </Text>
+          {(mating.sire_KP || mating.sire_color) ? (
+            <Text style={styles.dogRowMeta} numberOfLines={1}>
+              {[mating.sire_KP ? `KP ${mating.sire_KP}` : null, mating.sire_color || null].filter(Boolean).join(" · ")}
+            </Text>
+          ) : null}
         </View>
         <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
       </TouchableOpacity>
@@ -105,6 +110,11 @@ function MatingRow({
           <Text style={styles.dogRowName} numberOfLines={1}>
             {mating.dam_name.trim()}
           </Text>
+          {(mating.dam_KP || mating.dam_color) ? (
+            <Text style={styles.dogRowMeta} numberOfLines={1}>
+              {[mating.dam_KP ? `KP ${mating.dam_KP}` : null, mating.dam_color || null].filter(Boolean).join(" · ")}
+            </Text>
+          ) : null}
         </View>
         <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
       </TouchableOpacity>
@@ -728,6 +738,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     fontWeight: "600",
     color: COLORS.text,
+  },
+  dogRowMeta: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
   matingFooter: {
     flexDirection: "row",

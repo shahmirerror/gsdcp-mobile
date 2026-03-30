@@ -817,7 +817,13 @@ export async function fetchKennels(): Promise<Kennel[]> {
 
 export type KennelMating = {
   sire_name: string;
+  sire_KP: string | null;
+  sire_color: string | null;
+  sire_microchip: string | null;
   dam_name: string;
+  dam_KP: string | null;
+  dam_color: string | null;
+  dam_microchip: string | null;
   mating_date: string;
   sire_dog_id: string;
   dam_dog_id: string;
