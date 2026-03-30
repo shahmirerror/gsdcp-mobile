@@ -1005,12 +1005,12 @@ function DogDropdown({
             >
               <View style={{
                 width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center",
-                backgroundColor: dog.sex === "Male" ? `${COLORS.primary}18` : dog.sex === "Female" ? "#F3E8FF" : "#F1F5F9",
+                backgroundColor: (dog.sex ?? "").toLowerCase() === "male" ? `${COLORS.primary}18` : (dog.sex ?? "").toLowerCase() === "female" ? "#F3E8FF" : "#F1F5F9",
               }}>
                 <Ionicons
-                  name={dog.sex === "Male" ? "male" : dog.sex === "Female" ? "female" : "paw"}
+                  name={(dog.sex ?? "").toLowerCase() === "male" ? "male" : (dog.sex ?? "").toLowerCase() === "female" ? "female" : "paw"}
                   size={13}
-                  color={dog.sex === "Male" ? COLORS.primary : dog.sex === "Female" ? "#9333EA" : COLORS.textMuted}
+                  color={(dog.sex ?? "").toLowerCase() === "male" ? COLORS.primary : (dog.sex ?? "").toLowerCase() === "female" ? "#9333EA" : COLORS.textMuted}
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -1072,7 +1072,7 @@ function StudCertTab() {
     staleTime: 300_000,
   });
   const sireOptions: DogOption[] = (memberDetail?.ownedDogs ?? [])
-    .filter(d => d.sex === "Male")
+    .filter(d => (d.sex ?? "").toLowerCase() === "male")
     .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
   useEffect(() => {
@@ -1434,7 +1434,7 @@ function LitterInspectionTab() {
     staleTime: 300_000,
   });
   const damOptions: DogOption[] = (inspMemberDetail?.ownedDogs ?? [])
-    .filter(d => d.sex === "Female")
+    .filter(d => (d.sex ?? "").toLowerCase() === "female")
     .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
   const INSP_PER_PAGE = 10;
@@ -1819,7 +1819,7 @@ function LitterRegistrationTab() {
     staleTime: 300_000,
   });
   const regDamOptions: DogOption[] = (regMemberDetail?.ownedDogs ?? [])
-    .filter(d => d.sex === "Female")
+    .filter(d => (d.sex ?? "").toLowerCase() === "female")
     .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, sex: d.sex, color: d.color }));
 
   const REG_PER_PAGE = 10;
