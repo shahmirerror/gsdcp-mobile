@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +8,9 @@ import {
   ActivityIndicator,
   Dimensions,
   RefreshControl,
+  Modal,
+  Pressable,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -14,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchDashboard, fetchNews, stripHtml, NewsItem } from "../lib/api";
+import { fetchDashboard, fetchNews, fetchRecentMatings, stripHtml, NewsItem, RecentMating } from "../lib/api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -27,18 +31,26 @@ function getCurrentSeason(): string {
   return month >= 7 ? `${year}/${year + 1}` : `${year - 1}/${year}`;
 }
 
-function formatMatingDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function parseMatingDate(dateStr: string): { day: string; month: string; year: string; full: string } {
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return { day: "?", month: "???", year: "?", full: dateStr };
+  const day = parseInt(parts[2], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const year = parts[0];
+  return {
+    day: String(day),
+    month: MONTHS[monthIdx] ?? "???",
+    year,
+    full: `${day} ${MONTHS[monthIdx]} ${year}`,
+  };
 }
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
 
   const { data: dashboard, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/dashboard"],
@@ -48,6 +60,11 @@ export default function DashboardScreen() {
   const { data: newsData, isLoading: newsLoading } = useQuery({
     queryKey: ["/api/mobile/news"],
     queryFn: fetchNews,
+  });
+
+  const { data: matingsData, isLoading: matingsLoading } = useQuery({
+    queryKey: ["/api/mobile/recent-matings"],
+    queryFn: fetchRecentMatings,
   });
 
   const recentNews = (newsData ?? []).slice(0, 2);
@@ -149,56 +166,50 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {isLoading ? (
+        {matingsLoading ? (
           <View style={styles.loadingCard}>
             <ActivityIndicator size="small" color={COLORS.primary} />
           </View>
-        ) : dashboard?.recentMatings && dashboard.recentMatings.length > 0 ? (
+        ) : matingsData && matingsData.length > 0 ? (
           <View style={styles.activityCard}>
-            {dashboard.recentMatings.map((mating, i) => (
-              <TouchableOpacity
-                key={String(i)}
-                style={[
-                  styles.litterItem,
-                  i < dashboard.recentMatings.length - 1 &&
-                    styles.litterItemBorder,
-                ]}
-                activeOpacity={0.7}
-                onPress={() => navigation.navigate("RecentMatingsTab")}
-                data-testid={`card-litter-${i}`}
-              >
-                <View style={styles.litterIconWrap}>
-                  <Ionicons name="heart" size={14} color={COLORS.accent} />
-                </View>
-                <View style={styles.litterTextWrap}>
-                  <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
-                  <Text style={styles.litterPairing}>
-                    {mating.sire_name.trim()} × {mating.dam_name.trim()}
-                  </Text>
-                  <View style={styles.litterMeta}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={11}
-                      color={COLORS.textMuted}
-                    />
-                    <Text style={styles.litterMetaText}>
-                      {formatMatingDate(mating.mating_date)}
-                    </Text>
-                    {mating.city ? (
-                      <>
-                        <Text style={styles.litterMetaDot}>·</Text>
-                        <Ionicons
-                          name="location-outline"
-                          size={11}
-                          color={COLORS.textMuted}
-                        />
-                        <Text style={styles.litterMetaText}>{mating.city}</Text>
-                      </>
-                    ) : null}
+            {matingsData.slice(0, 3).map((mating, i) => {
+              const date = parseMatingDate(mating.mating_date);
+              const displayList = matingsData.slice(0, 3);
+              return (
+                <TouchableOpacity
+                  key={mating.id}
+                  style={[
+                    styles.litterItem,
+                    i < displayList.length - 1 && styles.litterItemBorder,
+                  ]}
+                  activeOpacity={0.7}
+                  onPress={() => setPreviewMating(mating)}
+                  data-testid={`card-litter-${i}`}
+                >
+                  <View style={styles.litterIconWrap}>
+                    <Ionicons name="heart" size={14} color={COLORS.accent} />
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={styles.litterTextWrap}>
+                    <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
+                    <Text style={styles.litterPairing}>
+                      {mating.sire.name.trim()} × {mating.dam.name.trim()}
+                    </Text>
+                    <View style={styles.litterMeta}>
+                      <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} />
+                      <Text style={styles.litterMetaText}>{date.full}</Text>
+                      {mating.city ? (
+                        <>
+                          <Text style={styles.litterMetaDot}>·</Text>
+                          <Ionicons name="location-outline" size={11} color={COLORS.textMuted} />
+                          <Text style={styles.litterMetaText}>{mating.city}</Text>
+                        </>
+                      ) : null}
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ) : (
           <View style={styles.activityCard}>
