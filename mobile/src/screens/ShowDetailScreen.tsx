@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   ImageBackground,
   RefreshControl,
+  Modal,
+  Pressable,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -109,6 +111,92 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
       </View>
       <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
     </TouchableOpacity>
+  );
+}
+
+function JudgePopupSheet({ judge, onClose, onViewProfile }: {
+  judge: ShowJudge;
+  onClose: () => void;
+  onViewProfile: () => void;
+}) {
+  const [imgErr, setImgErr] = useState(false);
+  const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  const hasImg = !!judge.imageUrl && !imgErr;
+  return (
+    <View style={styles.popupSheet}>
+      <View style={styles.popupHandle} />
+      <View style={styles.popupAvatarWrap}>
+        {hasImg ? (
+          <Image source={{ uri: judge.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
+        ) : (
+          <View style={styles.popupAvatarFallback}>
+            <Text style={styles.popupAvatarInitials}>{initials}</Text>
+          </View>
+        )}
+      </View>
+      <Text style={styles.popupLabel}>JUDGE</Text>
+      <Text style={styles.popupName}>{judge.full_name}</Text>
+      {judge.credentials ? <Text style={styles.popupSub}>{judge.credentials}</Text> : null}
+      <TouchableOpacity style={styles.popupBtn} activeOpacity={0.8} onPress={onViewProfile}>
+        <Ionicons name="person-outline" size={16} color="#fff" />
+        <Text style={styles.popupBtnText}>View Full Profile</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.popupDismiss} onPress={onClose} activeOpacity={0.7}>
+        <Text style={styles.popupDismissText}>Dismiss</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function DogPopupSheet({ entry, kpLine, onClose, onViewProfile }: {
+  entry: ShowResultEntry;
+  kpLine: string;
+  onClose: () => void;
+  onViewProfile: () => void;
+}) {
+  const [imgErr, setImgErr] = useState(false);
+  const hasImg = !!entry.imageUrl && !imgErr;
+  const gradingLine = [entry.grading, entry.placement ? `#${entry.placement}` : ""].filter(Boolean).join("  ·  ");
+  return (
+    <View style={styles.popupSheet}>
+      <View style={styles.popupHandle} />
+      <View style={styles.popupAvatarWrap}>
+        {hasImg ? (
+          <Image source={{ uri: entry.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
+        ) : (
+          <View style={[styles.popupAvatarFallback, { backgroundColor: `${COLORS.primary}15` }]}>
+            <Ionicons name="paw" size={32} color={COLORS.primary} />
+          </View>
+        )}
+      </View>
+      <Text style={styles.popupLabel}>RESULT</Text>
+      <Text style={styles.popupName} numberOfLines={2}>{entry.dog_name.trim()}</Text>
+      {kpLine ? <Text style={styles.popupSub}>{kpLine}</Text> : null}
+      <View style={styles.popupChipRow}>
+        {entry.class ? (
+          <View style={styles.popupChip}>
+            <Text style={styles.popupChipText}>{entry.class}</Text>
+          </View>
+        ) : null}
+        {gradingLine ? (
+          <View style={[styles.popupChip, { backgroundColor: `${COLORS.accent}18` }]}>
+            <Text style={[styles.popupChipText, { color: COLORS.accent }]}>{gradingLine}</Text>
+          </View>
+        ) : null}
+        {entry.sex ? (
+          <View style={styles.popupChip}>
+            <Text style={styles.popupChipText}>{entry.sex}</Text>
+          </View>
+        ) : null}
+      </View>
+      <TouchableOpacity style={styles.popupBtn} activeOpacity={0.8} onPress={onViewProfile}>
+        <Ionicons name="paw-outline" size={16} color="#fff" />
+        <Text style={styles.popupBtnText}>View Dog Profile</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.popupDismiss} onPress={onClose} activeOpacity={0.7}>
+        <Text style={styles.popupDismissText}>Dismiss</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -587,6 +675,8 @@ export default function ShowDetailScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>("info");
   const [selectedHair, setSelectedHair] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [popupJudge, setPopupJudge] = useState<ShowJudge | null>(null);
+  const [popupDog, setPopupDog] = useState<ShowResultEntry | null>(null);
 
   const { data: show, isLoading, isError, refetch, isRefetching } = useQuery<ShowDetail>({
     queryKey: ["shows", id],
@@ -700,8 +790,63 @@ export default function ShowDetailScreen() {
   const statusColor = STATUS_COLORS[show.status] || COLORS.textMuted;
 
   const handleDogPress = (entry: ShowResultEntry) => {
-    navigation.push("DogProfile", { id: entry.dog_id, name: entry.dog_name.trim() });
+    setPopupDog(entry);
   };
+
+  const dogKpLine = (entry: ShowResultEntry | null) => {
+    if (!entry) return "";
+    const k = (entry.KP ?? "").trim();
+    if (k && k !== "0") return `KP ${k}`;
+    const f = (entry.foreign_reg_no ?? "").trim();
+    return f || "";
+  };
+
+  const renderJudgePopup = () => (
+    <Modal
+      visible={!!popupJudge}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setPopupJudge(null)}
+    >
+      <View style={styles.popupOverlay}>
+        <Pressable style={styles.popupBackdrop} onPress={() => setPopupJudge(null)} />
+        {popupJudge ? (
+          <JudgePopupSheet
+            judge={popupJudge}
+            onClose={() => setPopupJudge(null)}
+            onViewProfile={() => {
+              setPopupJudge(null);
+              navigation.push("JudgeDetail", { id: popupJudge.id, backLabel: show?.name });
+            }}
+          />
+        ) : null}
+      </View>
+    </Modal>
+  );
+
+  const renderDogPopup = () => (
+    <Modal
+      visible={!!popupDog}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setPopupDog(null)}
+    >
+      <View style={styles.popupOverlay}>
+        <Pressable style={styles.popupBackdrop} onPress={() => setPopupDog(null)} />
+        {popupDog ? (
+          <DogPopupSheet
+            entry={popupDog}
+            kpLine={dogKpLine(popupDog)}
+            onClose={() => setPopupDog(null)}
+            onViewProfile={() => {
+              setPopupDog(null);
+              navigation.push("DogProfile", { id: popupDog.dog_id, name: popupDog.dog_name.trim() });
+            }}
+          />
+        ) : null}
+      </View>
+    </Modal>
+  );
 
   const renderHeader = () => (
     <>
@@ -779,51 +924,55 @@ export default function ShowDetailScreen() {
 
   if (activeTab === "info" || !isShowType) {
     return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={true}
-        overScrollMode="always"
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
-        }
-      >
-        {renderHeader()}
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={true}
+          overScrollMode="always"
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+          }
+        >
+          {renderHeader()}
 
-        <View style={styles.card}>
-          <Text style={styles.cardHeading}>Event Details</Text>
-          <InfoRow
-            icon="calendar"
-            label="Date"
-            value={show.dates.length > 0 ? show.dates.map(formatDate).join(" — ") : "TBA"}
-          />
-          {show.location && (
-            <InfoRow icon="location" label="Location" value={show.location} />
-          )}
-          {show.last_date_of_entry && (
-            <InfoRow icon="time" label="Last Date of Entry" value={formatDate(show.last_date_of_entry)} />
-          )}
-          <InfoRow icon="paw" label="Entries" value={String(show.entryCount)} />
-        </View>
-
-        {show.judges.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardHeading}>
-              {show.judges.length === 1 ? "Judge" : "Judges"}
-            </Text>
-            {show.judges.map((judge) => (
-              <JudgeRow
-                key={judge.id}
-                judge={judge}
-                onPress={() => navigation.push("JudgeDetail", { id: judge.id, backLabel: show.name })}
-              />
-            ))}
+            <Text style={styles.cardHeading}>Event Details</Text>
+            <InfoRow
+              icon="calendar"
+              label="Date"
+              value={show.dates.length > 0 ? show.dates.map(formatDate).join(" — ") : "TBA"}
+            />
+            {show.location && (
+              <InfoRow icon="location" label="Location" value={show.location} />
+            )}
+            {show.last_date_of_entry && (
+              <InfoRow icon="time" label="Last Date of Entry" value={formatDate(show.last_date_of_entry)} />
+            )}
+            <InfoRow icon="paw" label="Entries" value={String(show.entryCount)} />
           </View>
-        )}
 
-        <View style={{ height: 32 }} />
-      </ScrollView>
+          {show.judges.length > 0 && (
+            <View style={styles.card}>
+              <Text style={styles.cardHeading}>
+                {show.judges.length === 1 ? "Judge" : "Judges"}
+              </Text>
+              {show.judges.map((judge) => (
+                <JudgeRow
+                  key={judge.id}
+                  judge={judge}
+                  onPress={() => setPopupJudge(judge)}
+                />
+              ))}
+            </View>
+          )}
+
+          <View style={{ height: 32 }} />
+        </ScrollView>
+        {renderJudgePopup()}
+        {renderDogPopup()}
+      </View>
     );
   }
 
@@ -928,6 +1077,8 @@ export default function ShowDetailScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+      {renderJudgePopup()}
+      {renderDogPopup()}
     </View>
   );
 }
@@ -1644,5 +1795,115 @@ const styles = StyleSheet.create({
   verifyErrorReason: {
     fontSize: 12,
     color: "#DC2626",
+  },
+  popupOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  popupBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  popupSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    alignItems: "center",
+  },
+  popupHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E2E8F0",
+    marginBottom: 20,
+  },
+  popupAvatarWrap: {
+    marginBottom: 14,
+  },
+  popupAvatarImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  popupAvatarFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  popupAvatarInitials: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  popupLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    color: COLORS.textMuted,
+    marginBottom: 4,
+  },
+  popupName: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: COLORS.text,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  popupSub: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  popupChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  popupChip: {
+    backgroundColor: `${COLORS.primary}12`,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  popupChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  popupBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 28,
+    marginTop: 20,
+    width: "100%",
+    justifyContent: "center",
+  },
+  popupBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  popupDismiss: {
+    marginTop: 14,
+    paddingVertical: 6,
+  },
+  popupDismissText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontWeight: "500",
   },
 });
