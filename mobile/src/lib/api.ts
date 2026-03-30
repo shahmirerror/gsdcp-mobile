@@ -125,6 +125,9 @@ export type LineBreedingEntry = {
   dog_name: string;
   positions: string[];
   sides: string[];
+  positions_by_side?: { father?: string[]; mother?: string[] } | null;
+  line_breeding_pattern?: string | null;
+  irregular_side_only?: boolean;
   litter_letter: string | null;
   kennel?: string | null;
   dogs?: LineBreedingDog[];

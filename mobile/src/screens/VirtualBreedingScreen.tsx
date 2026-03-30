@@ -171,17 +171,21 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
   return (
     <>
       {entries.map((entry, idx) => {
-        const sirePositions: string[] = [];
-        const damPositions: string[] = [];
-        entry.positions.forEach((p, i) => {
-          if (entry.sides[i] === "father") sirePositions.push(p);
-          else damPositions.push(p);
-        });
-        const genLabel = [sirePositions.join(","), damPositions.join(",")].filter(Boolean).join(" - ");
-        const sideLabel = [
-          sirePositions.length > 0 ? "Sire side" : "",
-          damPositions.length > 0 ? "Dam side" : "",
-        ].filter(Boolean).join(" - ");
+        // Use positions_by_side if available (more accurate), otherwise fall back to positions+sides zip
+        const pbs = entry.positions_by_side;
+        const sirePositions: string[] = pbs?.father?.map(String) ??
+          entry.positions.filter((_, i) => entry.sides[i] === "father");
+        const damPositions: string[] = pbs?.mother?.map(String) ??
+          entry.positions.filter((_, i) => entry.sides[i] === "mother");
+
+        const genLabel = [
+          sirePositions.length > 0 ? `Sire: gen ${sirePositions.join(",")}` : "",
+          damPositions.length > 0 ? `Dam: gen ${damPositions.join(",")}` : "",
+        ].filter(Boolean).join("  ·  ");
+
+        const patternLabel = entry.line_breeding_pattern
+          ? entry.line_breeding_pattern.replace(/_/g, " ")
+          : null;
 
         if ((entry.type === "litter_pair" || entry.type === "litter_group") && entry.dogs && entry.dogs.length > 0) {
           const isExpanded = expandedLitters.has(idx);
@@ -200,7 +204,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
                   <Text style={styles.lineBreedName} numberOfLines={1}>
                     Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}
                   </Text>
-                  <Text style={styles.lineBreedMeta}>{genLabel}{sideLabel ? ` (${sideLabel})` : ""}</Text>
+                  <Text style={styles.lineBreedMeta}>{genLabel}</Text>
                 </View>
                 <Ionicons name={isExpanded ? "chevron-down" : "chevron-forward"} size={18} color="#94A3B8" />
               </TouchableOpacity>
@@ -232,8 +236,15 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
             onPress={() => entry.id ? navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: entry.id, name: entry.dog_name } }) : undefined}
           >
             <View style={styles.lineBreedInfo}>
-              <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
-              <Text style={styles.lineBreedMeta}>{genLabel}{sideLabel ? ` (${sideLabel})` : ""}</Text>
+              <View style={styles.lineBreedNameRow}>
+                <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
+                {patternLabel && (
+                  <View style={styles.patternBadge}>
+                    <Text style={styles.patternBadgeText}>{patternLabel}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.lineBreedMeta}>{genLabel}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </TouchableOpacity>
@@ -761,6 +772,12 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  lineBreedNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
   lineBreedName: {
     fontSize: 13,
     fontWeight: "600",
@@ -769,6 +786,20 @@ const styles = StyleSheet.create({
   lineBreedMeta: {
     fontSize: 11,
     color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  patternBadge: {
+    backgroundColor: `${COLORS.primary}15`,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  patternBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: COLORS.primary,
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   litterDropdown: {
     backgroundColor: "#F8FAFC",
