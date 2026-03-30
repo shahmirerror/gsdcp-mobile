@@ -821,6 +821,7 @@ export type KennelMating = {
   mating_date: string;
   sire_dog_id: string;
   dam_dog_id: string;
+  puppies: string | null;
 };
 
 export type KennelOwner = {

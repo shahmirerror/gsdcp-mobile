@@ -112,6 +112,13 @@ function MatingRow({
       <View style={styles.matingFooter}>
         <Ionicons name="calendar-outline" size={13} color={COLORS.textMuted} />
         <Text style={styles.matingDate}>{formatDate(mating.mating_date)}</Text>
+        {mating.puppies ? (
+          <>
+            <View style={styles.matingFooterDot} />
+            <Ionicons name="paw-outline" size={13} color={COLORS.textMuted} />
+            <Text style={styles.matingDate}>{mating.puppies} {Number(mating.puppies) === 1 ? "Puppy" : "Puppies"}</Text>
+          </>
+        ) : null}
       </View>
     </View>
   );
@@ -735,6 +742,13 @@ const styles = StyleSheet.create({
   matingDate: {
     fontSize: FONT_SIZES.sm,
     color: COLORS.textMuted,
+  },
+  matingFooterDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: COLORS.textMuted,
+    marginHorizontal: 2,
   },
   emptyState: {
     alignItems: "center",
