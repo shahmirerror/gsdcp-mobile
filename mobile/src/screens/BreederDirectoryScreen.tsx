@@ -362,6 +362,9 @@ export default function BreederDirectoryScreen() {
                   )}
                   <View style={styles.popupHeaderInfo}>
                     <Text style={[styles.popupName, styles.popupLink]}>{b.name || "—"}</Text>
+                    {b.membership_no ? (
+                      <Text style={styles.popupMemberNo}>Member {b.membership_no}</Text>
+                    ) : null}
                     <View style={styles.popupBreederMeta}>
                       {b.totalLitters > 0 ? (
                         <Text style={styles.popupKennel}>{b.totalLitters} litters</Text>
@@ -382,14 +385,8 @@ export default function BreederDirectoryScreen() {
                 <View style={styles.popupDivider} />
 
                 {/* Extra contact info */}
-                {(b.phone || b.email || b.membership_no) ? (
+                {(b.phone || b.email) ? (
                   <View style={styles.popupInfoGrid}>
-                    {b.membership_no ? (
-                      <View style={styles.popupInfoRow}>
-                        <Ionicons name="card-outline" size={16} color={COLORS.primary} />
-                        <Text style={styles.popupInfoText}>Member {b.membership_no}</Text>
-                      </View>
-                    ) : null}
                     {b.phone ? (
                       <View style={styles.popupInfoRow}>
                         <Ionicons name="call-outline" size={16} color={COLORS.primary} />
@@ -993,6 +990,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginTop: 2,
+  },
+  popupMemberNo: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
   popupKennelImage: {
     width: "100%",
