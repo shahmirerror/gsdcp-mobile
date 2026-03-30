@@ -81,6 +81,7 @@ export default function MemberDirectoryScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
   const [countryFilter, setCountryFilter] = useState<string>("All");
+  const [typeFilter, setTypeFilter] = useState<"All" | "T-" | "P-">("All");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
   const [tempCountry, setTempCountry] = useState<string>("All");
@@ -98,11 +99,8 @@ export default function MemberDirectoryScreen() {
     setDebouncedSearch("");
   };
 
-  const setTypeFilter = (prefix: string) => {
-    const next = search === prefix ? "" : prefix;
-    setSearch(next);
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    setDebouncedSearch(next);
+  const toggleTypeFilter = (prefix: "T-" | "P-") => {
+    setTypeFilter((prev) => (prev === prefix ? "All" : prefix));
   };
 
   useEffect(() => {
@@ -110,7 +108,7 @@ export default function MemberDirectoryScreen() {
   }, []);
 
   const activeFilterCount =
-    (cityFilter !== "All" ? 1 : 0) + (countryFilter !== "All" ? 1 : 0);
+    (cityFilter !== "All" ? 1 : 0) + (countryFilter !== "All" ? 1 : 0) + (typeFilter !== "All" ? 1 : 0);
 
   const openFilters = () => {
     setTempCity(cityFilter);
@@ -127,6 +125,7 @@ export default function MemberDirectoryScreen() {
   const resetFilters = () => {
     setTempCity("All");
     setTempCountry("All");
+    setTypeFilter("All");
   };
 
   const {
@@ -181,8 +180,11 @@ export default function MemberDirectoryScreen() {
     if (cityFilter !== "All") {
       results = results.filter((m) => m.city === cityFilter);
     }
+    if (typeFilter !== "All") {
+      results = results.filter((m) => m.membership_no?.startsWith(typeFilter));
+    }
     return results;
-  }, [allMembers, countryFilter, cityFilter]);
+  }, [allMembers, countryFilter, cityFilter, typeFilter]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -235,23 +237,23 @@ export default function MemberDirectoryScreen() {
       {/* Membership type quick filters */}
       <View style={styles.typeRow}>
         <TouchableOpacity
-          style={[styles.typeChip, search === "T-" && styles.typeChipActive]}
-          onPress={() => setTypeFilter("T-")}
+          style={[styles.typeChip, typeFilter === "T-" && styles.typeChipActive]}
+          onPress={() => toggleTypeFilter("T-")}
           activeOpacity={0.7}
           data-testid="chip-type-temporary"
         >
-          <View style={[styles.typeChipDot, { backgroundColor: search === "T-" ? "#fff" : "#F59E0B" }]} />
-          <Text style={[styles.typeChipText, search === "T-" && styles.typeChipTextActive]}>Temporary</Text>
+          <View style={[styles.typeChipDot, { backgroundColor: typeFilter === "T-" ? "#fff" : "#F59E0B" }]} />
+          <Text style={[styles.typeChipText, typeFilter === "T-" && styles.typeChipTextActive]}>Temporary</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.typeChip, search === "P-" && styles.typeChipActivePerm]}
-          onPress={() => setTypeFilter("P-")}
+          style={[styles.typeChip, typeFilter === "P-" && styles.typeChipActivePerm]}
+          onPress={() => toggleTypeFilter("P-")}
           activeOpacity={0.7}
           data-testid="chip-type-permanent"
         >
-          <View style={[styles.typeChipDot, { backgroundColor: search === "P-" ? "#fff" : COLORS.primary }]} />
-          <Text style={[styles.typeChipText, search === "P-" && styles.typeChipTextActive]}>Permanent</Text>
+          <View style={[styles.typeChipDot, { backgroundColor: typeFilter === "P-" ? "#fff" : COLORS.primary }]} />
+          <Text style={[styles.typeChipText, typeFilter === "P-" && styles.typeChipTextActive]}>Permanent</Text>
         </TouchableOpacity>
       </View>
 
