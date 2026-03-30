@@ -415,8 +415,17 @@ export default function VirtualBreedingScreen() {
               transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
             }}
           >
+            {/* Line Breeding */}
+            <View style={styles.card}>
+              <View style={styles.pedigreeHeader}>
+                <Ionicons name="git-merge-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.pedigreeTitle}>Line Breeding</Text>
+              </View>
+              <LineBreedingSection entries={result.lineBreeding} />
+            </View>
+
             {/* Pedigree */}
-            <View style={styles.pedigreeCard}>
+            <View style={[styles.pedigreeCard, { marginTop: 12 }]}>
               <View style={styles.pedigreeHeader}>
                 <Ionicons name="git-branch-outline" size={16} color={COLORS.primary} />
                 <Text style={styles.pedigreeTitle}>Virtual Offspring Pedigree</Text>
@@ -427,15 +436,6 @@ export default function VirtualBreedingScreen() {
                 × <Text style={{ fontWeight: "700" }}>{dam?.name}</Text>
               </Text>
               <PedigreeTree pedigree={result.pedigree} />
-            </View>
-
-            {/* Line Breeding */}
-            <View style={[styles.card, { marginTop: 12 }]}>
-              <View style={styles.pedigreeHeader}>
-                <Ionicons name="git-merge-outline" size={16} color={COLORS.primary} />
-                <Text style={styles.pedigreeTitle}>Line Breeding</Text>
-              </View>
-              <LineBreedingSection entries={result.lineBreeding} />
             </View>
 
             <View style={styles.disclaimer}>
