@@ -156,13 +156,15 @@ export default function DashboardScreen() {
         ) : dashboard?.recentMatings && dashboard.recentMatings.length > 0 ? (
           <View style={styles.activityCard}>
             {dashboard.recentMatings.map((mating, i) => (
-              <View
+              <TouchableOpacity
                 key={String(i)}
                 style={[
                   styles.litterItem,
                   i < dashboard.recentMatings.length - 1 &&
                     styles.litterItemBorder,
                 ]}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("RecentMatingsTab")}
                 data-testid={`card-litter-${i}`}
               >
                 <View style={styles.litterIconWrap}>
@@ -195,7 +197,7 @@ export default function DashboardScreen() {
                     ) : null}
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         ) : (
@@ -279,7 +281,7 @@ export default function DashboardScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>News & Updates</Text>
           <TouchableOpacity
-            onPress={() => navigation.navigate("ClubTab")}
+            onPress={() => navigation.navigate("TheClubTab")}
             activeOpacity={0.7}
             data-testid="link-view-all-news"
           >
@@ -294,9 +296,11 @@ export default function DashboardScreen() {
         ) : recentNews.length > 0 ? (
           <View style={styles.activityCard}>
             {recentNews.map((item: NewsItem, i: number) => (
-              <View
+              <TouchableOpacity
                 key={item.id}
                 style={[styles.newsItem, i < recentNews.length - 1 && styles.newsItemBorder]}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate("TheClubTab")}
                 data-testid={`card-news-dash-${item.id}`}
               >
                 <View style={styles.newsIconWrap}>
@@ -308,7 +312,7 @@ export default function DashboardScreen() {
                     {stripHtml(item.content)}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         ) : (
