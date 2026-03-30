@@ -10,11 +10,16 @@ import {
   Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { searchDogs, fetchVirtualBreeding, DogSearchResult, Pedigree } from "../lib/api";
+import { searchDogs, fetchVirtualBreeding } from "../lib/api";
+import type { DogSearchResult, LineBreedingEntry, VirtualBreedingResult } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
+
+type Nav = NativeStackNavigationProp<any>;
 
 /* ─── Types ─────────────────────────────────────────────── */
 type SelectedDog = {
@@ -152,18 +157,104 @@ function DogSearchField({
   );
 }
 
+/* ─── Line Breeding Section ──────────────────────────────── */
+function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
+  const navigation = useNavigation<Nav>();
+  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
+
+  if (entries.length === 0) {
+    return (
+      <Text style={styles.lineBreedEmpty}>No common ancestry found in 5 generations</Text>
+    );
+  }
+
+  return (
+    <>
+      {entries.map((entry, idx) => {
+        const sirePositions: string[] = [];
+        const damPositions: string[] = [];
+        entry.positions.forEach((p, i) => {
+          if (entry.sides[i] === "father") sirePositions.push(p);
+          else damPositions.push(p);
+        });
+        const genLabel = [sirePositions.join(","), damPositions.join(",")].filter(Boolean).join(" - ");
+        const sideLabel = [
+          sirePositions.length > 0 ? "Sire side" : "",
+          damPositions.length > 0 ? "Dam side" : "",
+        ].filter(Boolean).join(" - ");
+
+        if ((entry.type === "litter_pair" || entry.type === "litter_group") && entry.dogs && entry.dogs.length > 0) {
+          const isExpanded = expandedLitters.has(idx);
+          return (
+            <View key={`litter-${idx}`}>
+              <TouchableOpacity
+                style={styles.lineBreedRow}
+                activeOpacity={0.7}
+                onPress={() => setExpandedLitters((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(idx)) next.delete(idx); else next.add(idx);
+                  return next;
+                })}
+              >
+                <View style={styles.lineBreedInfo}>
+                  <Text style={styles.lineBreedName} numberOfLines={1}>
+                    Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}
+                  </Text>
+                  <Text style={styles.lineBreedMeta}>{genLabel}{sideLabel ? ` (${sideLabel})` : ""}</Text>
+                </View>
+                <Ionicons name={isExpanded ? "chevron-down" : "chevron-forward"} size={18} color="#94A3B8" />
+              </TouchableOpacity>
+              {isExpanded && (
+                <View style={styles.litterDropdown}>
+                  {entry.dogs.map((d) => (
+                    <TouchableOpacity
+                      key={d.id}
+                      style={styles.litterDogRow}
+                      activeOpacity={0.7}
+                      onPress={() => navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: d.id, name: d.dog_name } })}
+                    >
+                      <Ionicons name="paw" size={14} color={COLORS.primary} />
+                      <Text style={styles.litterDogName} numberOfLines={1}>{d.dog_name}</Text>
+                      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          );
+        }
+
+        return (
+          <TouchableOpacity
+            key={`${entry.id ?? "e"}-${idx}`}
+            style={styles.lineBreedRow}
+            activeOpacity={0.7}
+            onPress={() => entry.id ? navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: entry.id, name: entry.dog_name } }) : undefined}
+          >
+            <View style={styles.lineBreedInfo}>
+              <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
+              <Text style={styles.lineBreedMeta}>{genLabel}{sideLabel ? ` (${sideLabel})` : ""}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </TouchableOpacity>
+        );
+      })}
+    </>
+  );
+}
+
 /* ─── Main Screen ────────────────────────────────────────── */
 export default function VirtualBreedingScreen() {
   const insets = useSafeAreaInsets();
   const [sire, setSire] = useState<SelectedDog | null>(null);
   const [dam,  setDam]  = useState<SelectedDog | null>(null);
-  const [pedigree, setPedigree] = useState<Pedigree | null>(null);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [result, setResult]   = useState<VirtualBreedingResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    setPedigree(null);
+    setResult(null);
     setError(null);
     if (!sire || !dam) return;
 
@@ -172,9 +263,9 @@ export default function VirtualBreedingScreen() {
     fadeAnim.setValue(0);
 
     fetchVirtualBreeding(sire.id, dam.id)
-      .then((p) => {
+      .then((r) => {
         if (cancelled) return;
-        setPedigree(p);
+        setResult(r);
         Animated.spring(fadeAnim, { toValue: 1, useNativeDriver: true, tension: 50, friction: 9 }).start();
       })
       .catch((e) => {
@@ -189,7 +280,7 @@ export default function VirtualBreedingScreen() {
   const handleReset = () => {
     setSire(null);
     setDam(null);
-    setPedigree(null);
+    setResult(null);
     setError(null);
   };
 
@@ -308,24 +399,35 @@ export default function VirtualBreedingScreen() {
           </View>
         )}
 
-        {/* Pedigree result */}
-        {pedigree && !loading && (
+        {/* Results */}
+        {result && !loading && (
           <Animated.View
             style={{
               opacity: fadeAnim,
               transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
             }}
           >
+            {/* Pedigree */}
             <View style={styles.pedigreeCard}>
               <View style={styles.pedigreeHeader}>
                 <Ionicons name="git-branch-outline" size={16} color={COLORS.primary} />
                 <Text style={styles.pedigreeTitle}>Virtual Offspring Pedigree</Text>
               </View>
               <Text style={styles.pedigreeNote}>
-                Showing 4-generation pedigree for a theoretical offspring of{" "}
-                <Text style={{ fontWeight: "700" }}>{sire?.name}</Text> × <Text style={{ fontWeight: "700" }}>{dam?.name}</Text>
+                4-generation pedigree for a theoretical offspring of{" "}
+                <Text style={{ fontWeight: "700" }}>{sire?.name}</Text>{" "}
+                × <Text style={{ fontWeight: "700" }}>{dam?.name}</Text>
               </Text>
-              <PedigreeTree pedigree={pedigree} />
+              <PedigreeTree pedigree={result.pedigree} />
+            </View>
+
+            {/* Line Breeding */}
+            <View style={[styles.card, { marginTop: 12 }]}>
+              <View style={styles.pedigreeHeader}>
+                <Ionicons name="git-merge-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.pedigreeTitle}>Line Breeding</Text>
+              </View>
+              <LineBreedingSection entries={result.lineBreeding} />
             </View>
 
             <View style={styles.disclaimer}>
@@ -641,5 +743,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     lineHeight: 17,
+  },
+  lineBreedEmpty: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
+    paddingVertical: 8,
+  },
+  lineBreedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,58,0.07)",
+  },
+  lineBreedInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  lineBreedName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  lineBreedMeta: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  litterDropdown: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    marginBottom: 4,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.08)",
+  },
+  litterDogRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,58,0.07)",
+  },
+  litterDogName: {
+    flex: 1,
+    fontSize: 13,
+    color: "#0F172A",
+    fontWeight: "500",
   },
 });

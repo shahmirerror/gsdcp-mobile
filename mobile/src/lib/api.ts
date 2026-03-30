@@ -1468,10 +1468,15 @@ export async function verifyDam(dogId: string, userId: number, sireId?: string):
   return { eligible: true, message: "" };
 }
 
+export type VirtualBreedingResult = {
+  pedigree: Pedigree;
+  lineBreeding: LineBreedingEntry[];
+};
+
 export async function fetchVirtualBreeding(
   sireId: string,
   damId: string,
-): Promise<Pedigree> {
+): Promise<VirtualBreedingResult> {
   const sNum = Number(String(sireId).replace(/^dog-/, ""));
   const dNum = Number(String(damId).replace(/^dog-/, ""));
   const res = await fetch(`${BASE_URL}/dogs/virtual-breeding`, {
@@ -1485,11 +1490,17 @@ export async function fetchVirtualBreeding(
   if (json.exception || json.success === false) {
     throw new Error(json.message ?? json.error?.message ?? "Failed to generate pedigree.");
   }
-  const pedigree = json.data?.pedigree ?? json.pedigree ?? json.data ?? null;
+  const data = json.data ?? json;
+  const pedigree = data?.pedigree ?? null;
   if (!pedigree || typeof pedigree !== "object" || Array.isArray(pedigree)) {
     throw new Error("No pedigree data returned from server.");
   }
-  return pedigree as Pedigree;
+  const lineBreeding: LineBreedingEntry[] = Array.isArray(data?.lineBreeding)
+    ? data.lineBreeding
+    : Array.isArray(data?.line_breeding)
+    ? data.line_breeding
+    : [];
+  return { pedigree: pedigree as Pedigree, lineBreeding };
 }
 
 export type DogSearchResult = {
