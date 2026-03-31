@@ -14,19 +14,39 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.gsdcp.mobile"
+      "bundleIdentifier": "org.gsdcp.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to take a new profile photo.",
+        "NSPhotoLibraryUsageDescription": "Used to select a profile photo from your library.",
+        "NSPhotoLibraryAddUsageDescription": "Used to save photos to your library."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo-square.png",
         "backgroundColor": "#0F5C3A"
       },
-      "package": "org.gsdcp.mobile"
+      "package": "org.gsdcp.mobile",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/logo-square.png",
       "bundler": "metro"
     },
-    "scheme": "gsdcp"
+    "scheme": "gsdcp",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Used to select a profile photo from your library.",
+          "cameraPermission": "Used to take a new profile photo."
+        }
+      ]
+    ]
   }
 }
