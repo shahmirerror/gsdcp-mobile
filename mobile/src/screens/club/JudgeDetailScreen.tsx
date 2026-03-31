@@ -176,6 +176,7 @@ export default function JudgeDetailScreen() {
                 <Ionicons name="calendar-outline" size={18} color={COLORS.accent} />
                 <Text style={styles.sectionTitle}>Recorded Appointments</Text>
               </View>
+              <Text style={styles.appointmentsDisclaimer}>Data available from 2014 onwards</Text>
               <View style={styles.appointmentsCard}>
                 {judge.shows.map((show: JudgeShow, i: number) => (
                   <TouchableOpacity
@@ -311,6 +312,13 @@ const styles = StyleSheet.create({
   bioText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 22 },
   bioPara: { marginBottom: 12 },
 
+  appointmentsDisclaimer: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontStyle: "italic",
+    marginBottom: 10,
+    marginLeft: 2,
+  },
   appointmentsCard: {
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.md,
