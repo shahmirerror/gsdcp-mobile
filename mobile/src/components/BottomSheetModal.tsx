@@ -1,10 +1,12 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import {
   Modal,
   View,
   Pressable,
   PanResponder,
   StyleSheet,
+  Animated,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "../lib/theme";
@@ -16,6 +18,8 @@ interface Props {
   maxHeight?: number | `${number}%`;
 }
 
+const SCREEN_HEIGHT = Dimensions.get("window").height;
+
 export default function BottomSheetModal({
   visible,
   onClose,
@@ -23,6 +27,20 @@ export default function BottomSheetModal({
   maxHeight = "85%",
 }: Props) {
   const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        bounciness: 0,
+        speed: 20,
+      }).start();
+    } else {
+      translateY.setValue(SCREEN_HEIGHT);
+    }
+  }, [visible]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -38,17 +56,23 @@ export default function BottomSheetModal({
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="none"
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
-        <View style={[styles.sheet, { maxHeight, paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Animated.View
+          style={[
+            styles.sheet,
+            { maxHeight, paddingBottom: Math.max(insets.bottom, 16) },
+            { transform: [{ translateY }] },
+          ]}
+        >
           <View {...panResponder.panHandlers} style={styles.handleArea}>
             <View style={styles.handle} />
           </View>
           {children}
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
