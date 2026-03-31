@@ -153,7 +153,18 @@ export default function JudgeDetailScreen() {
                 <Text style={styles.sectionTitle}>Biography</Text>
               </View>
               <View style={styles.bioCard}>
-                <Text style={styles.bioText}>{bio}</Text>
+                {bio
+                  .split("\n\n")
+                  .map((para) => para.replace(/\n/g, " ").trim())
+                  .filter((para) => para.length > 0)
+                  .map((para, i, arr) => (
+                    <Text
+                      key={i}
+                      style={[styles.bioText, i < arr.length - 1 && styles.bioPara]}
+                    >
+                      {para}
+                    </Text>
+                  ))}
               </View>
             </View>
           )}
@@ -298,6 +309,7 @@ const styles = StyleSheet.create({
     padding: 16, borderWidth: 1, borderColor: "#E8E8E4",
   },
   bioText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 22 },
+  bioPara: { marginBottom: 12 },
 
   appointmentsCard: {
     backgroundColor: "#fff",
