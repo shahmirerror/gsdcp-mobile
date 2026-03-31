@@ -703,7 +703,15 @@ export default function DogProfileScreen() {
                   g.startsWith("g") ? COLORS.accent :
                   g.startsWith("suf") ? "#ea580c" : COLORS.primary;
                 return (
-                  <View key={result.id} style={styles.showCard}>
+                  <TouchableOpacity
+                    key={result.id}
+                    style={styles.showCard}
+                    activeOpacity={0.75}
+                    onPress={() => result.showEventId
+                      ? (navigation as any).push("ShowDetail", { id: result.showEventId, name: result.showName })
+                      : undefined
+                    }
+                  >
                     <View style={[styles.showGradingStripe, { backgroundColor: gradingColor }]} />
                     <View style={styles.showCardInner}>
                       <View style={styles.showCardTop}>
@@ -734,10 +742,11 @@ export default function DogProfileScreen() {
                               </Text>
                             </View>
                           ) : null}
+                          <Ionicons name="chevron-forward" size={14} color="#CBD5E1" style={{ marginTop: 4 }} />
                         </View>
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
