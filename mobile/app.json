@@ -41,16 +41,13 @@
       "bundler": "metro"
     },
     "scheme": "gsdcp",
-<<<<<<< HEAD
     "extra": {
       "eas": {
         "projectId": "1dbe2f8d-6c82-4071-b167-9e6e4d4621a4"
       }
     },
     "plugins": [
-      "expo-font"
-=======
-    "plugins": [
+      "expo-font",
       [
         "expo-image-picker",
         {
@@ -58,7 +55,6 @@
           "cameraPermission": "Used to take a new profile photo."
         }
       ]
->>>>>>> a9f955270c834b70bfc0ed4a6f27b4b57cf6eabf
     ]
   }
 }
