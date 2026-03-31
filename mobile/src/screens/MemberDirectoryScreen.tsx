@@ -89,6 +89,7 @@ export default function MemberDirectoryScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
   const [tempCountry, setTempCountry] = useState<string>("All");
+  const [tempTypeFilter, setTempTypeFilter] = useState<"All" | "T-" | "P-">("All");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchChange = (text: string) => {
@@ -103,10 +104,6 @@ export default function MemberDirectoryScreen() {
     setDebouncedSearch("");
   };
 
-  const toggleTypeFilter = (prefix: "T-" | "P-") => {
-    setTypeFilter((prev) => (prev === prefix ? "All" : prefix));
-  };
-
   useEffect(() => {
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, []);
@@ -117,19 +114,21 @@ export default function MemberDirectoryScreen() {
   const openFilters = () => {
     setTempCity(cityFilter);
     setTempCountry(countryFilter);
+    setTempTypeFilter(typeFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setCityFilter(tempCity);
     setCountryFilter(tempCountry);
+    setTypeFilter(tempTypeFilter);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempCity("All");
     setTempCountry("All");
-    setTypeFilter("All");
+    setTempTypeFilter("All");
   };
 
   const {
@@ -251,29 +250,6 @@ export default function MemberDirectoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Membership type quick filters */}
-      <View style={styles.typeRow}>
-        <TouchableOpacity
-          style={[styles.typeChip, typeFilter === "T-" && styles.typeChipActive]}
-          onPress={() => toggleTypeFilter("T-")}
-          activeOpacity={0.7}
-          data-testid="chip-type-temporary"
-        >
-          <View style={[styles.typeChipDot, { backgroundColor: typeFilter === "T-" ? "#fff" : "#F59E0B" }]} />
-          <Text style={[styles.typeChipText, typeFilter === "T-" && styles.typeChipTextActive]}>Temporary</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.typeChip, typeFilter === "P-" && styles.typeChipActivePerm]}
-          onPress={() => toggleTypeFilter("P-")}
-          activeOpacity={0.7}
-          data-testid="chip-type-permanent"
-        >
-          <View style={[styles.typeChipDot, { backgroundColor: typeFilter === "P-" ? "#fff" : COLORS.primary }]} />
-          <Text style={[styles.typeChipText, typeFilter === "P-" && styles.typeChipTextActive]}>Permanent</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Active filter chips */}
       {activeFilterCount > 0 && (
         <ScrollView
@@ -282,6 +258,16 @@ export default function MemberDirectoryScreen() {
           style={styles.chipsRow}
           contentContainerStyle={styles.chipsContent}
         >
+          {typeFilter !== "All" && (
+            <TouchableOpacity
+              style={styles.activeChip}
+              onPress={() => setTypeFilter("All")}
+              data-testid="chip-type"
+            >
+              <Text style={styles.activeChipText}>{typeFilter === "T-" ? "Temporary" : "Permanent"}</Text>
+              <Ionicons name="close" size={12} color={COLORS.primary} />
+            </TouchableOpacity>
+          )}
           {countryFilter !== "All" && (
             <TouchableOpacity
               style={styles.activeChip}
@@ -303,7 +289,7 @@ export default function MemberDirectoryScreen() {
             </TouchableOpacity>
           )}
           <TouchableOpacity
-            onPress={() => { setCityFilter("All"); setCountryFilter("All"); }}
+            onPress={() => { setCityFilter("All"); setCountryFilter("All"); setTypeFilter("All"); }}
             data-testid="btn-clear-all"
           >
             <Text style={styles.clearAll}>Clear all</Text>
@@ -389,7 +375,23 @@ export default function MemberDirectoryScreen() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.filterLabel}>Country</Text>
+            <Text style={styles.filterLabel}>Membership Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
+              {(["All", "T-", "P-"] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.filterChip, tempTypeFilter === t && styles.filterChipActive]}
+                  onPress={() => setTempTypeFilter(t)}
+                  data-testid={`chip-type-${t}`}
+                >
+                  <Text style={[styles.filterChipText, tempTypeFilter === t && styles.filterChipTextActive]}>
+                    {t === "All" ? "All" : t === "T-" ? "Temporary" : "Permanent"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={[styles.filterLabel, { marginTop: SPACING.md }]}>Country</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {["All", ...countries].map((c) => (
                 <TouchableOpacity
@@ -468,32 +470,6 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
-
-  typeRow: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  typeChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1.5, borderColor: COLORS.border,
-    backgroundColor: "#fff",
-  },
-  typeChipActive: {
-    backgroundColor: "#F59E0B", borderColor: "#F59E0B",
-  },
-  typeChipActivePerm: {
-    backgroundColor: COLORS.primary, borderColor: COLORS.primary,
-  },
-  typeChipDot: { width: 7, height: 7, borderRadius: 4 },
-  typeChipText: { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
-  typeChipTextActive: { color: "#fff" },
 
   chipsRow: { maxHeight: 44, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: COLORS.border },
   chipsContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, flexDirection: "row", alignItems: "center" },
