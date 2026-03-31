@@ -825,9 +825,9 @@ export default function DogProfileScreen() {
           };
 
           const sections = [
-            { key: "hd", label: "HD — Hip Dysplasia",   data: hdHereditary },
-            { key: "ed", label: "ED — Elbow Dysplasia", data: edHereditary },
-          ].filter((s) => s.data);
+            { key: "hd", label: "HD — Hip Dysplasia",   data: hdHereditary, ownRating: dog.hd || null },
+            { key: "ed", label: "ED — Elbow Dysplasia", data: edHereditary, ownRating: dog.ed || null },
+          ].filter((s) => s.data || s.ownRating);
 
           if (sections.length === 0) {
             return (
@@ -849,9 +849,59 @@ export default function DogProfileScreen() {
                     <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
                     <Text style={styles.healthSectionTitle}>{s.label}</Text>
                   </View>
-                  {renderGradeBlock("This Dog's Offspring", s.data!.kids)}
-                  {renderGradeBlock("Sire's Offspring", s.data!.sire, dog.sire_id || undefined)}
-                  {renderGradeBlock("Dam's Offspring", s.data!.dam, dog.dam_id || undefined)}
+
+                  {/* 1. This Dog — own rating + offspring breakdown */}
+                  <View style={styles.healthBlock}>
+                    <View style={styles.healthBlockHeader}>
+                      <Text style={styles.healthBlockRole}>This Dog</Text>
+                    </View>
+                    {s.ownRating ? (
+                      <View style={styles.healthOwnRatingRow}>
+                        <Text style={styles.healthOwnRatingLabel}>Rating</Text>
+                        <Text style={styles.healthOwnRatingValue}>{s.ownRating}</Text>
+                      </View>
+                    ) : null}
+                    {s.data?.kids ? (() => {
+                      const g = s.data!.kids!;
+                      const totalOffspring = gradesTotal(g);
+                      const radiographed = gradesRadiographed(g);
+                      return (
+                        <>
+                          <View style={[styles.healthStats, s.ownRating ? { marginTop: 8 } : {}]}>
+                            <View style={styles.healthStatItem}>
+                              <Text style={styles.healthStatValue}>{totalOffspring}</Text>
+                              <Text style={styles.healthStatLabel}>Total Offspring</Text>
+                            </View>
+                            <View style={styles.healthStatDivider} />
+                            <View style={styles.healthStatItem}>
+                              <Text style={styles.healthStatValue}>{radiographed}</Text>
+                              <Text style={styles.healthStatLabel}>Radiographed</Text>
+                            </View>
+                          </View>
+                          <View style={styles.healthTable}>
+                            <View style={styles.healthTableHeader}>
+                              <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableRatingCell]}>Rating</Text>
+                              <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Number</Text>
+                              <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Percentage</Text>
+                            </View>
+                            {COLS.map((c, ri) => (
+                              <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
+                                <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
+                                <Text style={styles.healthTableCell}>{g[c.key] ?? 0}</Text>
+                                <Text style={styles.healthTableCell}>{pct(g[c.key] as number || 0, radiographed)}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        </>
+                      );
+                    })() : null}
+                  </View>
+
+                  {/* 2. Sire */}
+                  {renderGradeBlock("Sire", s.data?.sire, dog.sire_id || undefined)}
+
+                  {/* 3. Dam */}
+                  {renderGradeBlock("Dam", s.data?.dam, dog.dam_id || undefined)}
                 </View>
               ))}
             </View>
@@ -1359,6 +1409,26 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.primary,
     textDecorationLine: "underline",
+  },
+  healthOwnRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: `${COLORS.primary}08`,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  healthOwnRatingLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+  },
+  healthOwnRatingValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
   healthTableRatingCell: {
     flex: 1.8,
