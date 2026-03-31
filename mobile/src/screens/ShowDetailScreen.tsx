@@ -1119,7 +1119,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   heroBanner: {
-    height: 180,
+    width: "100%",
+    height: 256,
     justifyContent: "flex-end",
   },
   heroGradient: {
@@ -1127,7 +1128,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 120,
+    height: 256,
   },
   backButton: {
     position: "absolute",
