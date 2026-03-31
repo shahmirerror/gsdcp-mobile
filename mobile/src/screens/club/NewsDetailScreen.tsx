@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  BackHandler,
 } from "react-native";
-import { useCallback } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation, useRoute, RouteProp, useFocusEffect } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -23,16 +23,6 @@ export default function NewsDetailScreen() {
   const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<TheClubStackParamList, "NewsDetail">>();
   const { item } = route.params;
-
-  useFocusEffect(
-    useCallback(() => {
-      const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-        navigation.navigate("NewsUpdates");
-        return true;
-      });
-      return () => sub.remove();
-    }, [navigation])
-  );
 
   const paragraphs = stripHtml(item.content)
     .split("\n\n")
@@ -51,7 +41,7 @@ export default function NewsDetailScreen() {
       >
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => navigation.navigate("NewsUpdates")}
+          onPress={() => navigation.goBack()}
           data-testid="button-back"
         >
           <Ionicons name="chevron-back" size={22} color="#fff" />
