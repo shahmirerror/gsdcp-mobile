@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { gradeIndex } from "../lib/gradeUtils";
 import {
   View,
   Text,
@@ -1137,7 +1138,7 @@ export default function DogProfileScreen() {
         {activeTab === "shows" &&
           (showResults.length > 0 ? (
             <View style={{ gap: 12 }}>
-              {showResults.map((result) => {
+              {[...showResults].sort((a, b) => gradeIndex(a.grading) - gradeIndex(b.grading)).map((result) => {
                 const g = (result.grading || "").toLowerCase();
                 const gradingColor = g.startsWith("exc")
                   ? "#16a34a"

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { gradeIndex } from "../lib/gradeUtils";
 import {
   View,
   Text,
@@ -723,7 +724,13 @@ export default function ShowDetailScreen() {
       if (!groups.has(cls)) groups.set(cls, []);
       groups.get(cls)!.push(entry);
     });
-    groups.forEach((arr) => arr.sort((a, b) => parseInt(a.placement) - parseInt(b.placement)));
+    groups.forEach((arr) =>
+      arr.sort((a, b) => {
+        const gd = gradeIndex(a.grading) - gradeIndex(b.grading);
+        if (gd !== 0) return gd;
+        return parseInt(a.placement || "0") - parseInt(b.placement || "0");
+      })
+    );
     return groups;
   }, [hairResults]);
 
