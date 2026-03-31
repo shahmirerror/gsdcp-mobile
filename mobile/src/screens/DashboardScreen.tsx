@@ -438,7 +438,7 @@ export default function DashboardScreen() {
                 activeOpacity={0.8}
                 onPress={() => {
                   setPreviewMating(null);
-                  navigation.navigate("BreedersTab", { screen: "KennelProfile", params: { id: previewMating.kennel_id, name: previewMating.kennel_name } });
+                  navigation.navigate("KennelDirectoryTab", { screen: "KennelProfile", params: { id: previewMating.kennel_id, name: previewMating.kennel_name } });
                 }}
               >
                 <Ionicons name="home" size={16} color="#fff" />

@@ -19,6 +19,14 @@ const logoSquare = require("../../assets/logo-square.png");
 
 const VISIBLE_TABS = ["DogsTab", "BreedersTab", "HomeTab", "ShowsTab", "ProfileTab"];
 
+// Root screen name for each tab — used to pop back to the listing when a focused tab is re-pressed
+const TAB_ROOT_SCREENS: Record<string, string> = {
+  DogsTab: "DogSearch",
+  BreedersTab: "BreederDirectory",
+  ShowsTab: "ShowsList",
+  ProfileTab: "ProfileHome",
+};
+
 const TAB_CONFIG: Record<
   string,
   { label: string; icon: keyof typeof Ionicons.glyphMap; iconFocused: keyof typeof Ionicons.glyphMap }
@@ -160,8 +168,14 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
               target: route.key,
               canPreventDefault: true,
             });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name as any);
+            if (!event.defaultPrevented) {
+              const rootScreen = TAB_ROOT_SCREENS[route.name];
+              if (isFocused && rootScreen) {
+                // Already on this tab — pop back to the root listing screen
+                navigation.navigate(route.name as any, { screen: rootScreen });
+              } else if (!isFocused) {
+                navigation.navigate(route.name as any);
+              }
             }
           };
 
