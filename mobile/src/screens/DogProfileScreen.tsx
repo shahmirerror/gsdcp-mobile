@@ -1024,6 +1024,8 @@ export default function DogProfileScreen() {
                         {puppyCount} {puppyCount === 1 ? "Puppy" : "Puppies"}
                         {singleLitterDob
                           ? `  ·  ${formatDate(singleLitterDob)}`
+                          : uniqueDobs.length > 1
+                          ? `  ·  ${uniqueDobs.length} Litters`
                           : ""}
                       </Text>
                       <Ionicons
