@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { formatDate } from "../lib/dateUtils";
 import { fetchKennelDetail, KennelDetail, KennelMating } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 
@@ -29,14 +30,6 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function DetailItem({
   icon,

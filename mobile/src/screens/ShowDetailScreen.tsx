@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { gradeIndex } from "../lib/gradeUtils";
 import {
   View,
   Text,
@@ -20,23 +21,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
 import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry, fetchMeetingStatus, MeetingStatusResult, bookMeetingSeat } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import { formatDate } from "../lib/dateUtils";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-function formatDate(dateStr: string): string {
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIndex = parseInt(parts[1], 10) - 1;
-  const year = parts[0];
-  if (monthIndex < 0 || monthIndex > 11) return dateStr;
-  return `${day} ${MONTHS[monthIndex]} ${year}`;
-}
 
 const EVENT_TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Show: "trophy",
@@ -108,6 +96,9 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
         {entry.KP && (
           <Text style={styles.resultKp}>KP {entry.KP}</Text>
         )}
+        {entry.owner_names ? (
+          <Text style={styles.resultOwner} numberOfLines={1}>{entry.owner_names}</Text>
+        ) : null}
       </View>
       <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
     </TouchableOpacity>
@@ -148,11 +139,12 @@ function JudgePopupSheet({ judge, onClose, onViewProfile }: {
   );
 }
 
-function DogPopupSheet({ entry, kpLine, onClose, onViewProfile }: {
+function DogPopupSheet({ entry, kpLine, onClose, onViewProfile, onViewOwner }: {
   entry: ShowResultEntry;
   kpLine: string;
   onClose: () => void;
   onViewProfile: () => void;
+  onViewOwner: (id: string) => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!entry.imageUrl && !imgErr;
@@ -189,6 +181,38 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile }: {
           </View>
         ) : null}
       </View>
+      {(() => {
+        const ids   = entry.owner_ids?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
+        const names = entry.owner_names?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
+        const nos   = entry.owner_membership_nos?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
+        if (!names.length) return null;
+        return (
+          <View style={{ width: "100%" }}>
+            {names.map((name, i) => {
+              const id = ids[i] ?? null;
+              const no = nos[i] ?? null;
+              const label = no ? `${name}  ·  ${no}` : name;
+              return id ? (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.popupOwnerRow}
+                  activeOpacity={0.7}
+                  onPress={() => onViewOwner(id)}
+                >
+                  <Ionicons name="person-outline" size={13} color={COLORS.primary} />
+                  <Text style={[styles.popupOwnerText, { color: COLORS.primary }]} numberOfLines={1}>{label}</Text>
+                  <Ionicons name="chevron-forward" size={12} color={COLORS.primary} />
+                </TouchableOpacity>
+              ) : (
+                <View key={i} style={styles.popupOwnerRow}>
+                  <Ionicons name="person-outline" size={13} color={COLORS.textMuted} />
+                  <Text style={styles.popupOwnerText} numberOfLines={1}>{label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        );
+      })()}
       <TouchableOpacity style={styles.popupBtn} activeOpacity={0.8} onPress={onViewProfile}>
         <Ionicons name="paw-outline" size={16} color="#fff" />
         <Text style={styles.popupBtnText}>View Dog Profile</Text>
@@ -736,7 +760,13 @@ export default function ShowDetailScreen() {
       if (!groups.has(cls)) groups.set(cls, []);
       groups.get(cls)!.push(entry);
     });
-    groups.forEach((arr) => arr.sort((a, b) => parseInt(a.placement) - parseInt(b.placement)));
+    groups.forEach((arr) =>
+      arr.sort((a, b) => {
+        const gd = gradeIndex(a.grading) - gradeIndex(b.grading);
+        if (gd !== 0) return gd;
+        return parseInt(a.placement || "0") - parseInt(b.placement || "0");
+      })
+    );
     return groups;
   }, [hairResults]);
 
@@ -841,6 +871,10 @@ export default function ShowDetailScreen() {
             onViewProfile={() => {
               setPopupDog(null);
               navigation.push("DogProfile", { id: popupDog.dog_id, name: popupDog.dog_name.trim() });
+            }}
+            onViewOwner={(id) => {
+              setPopupDog(null);
+              navigation.push("MemberProfile", { id });
             }}
           />
         ) : null}
@@ -1119,7 +1153,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   heroBanner: {
-    height: 180,
+    width: "100%",
+    height: 256,
     justifyContent: "flex-end",
   },
   heroGradient: {
@@ -1127,7 +1162,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 120,
+    height: 256,
   },
   backButton: {
     position: "absolute",
@@ -1451,6 +1486,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 1,
+  },
+  resultOwner: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+    fontStyle: "italic",
   },
   emptyState: {
     alignItems: "center",
@@ -1860,6 +1901,20 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: "center",
     marginBottom: 4,
+  },
+  popupOwnerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 10,
+    marginBottom: 2,
+    paddingHorizontal: SPACING.md,
+  },
+  popupOwnerText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    flex: 1,
+    textAlign: "center",
   },
   popupChipRow: {
     flexDirection: "row",

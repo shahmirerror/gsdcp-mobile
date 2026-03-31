@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from "react";
 import {
   View,
   Text,
@@ -37,7 +37,9 @@ function isValidImage(url: string | null): boolean {
   return url.startsWith("http");
 }
 
-function MemberListItem({ member, onPress }: { member: Member; onPress: () => void }) {
+const Separator = memo(() => <View style={styles.separator} />);
+
+const MemberListItem = memo(function MemberListItem({ member, onPress }: { member: Member; onPress: () => void }) {
   const initials = getInitials(member.member_name);
   const hasImage = isValidImage(member.imageUrl);
   return (
@@ -71,7 +73,9 @@ function MemberListItem({ member, onPress }: { member: Member; onPress: () => vo
       <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
     </TouchableOpacity>
   );
-}
+});
+
+const keyExtractor = (item: Member) => item.id;
 
 export default function MemberDirectoryScreen() {
   const insets = useSafeAreaInsets();
@@ -85,6 +89,7 @@ export default function MemberDirectoryScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
   const [tempCountry, setTempCountry] = useState<string>("All");
+  const [tempTypeFilter, setTempTypeFilter] = useState<"All" | "T-" | "P-">("All");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchChange = (text: string) => {
@@ -99,10 +104,6 @@ export default function MemberDirectoryScreen() {
     setDebouncedSearch("");
   };
 
-  const toggleTypeFilter = (prefix: "T-" | "P-") => {
-    setTypeFilter((prev) => (prev === prefix ? "All" : prefix));
-  };
-
   useEffect(() => {
     return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
   }, []);
@@ -113,19 +114,21 @@ export default function MemberDirectoryScreen() {
   const openFilters = () => {
     setTempCity(cityFilter);
     setTempCountry(countryFilter);
+    setTempTypeFilter(typeFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setCityFilter(tempCity);
     setCountryFilter(tempCountry);
+    setTypeFilter(tempTypeFilter);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempCity("All");
     setTempCountry("All");
-    setTypeFilter("All");
+    setTempTypeFilter("All");
   };
 
   const {
@@ -194,6 +197,19 @@ export default function MemberDirectoryScreen() {
 
   const totalLoaded = allMembers.length;
 
+  const renderItem = useCallback(({ item }: { item: Member }) => (
+    <MemberListItem
+      member={item}
+      onPress={() => {
+        if (user && item.id === user.member_id) {
+          navigation.navigate("ProfileTab");
+        } else {
+          navigation.push("MemberProfile", { id: item.id, member: item });
+        }
+      }}
+    />
+  ), [user, navigation]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Search + Filter row */}
@@ -234,66 +250,6 @@ export default function MemberDirectoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Membership type quick filters */}
-      <View style={styles.typeRow}>
-        <TouchableOpacity
-          style={[styles.typeChip, typeFilter === "T-" && styles.typeChipActive]}
-          onPress={() => toggleTypeFilter("T-")}
-          activeOpacity={0.7}
-          data-testid="chip-type-temporary"
-        >
-          <View style={[styles.typeChipDot, { backgroundColor: typeFilter === "T-" ? "#fff" : "#F59E0B" }]} />
-          <Text style={[styles.typeChipText, typeFilter === "T-" && styles.typeChipTextActive]}>Temporary</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.typeChip, typeFilter === "P-" && styles.typeChipActivePerm]}
-          onPress={() => toggleTypeFilter("P-")}
-          activeOpacity={0.7}
-          data-testid="chip-type-permanent"
-        >
-          <View style={[styles.typeChipDot, { backgroundColor: typeFilter === "P-" ? "#fff" : COLORS.primary }]} />
-          <Text style={[styles.typeChipText, typeFilter === "P-" && styles.typeChipTextActive]}>Permanent</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Active filter chips */}
-      {activeFilterCount > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsRow}
-          contentContainerStyle={styles.chipsContent}
-        >
-          {countryFilter !== "All" && (
-            <TouchableOpacity
-              style={styles.activeChip}
-              onPress={() => setCountryFilter("All")}
-              data-testid="chip-country"
-            >
-              <Text style={styles.activeChipText}>{countryFilter}</Text>
-              <Ionicons name="close" size={12} color={COLORS.primary} />
-            </TouchableOpacity>
-          )}
-          {cityFilter !== "All" && (
-            <TouchableOpacity
-              style={styles.activeChip}
-              onPress={() => setCityFilter("All")}
-              data-testid="chip-city"
-            >
-              <Text style={styles.activeChipText}>{cityFilter}</Text>
-              <Ionicons name="close" size={12} color={COLORS.primary} />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            onPress={() => { setCityFilter("All"); setCountryFilter("All"); }}
-            data-testid="btn-clear-all"
-          >
-            <Text style={styles.clearAll}>Clear all</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      )}
-
       {/* Results meta */}
       {!isLoading && !isError && (
         <View style={styles.resultsMeta}>
@@ -320,9 +276,9 @@ export default function MemberDirectoryScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={Separator}
           showsVerticalScrollIndicator={false}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}
@@ -334,18 +290,7 @@ export default function MemberDirectoryScreen() {
               colors={[COLORS.primary]}
             />
           }
-          renderItem={({ item }) => (
-            <MemberListItem
-              member={item}
-              onPress={() => {
-                if (user && item.id === user.member_id) {
-                  navigation.navigate("ProfileTab");
-                } else {
-                  navigation.push("MemberProfile", { id: item.id, member: item });
-                }
-              }}
-            />
-          )}
+          renderItem={renderItem}
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footerLoader}>
@@ -383,7 +328,23 @@ export default function MemberDirectoryScreen() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.filterLabel}>Country</Text>
+            <Text style={styles.filterLabel}>Membership Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
+              {(["All", "T-", "P-"] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.filterChip, tempTypeFilter === t && styles.filterChipActive]}
+                  onPress={() => setTempTypeFilter(t)}
+                  data-testid={`chip-type-${t}`}
+                >
+                  <Text style={[styles.filterChipText, tempTypeFilter === t && styles.filterChipTextActive]}>
+                    {t === "All" ? "All" : t === "T-" ? "Temporary" : "Permanent"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={[styles.filterLabel, { marginTop: SPACING.md }]}>Country</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContent}>
               {["All", ...countries].map((c) => (
                 <TouchableOpacity
@@ -463,43 +424,7 @@ const styles = StyleSheet.create({
   },
   filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
 
-  typeRow: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  typeChip: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1.5, borderColor: COLORS.border,
-    backgroundColor: "#fff",
-  },
-  typeChipActive: {
-    backgroundColor: "#F59E0B", borderColor: "#F59E0B",
-  },
-  typeChipActivePerm: {
-    backgroundColor: COLORS.primary, borderColor: COLORS.primary,
-  },
-  typeChipDot: { width: 7, height: 7, borderRadius: 4 },
-  typeChipText: { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
-  typeChipTextActive: { color: "#fff" },
-
-  chipsRow: { maxHeight: 44, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: COLORS.border },
   chipsContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, flexDirection: "row", alignItems: "center" },
-  activeChip: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1, borderColor: COLORS.primary,
-    backgroundColor: "rgba(15,92,59,0.06)",
-  },
-  activeChipText: { fontSize: 12, fontWeight: "600", color: COLORS.primary },
-  clearAll: { fontSize: 12, color: COLORS.textMuted, fontWeight: "500", marginLeft: 4 },
 
   resultsMeta: {
     paddingHorizontal: SPACING.md, paddingVertical: 8,

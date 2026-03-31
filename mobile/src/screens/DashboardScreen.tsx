@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { formatDate } from "../lib/dateUtils";
 import { fetchDashboard, fetchNews, stripHtml, NewsItem, RecentMating } from "../lib/api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -43,7 +44,7 @@ function parseMatingDate(dateStr: string): { day: string; month: string; year: s
     day: String(day),
     month: MONTHS[monthIdx] ?? "???",
     year,
-    full: `${day} ${MONTHS[monthIdx]} ${year}`,
+    full: formatDate(dateStr),
   };
 }
 
@@ -307,7 +308,7 @@ export default function DashboardScreen() {
                 key={item.id}
                 style={[styles.newsItem, i < recentNews.length - 1 && styles.newsItemBorder]}
                 activeOpacity={0.7}
-                onPress={() => navigation.navigate("TheClubTab", { screen: "NewsUpdates" })}
+                onPress={() => navigation.navigate("TheClubTab", { screen: "NewsDetail", params: { item } })}
                 data-testid={`card-news-dash-${item.id}`}
               >
                 <View style={styles.newsIconWrap}>
@@ -438,7 +439,7 @@ export default function DashboardScreen() {
                 activeOpacity={0.8}
                 onPress={() => {
                   setPreviewMating(null);
-                  navigation.navigate("BreedersTab", { screen: "KennelProfile", params: { id: previewMating.kennel_id, name: previewMating.kennel_name } });
+                  navigation.navigate("KennelDirectoryTab", { screen: "KennelProfile", params: { id: previewMating.kennel_id, name: previewMating.kennel_name } });
                 }}
               >
                 <Ionicons name="home" size={16} color="#fff" />

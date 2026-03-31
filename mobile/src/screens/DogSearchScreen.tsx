@@ -19,6 +19,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { formatDate } from "../lib/dateUtils";
 import { fetchDogsPage, Dog, DogsPage } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import type { DogsStackParamList } from "../navigation/AppNavigator";
@@ -268,7 +269,7 @@ export default function DogSearchScreen() {
                   { label: "Sex", value: previewDog.sex },
                   { label: "Color", value: previewDog.color },
                   { label: "Hair", value: previewDog.hair },
-                  { label: "Date of Birth", value: previewDog.dob },
+                  { label: "Date of Birth", value: formatDate(previewDog.dob) },
                   { label: "Sire", value: previewDog.sire },
                   { label: "Dam", value: previewDog.dam },
                   { label: "Breeder", value: previewDog.breeder },

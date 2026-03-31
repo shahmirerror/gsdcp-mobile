@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 const BASE_URL       = "https://gsdcp.org/api/mobile";
 const AUTHORIZE_URL  = `${BASE_URL}/authorize`;
 
@@ -253,6 +255,9 @@ export type ShowResultEntry = {
   class: string;
   imageUrl: string | null;
   hair: string | null;
+  owner_names: string | null;
+  owner_ids: string | null;
+  owner_membership_nos: string | null;
 };
 
 export type ShowDetail = Show & {
@@ -391,13 +396,13 @@ export async function uploadProfilePhoto(
   const filename = imageUri.split("/").pop()?.split("?")[0] ?? "photo.jpg";
   const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
   const mime     = ext === "png" ? "image/png" : "image/jpeg";
-  // On web imageUri is a blob/data URL — fetch it to a Blob first.
-  // On native, use the { uri, name, type } shorthand that RN's FormData accepts.
-  try {
+  if (Platform.OS === "web") {
+    // On web imageUri is a blob/data URL — fetch it to a Blob then wrap in a File.
     const resp = await fetch(imageUri);
     const blob = await resp.blob();
     form.append("new_photo", new File([blob], filename, { type: mime }), filename);
-  } catch {
+  } else {
+    // On native (iOS/Android), use the { uri, name, type } shorthand RN FormData accepts.
     form.append("new_photo", { uri: imageUri, name: filename, type: mime } as any);
   }
   console.log("[PhotoUpload] uploading", filename, mime, "to", `${BASE_URL}/profile/update-profile`);

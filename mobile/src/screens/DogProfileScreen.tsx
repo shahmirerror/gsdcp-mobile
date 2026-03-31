@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { gradeIndex } from "../lib/gradeUtils";
 import {
   View,
   Text,
@@ -15,26 +16,24 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { fetchDog, DogDetail, Pedigree, Dog, DogOwner, LineBreedingEntry, ProgenyEntry, ProgenyPuppy, HereditaryData, HereditaryGrades } from "../lib/api";
+import { formatDate } from "../lib/dateUtils";
+import {
+  fetchDog,
+  DogDetail,
+  Pedigree,
+  Dog,
+  DogOwner,
+  LineBreedingEntry,
+  ProgenyEntry,
+  ProgenyPuppy,
+  HereditaryData,
+  HereditaryGrades,
+} from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-function formatDob(dob: string): string {
-  const parts = dob.split("-");
-  if (parts.length !== 3) return dob;
-  const day = parseInt(parts[2], 10);
-  const monthIndex = parseInt(parts[1], 10) - 1;
-  const year = parts[0];
-  if (monthIndex < 0 || monthIndex > 11) return dob;
-  return `${day} ${MONTHS[monthIndex]} ${year}`;
-}
 
 function DetailItem({
   icon,
@@ -56,7 +55,9 @@ function DetailItem({
         <Text style={styles.detailLabel}>{label}</Text>
         {onPress ? (
           <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-            <Text style={[styles.detailValue, styles.detailValueLink]}>{value}</Text>
+            <Text style={[styles.detailValue, styles.detailValueLink]}>
+              {value}
+            </Text>
           </TouchableOpacity>
         ) : (
           <Text style={styles.detailValue}>{value}</Text>
@@ -74,12 +75,21 @@ function isValidOwnerImage(url: string | null | undefined) {
 }
 
 function ownerInitials(name: string) {
-  return name.trim().split(" ").filter(Boolean).map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+  return name
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+    .map((w: string) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 /* Module-level — safe to use in JSX without violating Rules of Hooks */
 function OwnerRow({
-  o, isLast, onPress,
+  o,
+  isLast,
+  onPress,
 }: {
   o: DogOwner;
   isLast: boolean;
@@ -97,19 +107,30 @@ function OwnerRow({
         <Image source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
       ) : (
         <View style={[styles.ownerAvatar, styles.ownerAvatarPlaceholder]}>
-          <Text style={styles.ownerAvatarInitials}>{ownerInitials(o.name)}</Text>
+          <Text style={styles.ownerAvatarInitials}>
+            {ownerInitials(o.name)}
+          </Text>
         </View>
       )}
       <View style={{ flex: 1 }}>
         <Text style={styles.ownerName}>{o.name}</Text>
-        <Text style={styles.ownerSub}>{o.membership_no}{o.city ? ` · ${o.city}` : ""}</Text>
+        <Text style={styles.ownerSub}>
+          {o.membership_no}
+          {o.city ? ` · ${o.city}` : ""}
+        </Text>
       </View>
       <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
     </TouchableOpacity>
   );
 }
 
-function OwnerSection({ owners, navigation }: { owners: DogOwner[] | null; navigation: any }) {
+function OwnerSection({
+  owners,
+  navigation,
+}: {
+  owners: DogOwner[] | null;
+  navigation: any;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   /* deduplicate by member_id */
@@ -120,7 +141,14 @@ function OwnerSection({ owners, navigation }: { owners: DogOwner[] | null; navig
   const goToMember = (o: DogOwner) =>
     navigation.push("MemberProfile", {
       id: o.member_id,
-      member: { id: o.member_id, member_name: o.name, membership_no: o.membership_no, city: o.city, country: o.country, imageUrl: o.imageUrl },
+      member: {
+        id: o.member_id,
+        member_name: o.name,
+        membership_no: o.membership_no,
+        city: o.city,
+        country: o.country,
+        imageUrl: o.imageUrl,
+      },
     });
 
   if (unique.length === 0) {
@@ -142,19 +170,37 @@ function OwnerSection({ owners, navigation }: { owners: DogOwner[] | null; navig
         </View>
         <View style={styles.detailTextWrap}>
           <Text style={styles.detailLabel}>Owner</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 2,
+            }}
+          >
             {hasImg ? (
               <Image source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
             ) : (
               <View style={[styles.ownerAvatar, styles.ownerAvatarPlaceholder]}>
-                <Text style={styles.ownerAvatarInitials}>{ownerInitials(o.name)}</Text>
+                <Text style={styles.ownerAvatarInitials}>
+                  {ownerInitials(o.name)}
+                </Text>
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={[styles.detailValue, { color: COLORS.primary }]}>{o.name}</Text>
-              <Text style={styles.ownerSub}>{o.membership_no}{o.city ? ` · ${o.city}` : ""}</Text>
+              <Text style={[styles.detailValue, { color: COLORS.primary }]}>
+                {o.name}
+              </Text>
+              <Text style={styles.ownerSub}>
+                {o.membership_no}
+                {o.city ? ` · ${o.city}` : ""}
+              </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={COLORS.textMuted}
+            />
           </View>
         </View>
       </TouchableOpacity>
@@ -199,26 +245,39 @@ function OwnerSection({ owners, navigation }: { owners: DogOwner[] | null; navig
   );
 }
 
-function isPedigreePopulated(p: Pedigree | any[] | null | undefined): p is Pedigree {
+function isPedigreePopulated(
+  p: Pedigree | any[] | null | undefined,
+): p is Pedigree {
   if (!p || Array.isArray(p)) return false;
   return p.gen1 !== undefined;
 }
 
-type TabKey = "details" | "pedigree" | "siblings" | "progeny" | "shows" | "health";
+type TabKey =
+  | "details"
+  | "pedigree"
+  | "siblings"
+  | "progeny"
+  | "shows"
+  | "health";
 
 export default function DogProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const dogId = route.params?.id;
   const [activeTab, setActiveTab] = useState<TabKey>("details");
-  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
-  const [expandedProgeny, setExpandedProgeny] = useState<Set<number>>(new Set());
+  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(
+    new Set(),
+  );
+  const [expandedProgeny, setExpandedProgeny] = useState<Set<number>>(
+    new Set(),
+  );
 
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery<DogDetail>({
-    queryKey: ["dog", dogId],
-    queryFn: () => fetchDog(dogId),
-    enabled: !!dogId,
-  });
+  const { data, isLoading, isError, refetch, isRefetching } =
+    useQuery<DogDetail>({
+      queryKey: ["dog", dogId],
+      queryFn: () => fetchDog(dogId),
+      enabled: !!dogId,
+    });
 
   if (isLoading) {
     return (
@@ -231,7 +290,11 @@ export default function DogProfileScreen() {
   if (isError || !data?.dog) {
     return (
       <View style={styles.centered}>
-        <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
+        <Ionicons
+          name="alert-circle-outline"
+          size={48}
+          color={COLORS.textMuted}
+        />
         <Text style={styles.errorText}>
           {isError ? "Failed to load dog details." : "Dog not found."}
         </Text>
@@ -268,13 +331,153 @@ export default function DogProfileScreen() {
   })();
 
   const tabs: { key: TabKey; label: string; icon: string; count?: number }[] = [
-    { key: "details",  label: "Details",  icon: "list-outline"    as const },
+    { key: "details", label: "Details", icon: "list-outline" as const },
     { key: "pedigree", label: "Pedigree", icon: "git-branch-outline" as const },
-    { key: "siblings", label: "Siblings", icon: "people-outline"  as const },
-    { key: "progeny",  label: "Progeny",  icon: "paw-outline"     as const },
-    { key: "shows",    label: "Shows",    icon: "ribbon-outline"  as const },
-    { key: "health",   label: "HD/ED",    icon: "medkit-outline"  as const },
+    { key: "siblings", label: "Siblings", icon: "people-outline" as const },
+    { key: "progeny", label: "Progeny", icon: "paw-outline" as const },
+    { key: "shows", label: "Shows", icon: "ribbon-outline" as const },
+    { key: "health", label: "HD/ED", icon: "medkit-outline" as const },
   ];
+
+  // ── HD/ED tab helpers (defined outside JSX to avoid IIFE-inside-JSX parser issues) ──
+
+  const HEALTH_COLS: { key: keyof HereditaryGrades; label: string }[] = [
+    { key: "norm",  label: "Normal" },
+    { key: "fnorm", label: "Fast Normal" },
+    { key: "jperm", label: "Just Permitted" },
+    { key: "mid",   label: "Middle" },
+    { key: "sev",   label: "Severe" },
+  ];
+
+  const healthGradesTotal = (g: HereditaryGrades) =>
+    g.total ?? ((g.norm || 0) + (g.fnorm || 0) + (g.jperm || 0) + (g.mid || 0) + (g.sev || 0));
+  const healthGradesRadiographed = (g: HereditaryGrades) =>
+    (g.norm || 0) + (g.fnorm || 0) + (g.jperm || 0) + (g.mid || 0) + (g.sev || 0);
+  const healthPct = (n: number, total: number) =>
+    total > 0 ? ((n / total) * 100).toFixed(2) + "%" : "0.00%";
+
+  const renderHealthTypeBlock = (
+    typeLabel: string,
+    ownRating: string | null | undefined,
+    grades: HereditaryGrades | null | undefined,
+  ) => {
+    if (!ownRating && !grades) return null;
+    const totalOffspring = grades ? healthGradesTotal(grades) : 0;
+    const radiographed   = grades ? healthGradesRadiographed(grades) : 0;
+    return (
+      <View style={styles.healthTypeBlock}>
+        <Text style={styles.healthTypeLabel}>{typeLabel}</Text>
+        {ownRating ? (
+          <View style={styles.healthOwnRatingRow}>
+            <Text style={styles.healthOwnRatingLabel}>Rating</Text>
+            <Text style={styles.healthOwnRatingValue}>{ownRating}</Text>
+          </View>
+        ) : null}
+        {grades ? (
+          <View>
+            <View style={[styles.healthStats, ownRating ? { marginTop: 8 } : {}]}>
+              <View style={styles.healthStatItem}>
+                <Text style={styles.healthStatValue}>{totalOffspring}</Text>
+                <Text style={styles.healthStatLabel}>Total Offspring</Text>
+              </View>
+              <View style={styles.healthStatDivider} />
+              <View style={styles.healthStatItem}>
+                <Text style={styles.healthStatValue}>{radiographed}</Text>
+                <Text style={styles.healthStatLabel}>Radiographed</Text>
+              </View>
+            </View>
+            <View style={styles.healthTable}>
+              <View style={styles.healthTableHeader}>
+                <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableRatingCell]}>Rating</Text>
+                <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Number</Text>
+                <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Percentage</Text>
+              </View>
+              {HEALTH_COLS.map((c, ri) => (
+                <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
+                  <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
+                  <Text style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
+                  <Text style={styles.healthTableCell}>{healthPct((grades[c.key] as number) || 0, radiographed)}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  const renderHealthContent = () => {
+    const hasThisDog = !!(dog.hd || dog.ed || hdHereditary?.kids || edHereditary?.kids);
+    const hasSire    = !!(hdHereditary?.sire || edHereditary?.sire);
+    const hasDam     = !!(hdHereditary?.dam  || edHereditary?.dam);
+    if (!hasThisDog && !hasSire && !hasDam) {
+      return (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="medkit-outline" size={32} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No Health Data</Text>
+          <Text style={styles.emptyDesc}>No hereditary health results are available for this dog.</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={{ gap: 20 }}>
+        {hasThisDog ? (
+          <View style={styles.healthSection}>
+            <View style={styles.healthSectionHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
+                <Text style={styles.healthSectionTitle}>This Dog</Text>
+              </View>
+            </View>
+            <View style={styles.healthBlock}>
+              {renderHealthTypeBlock("HD — Hip Dysplasia",   dog.hd, hdHereditary?.kids)}
+              {renderHealthTypeBlock("ED — Elbow Dysplasia", dog.ed, edHereditary?.kids)}
+            </View>
+          </View>
+        ) : null}
+        {hasSire ? (
+          <View style={styles.healthSection}>
+            <View style={styles.healthSectionHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
+                <Text style={styles.healthSectionTitle}>Sire</Text>
+              </View>
+              {dog.sire_id ? (
+                <TouchableOpacity onPress={() => (navigation as any).push("DogProfile", { id: dog.sire_id })} activeOpacity={0.7}>
+                  <Text style={styles.healthBlockNavLink}>View Profile</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <View style={styles.healthBlock}>
+              {renderHealthTypeBlock("HD — Hip Dysplasia",   null, hdHereditary?.sire)}
+              {renderHealthTypeBlock("ED — Elbow Dysplasia", null, edHereditary?.sire)}
+            </View>
+          </View>
+        ) : null}
+        {hasDam ? (
+          <View style={styles.healthSection}>
+            <View style={styles.healthSectionHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
+                <Text style={styles.healthSectionTitle}>Dam</Text>
+              </View>
+              {dog.dam_id ? (
+                <TouchableOpacity onPress={() => (navigation as any).push("DogProfile", { id: dog.dam_id })} activeOpacity={0.7}>
+                  <Text style={styles.healthBlockNavLink}>View Profile</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <View style={styles.healthBlock}>
+              {renderHealthTypeBlock("HD — Hip Dysplasia",   null, hdHereditary?.dam)}
+              {renderHealthTypeBlock("ED — Elbow Dysplasia", null, edHereditary?.dam)}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   return (
     <ScrollView
@@ -284,10 +487,19 @@ export default function DogProfileScreen() {
       bounces={true}
       overScrollMode="always"
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
+        />
       }
     >
-      <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
+      <ImageBackground
+        source={heroBg}
+        style={styles.heroBanner}
+        resizeMode="cover"
+      >
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
           style={styles.heroGradient}
@@ -312,7 +524,11 @@ export default function DogProfileScreen() {
       <View style={styles.profileSection}>
         <View style={styles.avatarOuter}>
           {dog.imageUrl && dog.imageUrl.length > 0 ? (
-            <Image source={{ uri: dog.imageUrl }} style={styles.avatarPhoto} resizeMode="cover" />
+            <Image
+              source={{ uri: dog.imageUrl }}
+              style={styles.avatarPhoto}
+              resizeMode="cover"
+            />
           ) : (
             <View style={styles.avatarInner}>
               <Text style={styles.avatarText}>{initials}</Text>
@@ -382,8 +598,15 @@ export default function DogProfileScreen() {
                 {tab.label}
               </Text>
               {tab.count != null && tab.count > 0 && (
-                <View style={[styles.tabBadge, isActive && styles.tabBadgeActive]}>
-                  <Text style={[styles.tabBadgeText, isActive && styles.tabBadgeTextActive]}>
+                <View
+                  style={[styles.tabBadge, isActive && styles.tabBadgeActive]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      isActive && styles.tabBadgeTextActive,
+                    ]}
+                  >
                     {tab.count}
                   </Text>
                 </View>
@@ -404,29 +627,63 @@ export default function DogProfileScreen() {
                 <DetailItem
                   icon="calendar"
                   label="Date of Birth"
-                  value={dog.dob ? `${formatDob(dog.dob)}${age ? ` (${age})` : ""}` : "Unknown"}
+                  value={
+                    dog.dob
+                      ? `${formatDate(dog.dob)}${age ? ` (${age})` : ""}`
+                      : "Unknown"
+                  }
                 />
-                <DetailItem icon="color-palette" label="Color" value={dog.color || "Unknown"} />
-                <DetailItem icon="cut" label="Coat Type" value={dog.hair || "Unknown"} />
+                <DetailItem
+                  icon="color-palette"
+                  label="Color"
+                  value={dog.color || "Unknown"}
+                />
+                <DetailItem
+                  icon="cut"
+                  label="Coat Type"
+                  value={dog.hair || "Unknown"}
+                />
                 <DetailItem
                   icon="document-text"
                   label="Stud Book Number"
-                  value={dog.KP && dog.KP !== "0" ? `KP ${dog.KP}` : dog.foreign_reg_no ? dog.foreign_reg_no : "-"}
+                  value={
+                    dog.KP && dog.KP !== "0"
+                      ? `KP ${dog.KP}`
+                      : dog.foreign_reg_no
+                        ? dog.foreign_reg_no
+                        : "-"
+                  }
                 />
-                <DetailItem icon="hardware-chip" label="Microchip" value={dog.microchip || "-"} />
+                <DetailItem
+                  icon="hardware-chip"
+                  label="Microchip"
+                  value={dog.microchip || "-"}
+                />
                 <OwnerSection owners={dog.owner} navigation={navigation} />
-                <DetailItem icon="build" label="Breeder" value={dog.breeder || "-"} />
+                <DetailItem
+                  icon="build"
+                  label="Breeder"
+                  value={dog.breeder || "-"}
+                />
                 <DetailItem
                   icon="arrow-up-circle"
                   label="Sire"
                   value={dog.sire || "-"}
-                  onPress={dog.sire_id ? () => navigation.push("DogProfile", { id: dog.sire_id }) : undefined}
+                  onPress={
+                    dog.sire_id
+                      ? () => navigation.push("DogProfile", { id: dog.sire_id })
+                      : undefined
+                  }
                 />
                 <DetailItem
                   icon="arrow-down-circle"
                   label="Dam"
                   value={dog.dam || "-"}
-                  onPress={dog.dam_id ? () => navigation.push("DogProfile", { id: dog.dam_id }) : undefined}
+                  onPress={
+                    dog.dam_id
+                      ? () => navigation.push("DogProfile", { id: dog.dam_id })
+                      : undefined
+                  }
                 />
               </View>
               <View style={styles.cardDivider} />
@@ -439,10 +696,25 @@ export default function DogProfileScreen() {
                     if (entry.sides[i] === "father") sirePositions.push(p);
                     else damPositions.push(p);
                   });
-                  const genLabel = [sirePositions.join(","), damPositions.join(",")].filter(Boolean).join(" - ");
-                  const sideLabel = [sirePositions.length > 0 ? "Sire side" : "", damPositions.length > 0 ? "Dam side" : ""].filter(Boolean).join(" - ");
+                  const genLabel = [
+                    sirePositions.join(","),
+                    damPositions.join(","),
+                  ]
+                    .filter(Boolean)
+                    .join(" - ");
+                  const sideLabel = [
+                    sirePositions.length > 0 ? "Sire side" : "",
+                    damPositions.length > 0 ? "Dam side" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" - ");
 
-                  if ((entry.type === "litter_pair" || entry.type === "litter_group") && entry.dogs && entry.dogs.length > 0) {
+                  if (
+                    (entry.type === "litter_pair" ||
+                      entry.type === "litter_group") &&
+                    entry.dogs &&
+                    entry.dogs.length > 0
+                  ) {
                     const isExpanded = expandedLitters.has(idx);
                     const toggleExpand = () => {
                       setExpandedLitters((prev) => {
@@ -460,12 +732,24 @@ export default function DogProfileScreen() {
                           onPress={toggleExpand}
                         >
                           <View style={styles.lineBreedInfo}>
-                            <Text style={styles.lineBreedName} numberOfLines={1}>
-                              Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}
+                            <Text
+                              style={styles.lineBreedName}
+                              numberOfLines={1}
+                            >
+                              Litter {entry.litter_letter}
+                              {entry.kennel ? ` from ${entry.kennel}` : ""}
                             </Text>
-                            <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel})</Text>
+                            <Text style={styles.lineBreedMeta}>
+                              {genLabel} ({sideLabel})
+                            </Text>
                           </View>
-                          <Ionicons name={isExpanded ? "chevron-down" : "chevron-forward"} size={18} color="#94A3B8" />
+                          <Ionicons
+                            name={
+                              isExpanded ? "chevron-down" : "chevron-forward"
+                            }
+                            size={18}
+                            color="#94A3B8"
+                          />
                         </TouchableOpacity>
                         {isExpanded && (
                           <View style={styles.litterDropdown}>
@@ -474,11 +758,26 @@ export default function DogProfileScreen() {
                                 key={d.id}
                                 style={styles.litterDogRow}
                                 activeOpacity={0.7}
-                                onPress={() => navigation.push("DogProfile", { id: d.id })}
+                                onPress={() =>
+                                  navigation.push("DogProfile", { id: d.id })
+                                }
                               >
-                                <Ionicons name="paw" size={14} color={COLORS.primary} />
-                                <Text style={styles.litterDogName} numberOfLines={1}>{d.dog_name}</Text>
-                                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                                <Ionicons
+                                  name="paw"
+                                  size={14}
+                                  color={COLORS.primary}
+                                />
+                                <Text
+                                  style={styles.litterDogName}
+                                  numberOfLines={1}
+                                >
+                                  {d.dog_name}
+                                </Text>
+                                <Ionicons
+                                  name="chevron-forward"
+                                  size={16}
+                                  color="#94A3B8"
+                                />
                               </TouchableOpacity>
                             ))}
                           </View>
@@ -492,39 +791,79 @@ export default function DogProfileScreen() {
                       key={`${entry.id}-${idx}`}
                       style={styles.lineBreedRow}
                       activeOpacity={0.7}
-                      onPress={() => entry.id ? navigation.push("DogProfile", { id: entry.id }) : undefined}
+                      onPress={() =>
+                        entry.id
+                          ? navigation.push("DogProfile", { id: entry.id })
+                          : undefined
+                      }
                     >
                       <View style={styles.lineBreedInfo}>
-                        <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
-                        <Text style={styles.lineBreedMeta}>{genLabel} ({sideLabel})</Text>
+                        <Text style={styles.lineBreedName} numberOfLines={1}>
+                          {entry.dog_name}
+                        </Text>
+                        <Text style={styles.lineBreedMeta}>
+                          {genLabel} ({sideLabel})
+                        </Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={18}
+                        color="#94A3B8"
+                      />
                     </TouchableOpacity>
                   );
                 })
               ) : (
-                <Text style={styles.lineBreedEmpty}>No common ancestory was found in 5 generations</Text>
+                <Text style={styles.lineBreedEmpty}>
+                  No common ancestory was found in 5 generations
+                </Text>
               )}
             </View>
 
             <View style={styles.card}>
               <Text style={styles.cardHeading}>Ratings</Text>
               <View style={styles.detailsGrid}>
-                <DetailItem icon="calendar-number" label="Breed Survey Period" value={dog.breed_survey_period || "-"} />
-                <DetailItem icon="star" label="Show Rating" value={dog.show_rating || (dog.titles.length > 0 ? dog.titles.join(", ") : "-")} />
-                <DetailItem icon="ribbon" label="Working Title" value={(dog.working_title && dog.working_title.trim()) || "-"} />
+                <DetailItem
+                  icon="calendar-number"
+                  label="Breed Survey Period"
+                  value={dog.breed_survey_period || "-"}
+                />
+                <DetailItem
+                  icon="star"
+                  label="Show Rating"
+                  value={
+                    dog.show_rating ||
+                    (dog.titles.length > 0 ? dog.titles.join(", ") : "-")
+                  }
+                />
+                <DetailItem
+                  icon="ribbon"
+                  label="Working Title"
+                  value={(dog.working_title && dog.working_title.trim()) || "-"}
+                />
               </View>
             </View>
 
             <View style={styles.card}>
               <Text style={styles.cardHeading}>Examinations</Text>
               <View style={styles.detailsGrid}>
-                <DetailItem icon="fitness" label="HD Rating" value={dog.hd || "-"} />
-                <DetailItem icon="body" label="ED Rating" value={dog.ed || "-"} />
-                <DetailItem icon="flask" label="DNA Status" value={dog.dna_status || "-"} />
+                <DetailItem
+                  icon="fitness"
+                  label="HD Rating"
+                  value={dog.hd || "-"}
+                />
+                <DetailItem
+                  icon="body"
+                  label="ED Rating"
+                  value={dog.ed || "-"}
+                />
+                <DetailItem
+                  icon="flask"
+                  label="DNA Status"
+                  value={dog.dna_status || "-"}
+                />
               </View>
             </View>
-
           </>
         )}
 
@@ -537,7 +876,11 @@ export default function DogProfileScreen() {
           ) : (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconWrap}>
-                <Ionicons name="git-branch-outline" size={32} color={COLORS.primary} />
+                <Ionicons
+                  name="git-branch-outline"
+                  size={32}
+                  color={COLORS.primary}
+                />
               </View>
               <Text style={styles.emptyTitle}>No Pedigree Data</Text>
               <Text style={styles.emptyDesc}>
@@ -565,7 +908,11 @@ export default function DogProfileScreen() {
           ) : (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconWrap}>
-                <Ionicons name="people-outline" size={32} color={COLORS.primary} />
+                <Ionicons
+                  name="people-outline"
+                  size={32}
+                  color={COLORS.primary}
+                />
               </View>
               <Text style={styles.emptyTitle}>No Siblings Found</Text>
               <Text style={styles.emptyDesc}>
@@ -580,47 +927,107 @@ export default function DogProfileScreen() {
               {progeny.map((entry: ProgenyEntry, i: number) => {
                 const partner = entry.partner;
                 const isSire = entry.partner_type === "sire";
-                const partnerInitials = (partner.dog_name || "")
-                  .trim().split(" ").filter(Boolean).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+                const partnerInitials =
+                  (partner.dog_name || "")
+                    .trim()
+                    .split(" ")
+                    .filter(Boolean)
+                    .map((w: string) => w[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase() || "?";
                 const puppies = entry.puppies || [];
                 const puppyCount = puppies.length;
                 const isOpen = expandedProgeny.has(i);
                 const toggleProgeny = () => {
                   setExpandedProgeny((prev) => {
                     const next = new Set(prev);
-                    if (next.has(i)) next.delete(i); else next.add(i);
+                    if (next.has(i)) next.delete(i);
+                    else next.add(i);
                     return next;
                   });
                 };
+                const uniqueDobs = [
+                  ...new Set(
+                    puppies
+                      .map((p: ProgenyPuppy) => p.dob)
+                      .filter(Boolean)
+                  ),
+                ];
+                const singleLitterDob =
+                  uniqueDobs.length === 1 ? (uniqueDobs[0] as string) : null;
                 return (
                   <View key={`${partner.id}-${i}`} style={styles.litterCard}>
                     <TouchableOpacity
                       style={styles.litterPartner}
-                      onPress={() => navigation.push("DogProfile", { id: partner.id, name: partner.dog_name })}
+                      onPress={() =>
+                        navigation.push("DogProfile", {
+                          id: partner.id,
+                          name: partner.dog_name,
+                        })
+                      }
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.litterAvatar, isSire ? styles.litterAvatarSire : styles.litterAvatarDam]}>
-                        <Text style={styles.litterAvatarText}>{partnerInitials}</Text>
+                      <View
+                        style={[
+                          styles.litterAvatar,
+                          isSire
+                            ? styles.litterAvatarSire
+                            : styles.litterAvatarDam,
+                        ]}
+                      >
+                        <Text style={styles.litterAvatarText}>
+                          {partnerInitials}
+                        </Text>
                       </View>
                       <View style={styles.litterPartnerInfo}>
                         <View style={styles.litterPartnerRow}>
-                          <Text style={styles.litterPartnerName} numberOfLines={1}>{partner.dog_name}</Text>
-                          <View style={[styles.partnerTypeBadge, isSire ? styles.sireBadge : styles.damBadge]}>
-                            <Text style={styles.partnerTypeBadgeText}>{isSire ? "♂ Sire" : "♀ Dam"}</Text>
+                          <Text
+                            style={styles.litterPartnerName}
+                            numberOfLines={1}
+                          >
+                            {partner.dog_name}
+                          </Text>
+                          <View
+                            style={[
+                              styles.partnerTypeBadge,
+                              isSire ? styles.sireBadge : styles.damBadge,
+                            ]}
+                          >
+                            <Text style={styles.partnerTypeBadgeText}>
+                              {isSire ? "♂ Sire" : "♀ Dam"}
+                            </Text>
                           </View>
                         </View>
                         {partner.show_title ? (
-                          <Text style={styles.litterPartnerSub}>{partner.show_title} · KP {partner.KP || "-"}</Text>
+                          <Text style={styles.litterPartnerSub}>
+                            {partner.show_title} · KP {partner.KP || "-"}
+                          </Text>
                         ) : (
-                          <Text style={styles.litterPartnerSub}>KP {partner.KP || "-"}</Text>
+                          <Text style={styles.litterPartnerSub}>
+                            KP {partner.KP || "-"}
+                          </Text>
                         )}
                       </View>
-                      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={COLORS.textMuted}
+                      />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.litterDivider} onPress={toggleProgeny} activeOpacity={0.7}>
+                    <TouchableOpacity
+                      style={styles.litterDivider}
+                      onPress={toggleProgeny}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.litterDividerText}>
                         {puppyCount} {puppyCount === 1 ? "Puppy" : "Puppies"}
+                        {singleLitterDob
+                          ? `  ·  ${formatDate(singleLitterDob)}`
+                          : uniqueDobs.length > 1
+                          ? `  ·  ${uniqueDobs.length} Litters`
+                          : ""}
                       </Text>
                       <Ionicons
                         name={isOpen ? "chevron-up" : "chevron-down"}
@@ -629,53 +1036,89 @@ export default function DogProfileScreen() {
                       />
                     </TouchableOpacity>
 
-                    {isOpen && (() => {
-                      const groups: Record<string, ProgenyPuppy[]> = {};
-                      puppies.forEach((puppy: ProgenyPuppy) => {
-                        const key = puppy.dob || "Unknown";
-                        if (!groups[key]) groups[key] = [];
-                        groups[key].push(puppy);
-                      });
-                      const sortedKeys = Object.keys(groups).sort((a, b) => {
-                        if (a === "Unknown") return 1;
-                        if (b === "Unknown") return -1;
-                        return b.localeCompare(a);
-                      });
-                      return sortedKeys.map((dobKey) => {
-                        const group = groups[dobKey];
-                        const label = dobKey === "Unknown" ? "Unknown DOB" : formatDob(dobKey);
-                        return (
-                          <View key={dobKey}>
-                            <View style={styles.puppyDobHeader}>
-                              <Text style={styles.puppyDobHeaderText}>{label}</Text>
+                    {isOpen &&
+                      (() => {
+                        const groups: Record<string, ProgenyPuppy[]> = {};
+                        puppies.forEach((puppy: ProgenyPuppy) => {
+                          const key = puppy.dob || "Unknown";
+                          if (!groups[key]) groups[key] = [];
+                          groups[key].push(puppy);
+                        });
+                        const sortedKeys = Object.keys(groups).sort((a, b) => {
+                          if (a === "Unknown") return 1;
+                          if (b === "Unknown") return -1;
+                          return b.localeCompare(a);
+                        });
+                        return sortedKeys.map((dobKey) => {
+                          const group = groups[dobKey];
+                          const label =
+                            dobKey === "Unknown"
+                              ? "Unknown DOB"
+                              : formatDate(dobKey);
+                          return (
+                            <View key={dobKey}>
+                              <View style={styles.puppyDobHeader}>
+                                <Text style={styles.puppyDobHeaderText}>
+                                  {label}
+                                </Text>
+                              </View>
+                              {group.map((puppy: ProgenyPuppy, j: number) => {
+                                const isMale =
+                                  (puppy.sex || "").toLowerCase() === "male";
+                                return (
+                                  <TouchableOpacity
+                                    key={puppy.id || j}
+                                    style={[
+                                      styles.puppyRow,
+                                      j < group.length - 1 &&
+                                        styles.puppyRowBorder,
+                                    ]}
+                                    onPress={() =>
+                                      navigation.push("DogProfile", {
+                                        id: puppy.id,
+                                        name: puppy.dog_name,
+                                      })
+                                    }
+                                    activeOpacity={0.7}
+                                  >
+                                    <View
+                                      style={[
+                                        styles.puppyDot,
+                                        isMale
+                                          ? styles.puppyDotMale
+                                          : styles.puppyDotFemale,
+                                      ]}
+                                    >
+                                      <Text style={styles.puppyDotText}>
+                                        {isMale ? "♂" : "♀"}
+                                      </Text>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                      <Text
+                                        style={styles.puppyName}
+                                        numberOfLines={1}
+                                      >
+                                        {puppy.dog_name}
+                                      </Text>
+                                      <Text style={styles.puppyMeta}>
+                                        {puppy.show_title
+                                          ? `${puppy.show_title} · `
+                                          : ""}
+                                        KP {puppy.KP || "-"}
+                                      </Text>
+                                    </View>
+                                    <Ionicons
+                                      name="chevron-forward"
+                                      size={14}
+                                      color={COLORS.textMuted}
+                                    />
+                                  </TouchableOpacity>
+                                );
+                              })}
                             </View>
-                            {group.map((puppy: ProgenyPuppy, j: number) => {
-                              const isMale = (puppy.sex || "").toLowerCase() === "male";
-                              return (
-                                <TouchableOpacity
-                                  key={puppy.id || j}
-                                  style={[styles.puppyRow, j < (group.length - 1) && styles.puppyRowBorder]}
-                                  onPress={() => navigation.push("DogProfile", { id: puppy.id, name: puppy.dog_name })}
-                                  activeOpacity={0.7}
-                                >
-                                  <View style={[styles.puppyDot, isMale ? styles.puppyDotMale : styles.puppyDotFemale]}>
-                                    <Text style={styles.puppyDotText}>{isMale ? "♂" : "♀"}</Text>
-                                  </View>
-                                  <View style={{ flex: 1 }}>
-                                    <Text style={styles.puppyName} numberOfLines={1}>{puppy.dog_name}</Text>
-                                    <Text style={styles.puppyMeta}>
-                                      {puppy.show_title ? `${puppy.show_title} · ` : ""}
-                                      KP {puppy.KP || "-"}
-                                    </Text>
-                                  </View>
-                                  <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-                        );
-                      });
-                    })()}
+                          );
+                        });
+                      })()}
                   </View>
                 );
               })}
@@ -695,56 +1138,114 @@ export default function DogProfileScreen() {
         {activeTab === "shows" &&
           (showResults.length > 0 ? (
             <View style={{ gap: 12 }}>
-              {showResults.map((result) => {
+              {[...showResults].sort((a, b) => gradeIndex(a.grading) - gradeIndex(b.grading)).map((result) => {
                 const g = (result.grading || "").toLowerCase();
-                const gradingColor =
-                  g.startsWith("exc") ? "#16a34a" :
-                  g.startsWith("v g") || g.startsWith("very") ? "#0891b2" :
-                  g.startsWith("g") ? COLORS.accent :
-                  g.startsWith("suf") ? "#ea580c" : COLORS.primary;
+                const gradingColor = g.startsWith("exc")
+                  ? "#16a34a"
+                  : g.startsWith("v g") || g.startsWith("very")
+                    ? "#0891b2"
+                    : g.startsWith("g")
+                      ? COLORS.accent
+                      : g.startsWith("suf")
+                        ? "#ea580c"
+                        : COLORS.primary;
                 return (
-                  <View key={result.id} style={styles.showCard}>
-                    <View style={[styles.showGradingStripe, { backgroundColor: gradingColor }]} />
+                  <TouchableOpacity
+                    key={result.id}
+                    style={styles.showCard}
+                    activeOpacity={result.showEventId ? 0.75 : 1}
+                    onPress={() => {
+                      if (result.showEventId) {
+                        (navigation as any).push("ShowDetail", {
+                          id: result.showEventId,
+                          name: result.showName,
+                        });
+                      }
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.showGradingStripe,
+                        { backgroundColor: gradingColor },
+                      ]}
+                    />
                     <View style={styles.showCardInner}>
                       <View style={styles.showCardTop}>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.showName} numberOfLines={2}>{result.showName}</Text>
+                          <Text style={styles.showName} numberOfLines={2}>
+                            {result.showName}
+                          </Text>
                           <View style={styles.showMetaRow}>
                             {result.className ? (
                               <View style={styles.showClassBadge}>
-                                <Text style={styles.showClassText}>{result.className}</Text>
+                                <Text style={styles.showClassText}>
+                                  {result.className}
+                                </Text>
                               </View>
                             ) : null}
                             {result.date ? (
                               <Text style={styles.showDate}>
-                                <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} /> {result.date}
+                                <Ionicons
+                                  name="calendar-outline"
+                                  size={11}
+                                  color={COLORS.textMuted}
+                                />{" "}
+                                {formatDate(result.date)}
                               </Text>
                             ) : null}
                           </View>
                         </View>
                         <View style={styles.showRight}>
-                          <View style={[styles.showGradingBadge, { backgroundColor: gradingColor }]}>
-                            <Text style={styles.showGradingText}>{result.grading}</Text>
+                          <View
+                            style={[
+                              styles.showGradingBadge,
+                              { backgroundColor: gradingColor },
+                            ]}
+                          >
+                            <Text style={styles.showGradingText}>
+                              {result.grading}
+                            </Text>
                           </View>
                           {result.placement ? (
                             <View style={styles.showPlacement}>
-                              <Ionicons name="trophy-outline" size={12} color={gradingColor} />
-                              <Text style={[styles.showPlacementText, { color: gradingColor }]}>
+                              <Ionicons
+                                name="trophy-outline"
+                                size={12}
+                                color={gradingColor}
+                              />
+                              <Text
+                                style={[
+                                  styles.showPlacementText,
+                                  { color: gradingColor },
+                                ]}
+                              >
                                 #{result.placement}
                               </Text>
                             </View>
                           ) : null}
+                          {result.showEventId ? (
+                            <Ionicons
+                              name="chevron-forward"
+                              size={14}
+                              color="#CBD5E1"
+                              style={{ marginTop: 4 }}
+                            />
+                          ) : null}
                         </View>
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
           ) : (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconWrap}>
-                <Ionicons name="ribbon-outline" size={32} color={COLORS.primary} />
+                <Ionicons
+                  name="ribbon-outline"
+                  size={32}
+                  color={COLORS.primary}
+                />
               </View>
               <Text style={styles.emptyTitle}>No Show Results</Text>
               <Text style={styles.emptyDesc}>
@@ -753,101 +1254,8 @@ export default function DogProfileScreen() {
             </View>
           ))}
 
-        {activeTab === "health" && (() => {
-          const COLS: { key: keyof HereditaryGrades; label: string }[] = [
-            { key: "norm",  label: "Normal" },
-            { key: "fnorm", label: "Fast Normal" },
-            { key: "jperm", label: "Just Permitted" },
-            { key: "mid",   label: "Middle" },
-            { key: "sev",   label: "Severe" },
-          ];
-          const gradesTotal = (g: HereditaryGrades) =>
-            g.total ?? ((g.norm || 0) + (g.fnorm || 0) + (g.jperm || 0) + (g.mid || 0) + (g.sev || 0));
-          const gradesRadiographed = (g: HereditaryGrades) =>
-            (g.norm || 0) + (g.fnorm || 0) + (g.jperm || 0) + (g.mid || 0) + (g.sev || 0);
-          const pct = (n: number, total: number) =>
-            total > 0 ? (n / total * 100).toFixed(2) + "%" : "0.00%";
+        {activeTab === "health" ? renderHealthContent() : null}
 
-          const renderGradeBlock = (
-            role: string,
-            grades: HereditaryGrades | null | undefined,
-            navId?: string,
-          ) => {
-            if (!grades) return null;
-            const totalOffspring = gradesTotal(grades);
-            const radiographed = gradesRadiographed(grades);
-            return (
-              <View style={styles.healthBlock}>
-                <View style={styles.healthBlockHeader}>
-                  <Text style={styles.healthBlockRole}>{role}</Text>
-                  {navId ? (
-                    <TouchableOpacity onPress={() => navigation.push("DogProfile", { id: navId })} activeOpacity={0.7}>
-                      <Text style={styles.healthBlockNavLink}>View Profile →</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-                <View style={styles.healthStats}>
-                  <View style={styles.healthStatItem}>
-                    <Text style={styles.healthStatValue}>{totalOffspring}</Text>
-                    <Text style={styles.healthStatLabel}>Total Offspring</Text>
-                  </View>
-                  <View style={styles.healthStatDivider} />
-                  <View style={styles.healthStatItem}>
-                    <Text style={styles.healthStatValue}>{radiographed}</Text>
-                    <Text style={styles.healthStatLabel}>Radiographed</Text>
-                  </View>
-                </View>
-                <View style={styles.healthTable}>
-                  <View style={styles.healthTableHeader}>
-                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableRatingCell]}>Rating</Text>
-                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Number</Text>
-                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Percentage</Text>
-                  </View>
-                  {COLS.map((c, ri) => (
-                    <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
-                      <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
-                      <Text style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
-                      <Text style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, radiographed)}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            );
-          };
-
-          const sections = [
-            { key: "hd", label: "HD — Hip Dysplasia",   data: hdHereditary },
-            { key: "ed", label: "ED — Elbow Dysplasia", data: edHereditary },
-          ].filter((s) => s.data);
-
-          if (sections.length === 0) {
-            return (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIconWrap}>
-                  <Ionicons name="medkit-outline" size={32} color={COLORS.primary} />
-                </View>
-                <Text style={styles.emptyTitle}>No Health Data</Text>
-                <Text style={styles.emptyDesc}>No hereditary health results are available for this dog.</Text>
-              </View>
-            );
-          }
-
-          return (
-            <View style={{ gap: 20 }}>
-              {sections.map((s) => (
-                <View key={s.key} style={styles.healthSection}>
-                  <View style={styles.healthSectionHeader}>
-                    <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
-                    <Text style={styles.healthSectionTitle}>{s.label}</Text>
-                  </View>
-                  {renderGradeBlock("This Dog's Offspring", s.data!.kids)}
-                  {renderGradeBlock("Sire's Offspring", s.data!.sire, dog.sire_id || undefined)}
-                  {renderGradeBlock("Dam's Offspring", s.data!.dam, dog.dam_id || undefined)}
-                </View>
-              ))}
-            </View>
-          );
-        })()}
       </View>
 
       <View style={{ height: 32 }} />
@@ -1312,6 +1720,7 @@ const styles = StyleSheet.create({
   healthSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1350,6 +1759,46 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.primary,
     textDecorationLine: "underline",
+  },
+  healthBlockDot: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: COLORS.primary,
+    textDecorationLine: "none",
+  },
+  healthTypeBlock: {
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(15,92,59,0.06)",
+  },
+  healthTypeLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  healthOwnRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: `${COLORS.primary}08`,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  healthOwnRatingLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+  },
+  healthOwnRatingValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
   healthTableRatingCell: {
     flex: 1.8,

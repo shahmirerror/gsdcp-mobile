@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,14 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudgeDetail, stripHtml, JudgeShow } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
-
-const MONTHS = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
-
-function formatShowDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr.toUpperCase();
-  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
+import { formatDate } from "../../lib/dateUtils";
 
 const heroBg = require("../../../assets/hero-bg.jpg");
 
@@ -57,7 +51,7 @@ export default function JudgeDetailScreen() {
 
   const [imgError, setImgError] = useState(false);
 
-  const { data: judge, isLoading } = useQuery({
+  const { data: judge, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/all-judges", id],
     queryFn: () => fetchJudgeDetail(id),
   });
@@ -75,6 +69,9 @@ export default function JudgeDetailScreen() {
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
     >
       {/* Hero banner — same pattern as Dog/Breeder/Kennel profiles */}
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
@@ -156,7 +153,18 @@ export default function JudgeDetailScreen() {
                 <Text style={styles.sectionTitle}>Biography</Text>
               </View>
               <View style={styles.bioCard}>
-                <Text style={styles.bioText}>{bio}</Text>
+                {bio
+                  .split("\n\n")
+                  .map((para) => para.replace(/\n/g, " ").trim())
+                  .filter((para) => para.length > 0)
+                  .map((para, i, arr) => (
+                    <Text
+                      key={i}
+                      style={[styles.bioText, i < arr.length - 1 && styles.bioPara]}
+                    >
+                      {para}
+                    </Text>
+                  ))}
               </View>
             </View>
           )}
@@ -166,7 +174,7 @@ export default function JudgeDetailScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="calendar-outline" size={18} color={COLORS.accent} />
-                <Text style={styles.sectionTitle}>Notable Appointments</Text>
+                <Text style={styles.sectionTitle}>Recorded Appointments</Text>
               </View>
               <View style={styles.appointmentsCard}>
                 {judge.shows.map((show: JudgeShow, i: number) => (
@@ -182,7 +190,7 @@ export default function JudgeDetailScreen() {
                       {i < judge.shows!.length - 1 && <View style={styles.apptLine} />}
                     </View>
                     <View style={styles.appointmentContent}>
-                      <Text style={styles.apptDate}>{formatShowDate(show.start_date)}</Text>
+                      <Text style={styles.apptDate}>{formatDate(show.start_date)}</Text>
                       <Text style={styles.apptName}>{show.title}</Text>
                       {(show.venue || show.city) && (
                         <Text style={styles.apptMeta}>
@@ -301,6 +309,7 @@ const styles = StyleSheet.create({
     padding: 16, borderWidth: 1, borderColor: "#E8E8E4",
   },
   bioText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 22 },
+  bioPara: { marginBottom: 12 },
 
   appointmentsCard: {
     backgroundColor: "#fff",

@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { formatDate } from "../lib/dateUtils";
 import {
   fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog,
   fetchStudCertificates, fetchStudCertificateDetail, submitStudCertificate,
@@ -1348,7 +1349,7 @@ function StudCertTab() {
             <View style={styles.divider} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
-              <Text style={tStyles.certDate}>Mating date: {certDetail.mating_date}</Text>
+              <Text style={tStyles.certDate}>Mating date: {formatDate(certDetail.mating_date)}</Text>
             </View>
           </>
         ) : (
@@ -1517,7 +1518,7 @@ function StudCertTab() {
                     {c.status ?? "Pending"}
                   </Text>
                 </View>
-                <Text style={tStyles.certDate}>{c.mating_date}</Text>
+                <Text style={tStyles.certDate}>{formatDate(c.mating_date)}</Text>
                 <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
               </View>
             </TouchableOpacity>
@@ -1732,7 +1733,7 @@ function LitterInspectionTab() {
             {detail.whelping_date && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Whelped: {detail.whelping_date}</Text>
+                <Text style={tStyles.certDate}>Whelped: {formatDate(detail.whelping_date)}</Text>
               </View>
             )}
           </>
@@ -1885,7 +1886,7 @@ function LitterInspectionTab() {
                       {item.status ?? "Pending"}
                     </Text>
                   </View>
-                  {item.whelping_date && <Text style={tStyles.certDate}>{item.whelping_date}</Text>}
+                  {item.whelping_date && <Text style={tStyles.certDate}>{formatDate(item.whelping_date)}</Text>}
                   <Text style={tStyles.certKP}>{totalPups} pups</Text>
                   <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
                 </View>
@@ -2118,7 +2119,7 @@ function LitterRegistrationTab() {
             {detail.dob && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
                 <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Whelped: {detail.dob}</Text>
+                <Text style={tStyles.certDate}>Whelped: {formatDate(detail.dob)}</Text>
               </View>
             )}
 
@@ -2458,7 +2459,7 @@ function LitterRegistrationTab() {
                   <View style={[tStyles.statusPill, { backgroundColor: pillBg }]}>
                     <Text style={[tStyles.statusPillText, { color: pillText }]}>{item.status ?? "Pending"}</Text>
                   </View>
-                  {item.whelping_date && <Text style={tStyles.certDate}>{item.whelping_date}</Text>}
+                  {item.whelping_date && <Text style={tStyles.certDate}>{formatDate(item.whelping_date)}</Text>}
                   <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
                 </View>
               </TouchableOpacity>

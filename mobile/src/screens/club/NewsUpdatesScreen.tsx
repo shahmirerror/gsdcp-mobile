@@ -9,17 +9,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchNews, stripHtml, NewsItem } from "../../lib/api";
+import type { TheClubStackParamList } from "../../navigation/AppNavigator";
+
+type Nav = NativeStackNavigationProp<TheClubStackParamList>;
 
 export default function NewsUpdatesScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
-  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const { data: news, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/news"],
@@ -68,35 +70,25 @@ export default function NewsUpdatesScreen() {
       ) : (
         <View style={styles.cardsWrap}>
           {(news ?? []).map((item: NewsItem) => {
-            const isOpen = expandedId === item.id;
-            const bodyText = stripHtml(item.content);
+            const preview = stripHtml(item.content).replace(/\n/g, " ");
             return (
               <TouchableOpacity
                 key={item.id}
                 style={styles.card}
                 activeOpacity={0.85}
-                onPress={() => setExpandedId(isOpen ? null : item.id)}
+                onPress={() => navigation.navigate("NewsDetail", { item })}
                 data-testid={`card-news-${item.id}`}
               >
                 <View style={styles.cardTop}>
                   <View style={styles.newsIconWrap}>
                     <Ionicons name="megaphone-outline" size={16} color={COLORS.accent} />
                   </View>
-                  <Ionicons
-                    name={isOpen ? "chevron-up" : "chevron-down"}
-                    size={16}
-                    color={COLORS.textMuted}
-                  />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
                 </View>
                 <Text style={styles.title}>{item.title}</Text>
-                {isOpen && (
-                  <Text style={styles.body}>{bodyText}</Text>
-                )}
-                {!isOpen && (
-                  <Text style={styles.bodyPreview} numberOfLines={2}>
-                    {bodyText}
-                  </Text>
-                )}
+                <Text style={styles.bodyPreview} numberOfLines={2}>
+                  {preview}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -141,6 +133,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 6, lineHeight: 21 },
-  body: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
   bodyPreview: { fontSize: 13, color: COLORS.textMuted, lineHeight: 19 },
 });

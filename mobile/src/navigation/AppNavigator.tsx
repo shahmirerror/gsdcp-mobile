@@ -29,6 +29,7 @@ import TheTeamScreen from "../screens/club/TheTeamScreen";
 import GSDCPJudgesScreen from "../screens/club/GSDCPJudgesScreen";
 import VisitingJudgesScreen from "../screens/club/VisitingJudgesScreen";
 import NewsUpdatesScreen from "../screens/club/NewsUpdatesScreen";
+import NewsDetailScreen from "../screens/club/NewsDetailScreen";
 import JudgeDetailScreen from "../screens/club/JudgeDetailScreen";
 
 import VirtualBreedingScreen from "../screens/VirtualBreedingScreen";
@@ -39,6 +40,7 @@ export type DogsStackParamList = {
   DogProfile: { id: string; name?: string };
   BreederProfile: { id: string; name?: string; breederData?: any };
   MemberProfile: { id: string; member?: any };
+  ShowDetail: { id: string; name?: string };
 };
 
 export type BreedersStackParamList = {
@@ -47,6 +49,7 @@ export type BreedersStackParamList = {
   KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
+  ShowDetail: { id: string; name?: string };
 };
 
 export type ShowsStackParamList = {
@@ -63,6 +66,7 @@ export type ProfileStackParamList = {
   KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
+  ShowDetail: { id: string; name?: string };
 };
 
 export type RecentMatingsStackParamList = {
@@ -70,12 +74,14 @@ export type RecentMatingsStackParamList = {
   DogProfile: { id: string; name?: string };
   KennelProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
+  ShowDetail: { id: string; name?: string };
 };
 
 export type MemberDirectoryStackParamList = {
   MemberDirectory: undefined;
   MemberProfile: { id: string; member?: any };
   DogProfile: { id: string; name?: string };
+  ShowDetail: { id: string; name?: string };
 };
 
 export type KennelDirectoryStackParamList = {
@@ -83,6 +89,7 @@ export type KennelDirectoryStackParamList = {
   KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
+  ShowDetail: { id: string; name?: string };
 };
 
 export type TheClubStackParamList = {
@@ -94,6 +101,7 @@ export type TheClubStackParamList = {
   GSDCPJudges: undefined;
   VisitingJudges: undefined;
   NewsUpdates: undefined;
+  NewsDetail: { item: { id: number; title: string; content: string } };
   JudgeDetail: { id: string; backLabel?: string };
   ShowDetail: { id: string; name?: string };
 };
@@ -128,6 +136,7 @@ function DogsStackNavigator() {
       <DogsStack.Screen name="DogProfile" component={DogProfileScreen} />
       <DogsStack.Screen name="BreederProfile" component={BreederProfileScreen} />
       <DogsStack.Screen name="MemberProfile" component={MemberProfileScreen} />
+      <DogsStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </DogsStack.Navigator>
   );
 }
@@ -140,6 +149,7 @@ function BreedersStackNavigator() {
       <BreedersStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <BreedersStack.Screen name="DogProfile" component={DogProfileScreen} />
       <BreedersStack.Screen name="MemberProfile" component={MemberProfileScreen} />
+      <BreedersStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </BreedersStack.Navigator>
   );
 }
@@ -171,6 +181,7 @@ function ProfileStackNavigator() {
           <ProfileStack.Screen name="KennelProfile" component={KennelProfileScreen} />
           <ProfileStack.Screen name="DogProfile" component={DogProfileScreen} />
           <ProfileStack.Screen name="MemberProfile" component={MemberProfileScreen} />
+          <ProfileStack.Screen name="ShowDetail" component={ShowDetailScreen} />
         </>
       ) : (
         <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
@@ -186,6 +197,7 @@ function RecentMatingsStackNavigator() {
       <RecentMatingsStack.Screen name="DogProfile" component={DogProfileScreen} />
       <RecentMatingsStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <RecentMatingsStack.Screen name="MemberProfile" component={MemberProfileScreen} />
+      <RecentMatingsStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </RecentMatingsStack.Navigator>
   );
 }
@@ -196,6 +208,7 @@ function MemberDirectoryStackNavigator() {
       <MemberDirectoryStack.Screen name="MemberDirectory" component={MemberDirectoryScreen} />
       <MemberDirectoryStack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <MemberDirectoryStack.Screen name="DogProfile" component={DogProfileScreen} />
+      <MemberDirectoryStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </MemberDirectoryStack.Navigator>
   );
 }
@@ -207,6 +220,7 @@ function KennelDirectoryStackNavigator() {
       <KennelDirectoryStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <KennelDirectoryStack.Screen name="DogProfile" component={DogProfileScreen} />
       <KennelDirectoryStack.Screen name="MemberProfile" component={MemberProfileScreen} />
+      <KennelDirectoryStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </KennelDirectoryStack.Navigator>
   );
 }
@@ -222,6 +236,7 @@ function TheClubStackNavigator() {
       <TheClubStack.Screen name="GSDCPJudges" component={GSDCPJudgesScreen} />
       <TheClubStack.Screen name="VisitingJudges" component={VisitingJudgesScreen} />
       <TheClubStack.Screen name="NewsUpdates" component={NewsUpdatesScreen} />
+      <TheClubStack.Screen name="NewsDetail" component={NewsDetailScreen} />
       <TheClubStack.Screen name="JudgeDetail" component={JudgeDetailScreen} />
       <TheClubStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </TheClubStack.Navigator>

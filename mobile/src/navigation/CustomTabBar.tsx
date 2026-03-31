@@ -20,6 +20,14 @@ const logoSquare = require("../../assets/logo-square.png");
 
 const VISIBLE_TABS = ["DogsTab", "BreedersTab", "HomeTab", "ShowsTab", "ProfileTab"];
 
+// Root screen name for each tab — used to pop back to the listing when a focused tab is re-pressed
+const TAB_ROOT_SCREENS: Record<string, string> = {
+  DogsTab: "DogSearch",
+  BreedersTab: "BreederDirectory",
+  ShowsTab: "ShowsList",
+  ProfileTab: "ProfileHome",
+};
+
 const TAB_CONFIG: Record<
   string,
   { label: string; icon: keyof typeof Ionicons.glyphMap; iconFocused: keyof typeof Ionicons.glyphMap }
@@ -146,7 +154,11 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
   return (
     <>
+<<<<<<< HEAD
       <View style={[styles.tabBar, { height: tabBarHeight, paddingBottom: effectiveBottomInset }]}>
+=======
+      <View style={[styles.tabBar, { paddingBottom: insets.bottom, height: tabBarHeight }]}>
+>>>>>>> a9f955270c834b70bfc0ed4a6f27b4b57cf6eabf
         {visibleRoutes.map((route) => {
           const globalIndex = state.routes.findIndex((r) => r.name === route.name);
           const isFocused = state.index === globalIndex;
@@ -162,8 +174,14 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
               target: route.key,
               canPreventDefault: true,
             });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name as any);
+            if (!event.defaultPrevented) {
+              const rootScreen = TAB_ROOT_SCREENS[route.name];
+              if (isFocused && rootScreen) {
+                // Already on this tab — pop back to the root listing screen
+                navigation.navigate(route.name as any, { screen: rootScreen });
+              } else if (!isFocused) {
+                navigation.navigate(route.name as any);
+              }
             }
           };
 
@@ -346,7 +364,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    height: 60,
     alignItems: "center",
   },
   tabBarOverlay: {
