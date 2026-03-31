@@ -250,53 +250,6 @@ export default function MemberDirectoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Active filter chips */}
-      {activeFilterCount > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsRow}
-          contentContainerStyle={styles.chipsContent}
-        >
-          {typeFilter !== "All" && (
-            <TouchableOpacity
-              style={styles.activeChip}
-              onPress={() => setTypeFilter("All")}
-              data-testid="chip-type"
-            >
-              <Text style={styles.activeChipText}>{typeFilter === "T-" ? "Temporary" : "Permanent"}</Text>
-              <Ionicons name="close" size={12} color={COLORS.primary} />
-            </TouchableOpacity>
-          )}
-          {countryFilter !== "All" && (
-            <TouchableOpacity
-              style={styles.activeChip}
-              onPress={() => setCountryFilter("All")}
-              data-testid="chip-country"
-            >
-              <Text style={styles.activeChipText}>{countryFilter}</Text>
-              <Ionicons name="close" size={12} color={COLORS.primary} />
-            </TouchableOpacity>
-          )}
-          {cityFilter !== "All" && (
-            <TouchableOpacity
-              style={styles.activeChip}
-              onPress={() => setCityFilter("All")}
-              data-testid="chip-city"
-            >
-              <Text style={styles.activeChipText}>{cityFilter}</Text>
-              <Ionicons name="close" size={12} color={COLORS.primary} />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            onPress={() => { setCityFilter("All"); setCountryFilter("All"); setTypeFilter("All"); }}
-            data-testid="btn-clear-all"
-          >
-            <Text style={styles.clearAll}>Clear all</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      )}
-
       {/* Results meta */}
       {!isLoading && !isError && (
         <View style={styles.resultsMeta}>
@@ -471,17 +424,7 @@ const styles = StyleSheet.create({
   },
   filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
 
-  chipsRow: { maxHeight: 44, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: COLORS.border },
   chipsContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, flexDirection: "row", alignItems: "center" },
-  activeChip: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.full,
-    borderWidth: 1, borderColor: COLORS.primary,
-    backgroundColor: "rgba(15,92,59,0.06)",
-  },
-  activeChipText: { fontSize: 12, fontWeight: "600", color: COLORS.primary },
-  clearAll: { fontSize: 12, color: COLORS.textMuted, fontWeight: "500", marginLeft: 4 },
 
   resultsMeta: {
     paddingHorizontal: SPACING.md, paddingVertical: 8,
