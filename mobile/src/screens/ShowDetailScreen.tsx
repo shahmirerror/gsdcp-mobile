@@ -11,8 +11,6 @@ import {
   ActivityIndicator,
   ImageBackground,
   RefreshControl,
-  Modal,
-  Pressable,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
 import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry, fetchMeetingStatus, MeetingStatusResult, bookMeetingSeat } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import BottomSheetModal from "../components/BottomSheetModal";
 import { formatDate } from "../lib/dateUtils";
 
 const heroBg = require("../../assets/hero-bg.jpg");
@@ -114,8 +113,7 @@ function JudgePopupSheet({ judge, onClose, onViewProfile }: {
   const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
   const hasImg = !!judge.imageUrl && !imgErr;
   return (
-    <View style={styles.popupSheet}>
-      <View style={styles.popupHandle} />
+    <View style={styles.popupInner}>
       <View style={styles.popupAvatarWrap}>
         {hasImg ? (
           <Image source={{ uri: judge.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
@@ -150,8 +148,7 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile, onViewOwner }: {
   const hasImg = !!entry.imageUrl && !imgErr;
   const gradingLine = [entry.grading, entry.placement ? `#${entry.placement}` : ""].filter(Boolean).join("  ·  ");
   return (
-    <View style={styles.popupSheet}>
-      <View style={styles.popupHandle} />
+    <View style={styles.popupInner}>
       <View style={styles.popupAvatarWrap}>
         {hasImg ? (
           <Image source={{ uri: entry.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
@@ -832,54 +829,44 @@ export default function ShowDetailScreen() {
   };
 
   const renderJudgePopup = () => (
-    <Modal
+    <BottomSheetModal
       visible={!!popupJudge}
-      animationType="slide"
-      transparent
-      onRequestClose={() => setPopupJudge(null)}
+      onClose={() => setPopupJudge(null)}
     >
-      <View style={styles.popupOverlay}>
-        <Pressable style={styles.popupBackdrop} onPress={() => setPopupJudge(null)} />
-        {popupJudge ? (
-          <JudgePopupSheet
-            judge={popupJudge}
-            onClose={() => setPopupJudge(null)}
-            onViewProfile={() => {
-              setPopupJudge(null);
-              navigation.push("JudgeDetail", { id: popupJudge.id, backLabel: show?.name });
-            }}
-          />
-        ) : null}
-      </View>
-    </Modal>
+      {popupJudge ? (
+        <JudgePopupSheet
+          judge={popupJudge}
+          onClose={() => setPopupJudge(null)}
+          onViewProfile={() => {
+            setPopupJudge(null);
+            navigation.push("JudgeDetail", { id: popupJudge.id, backLabel: show?.name });
+          }}
+        />
+      ) : null}
+    </BottomSheetModal>
   );
 
   const renderDogPopup = () => (
-    <Modal
+    <BottomSheetModal
       visible={!!popupDog}
-      animationType="slide"
-      transparent
-      onRequestClose={() => setPopupDog(null)}
+      onClose={() => setPopupDog(null)}
     >
-      <View style={styles.popupOverlay}>
-        <Pressable style={styles.popupBackdrop} onPress={() => setPopupDog(null)} />
-        {popupDog ? (
-          <DogPopupSheet
-            entry={popupDog}
-            kpLine={dogKpLine(popupDog)}
-            onClose={() => setPopupDog(null)}
-            onViewProfile={() => {
-              setPopupDog(null);
-              navigation.push("DogProfile", { id: popupDog.dog_id, name: popupDog.dog_name.trim() });
-            }}
-            onViewOwner={(id) => {
-              setPopupDog(null);
-              navigation.push("MemberProfile", { id });
-            }}
-          />
-        ) : null}
-      </View>
-    </Modal>
+      {popupDog ? (
+        <DogPopupSheet
+          entry={popupDog}
+          kpLine={dogKpLine(popupDog)}
+          onClose={() => setPopupDog(null)}
+          onViewProfile={() => {
+            setPopupDog(null);
+            navigation.push("DogProfile", { id: popupDog.dog_id, name: popupDog.dog_name.trim() });
+          }}
+          onViewOwner={(id) => {
+            setPopupDog(null);
+            navigation.push("MemberProfile", { id });
+          }}
+        />
+      ) : null}
+    </BottomSheetModal>
   );
 
   const renderHeader = () => (
@@ -1837,29 +1824,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#DC2626",
   },
-  popupOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  popupBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-  popupSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingBottom: 32,
+  popupInner: {
     paddingHorizontal: 24,
+    paddingBottom: 8,
     alignItems: "center",
-  },
-  popupHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#E2E8F0",
-    marginBottom: 20,
   },
   popupAvatarWrap: {
     marginBottom: 14,

@@ -7,8 +7,6 @@ import {
   ActivityIndicator,
   TextInput,
   TouchableOpacity,
-  Modal,
-  Pressable,
   ScrollView,
   RefreshControl,
   Image,
@@ -20,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import { fetchRecentMatings, RecentMating } from "../lib/api";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -291,14 +290,11 @@ export default function RecentMatingsScreen() {
       )}
 
       {/* Mating preview modal */}
-      <Modal visible={!!previewMating} animationType="slide" transparent onRequestClose={() => setPreviewMating(null)}>
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setPreviewMating(null)} />
+      <BottomSheetModal visible={!!previewMating} onClose={() => setPreviewMating(null)}>
           {previewMating && (() => {
             const date = parseMatingDate(previewMating.mating_date);
             return (
               <View style={styles.modalContent}>
-                <View style={styles.modalHandle} />
 
                 {/* Header */}
                 <View style={styles.previewHeader}>
@@ -402,15 +398,11 @@ export default function RecentMatingsScreen() {
               </View>
             );
           })()}
-        </View>
-      </Modal>
+      </BottomSheetModal>
 
       {/* Filter modal */}
-      <Modal visible={showFilterModal} animationType="slide" transparent onRequestClose={() => setShowFilterModal(false)}>
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)} />
+      <BottomSheetModal visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
@@ -458,8 +450,7 @@ export default function RecentMatingsScreen() {
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -585,13 +576,7 @@ const styles = StyleSheet.create({
   retryBtn: { marginTop: SPACING.md, paddingHorizontal: 20, paddingVertical: 10, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.primary },
   retryText: { color: "#fff", fontSize: FONT_SIZES.md, fontWeight: "600" },
 
-  modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
-  modalContent: {
-    backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 24, paddingBottom: 36, paddingTop: 12,
-  },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB", alignSelf: "center", marginBottom: 16 },
+  modalContent: { paddingHorizontal: 24 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 24 },
   modalTitle: { fontSize: 20, fontWeight: "700", color: "#0F172A" },
   resetText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.textMuted },

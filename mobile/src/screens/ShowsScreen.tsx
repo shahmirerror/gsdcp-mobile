@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Modal,
-  Pressable,
   ScrollView,
   RefreshControl,
   Image,
@@ -20,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchShows, Show, ShowJudge } from "../lib/api";
 import { formatDate } from "../lib/dateUtils";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -294,20 +293,15 @@ export default function ShowsScreen() {
         />
       )}
 
-      <Modal
+      <BottomSheetModal
         visible={!!previewShow}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPreviewShow(null)}
+        onClose={() => setPreviewShow(null)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setPreviewShow(null)} />
           {previewShow && (() => {
             const statusColor = STATUS_COLORS[previewShow.status] || COLORS.textMuted;
             const dateRange = formatDateRange(previewShow.dates);
             return (
               <View style={styles.modalContent}>
-                <View style={styles.modalHandle} />
                 <View style={styles.previewHeader}>
                   <View style={styles.previewDateBlock}>
                     {previewShow.dates.length > 0 ? (
@@ -370,19 +364,13 @@ export default function ShowsScreen() {
               </View>
             );
           })()}
-        </View>
-      </Modal>
+      </BottomSheetModal>
 
-      <Modal
+      <BottomSheetModal
         visible={showFilterModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowFilterModal(false)}
+        onClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)} />
           <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
@@ -438,8 +426,7 @@ export default function ShowsScreen() {
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -663,30 +650,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "600",
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-    paddingTop: 12,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginBottom: 16,
-  },
+  modalContent: { paddingHorizontal: 24 },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",

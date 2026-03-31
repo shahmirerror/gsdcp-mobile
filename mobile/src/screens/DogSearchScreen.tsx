@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Modal,
-  Pressable,
   RefreshControl,
   Image,
   ScrollView,
@@ -23,6 +21,7 @@ import { formatDate } from "../lib/dateUtils";
 import { fetchDogsPage, Dog, DogsPage } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import type { DogsStackParamList } from "../navigation/AppNavigator";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 type Nav = NativeStackNavigationProp<DogsStackParamList, "DogSearch">;
 
@@ -219,17 +218,12 @@ export default function DogSearchScreen() {
         />
       )}
 
-      <Modal
+      <BottomSheetModal
         visible={!!previewDog}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPreviewDog(null)}
+        onClose={() => setPreviewDog(null)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setPreviewDog(null)} />
           {previewDog && (
             <View style={styles.modalContent}>
-              <View style={styles.modalHandle} />
 
               <View style={styles.dogPreviewHeader}>
                 {previewDog.imageUrl ? (
@@ -302,19 +296,13 @@ export default function DogSearchScreen() {
               </TouchableOpacity>
             </View>
           )}
-        </View>
-      </Modal>
+      </BottomSheetModal>
 
-      <Modal
+      <BottomSheetModal
         visible={showFilterModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowFilterModal(false)}
+        onClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)} />
           <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <TouchableOpacity onPress={resetFilters}>
@@ -358,8 +346,7 @@ export default function DogSearchScreen() {
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -482,30 +469,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: SPACING.xxl,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-    paddingTop: 12,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginBottom: 16,
-  },
+  modalContent: { paddingHorizontal: 24 },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
