@@ -706,11 +706,12 @@ export default function DogProfileScreen() {
                   <TouchableOpacity
                     key={result.id}
                     style={styles.showCard}
-                    activeOpacity={0.75}
-                    onPress={() => result.showEventId
-                      ? (navigation as any).push("ShowDetail", { id: result.showEventId, name: result.showName })
-                      : undefined
-                    }
+                    activeOpacity={result.showEventId ? 0.75 : 1}
+                    onPress={() => {
+                      if (result.showEventId) {
+                        (navigation as any).push("ShowDetail", { id: result.showEventId, name: result.showName });
+                      }
+                    }}
                   >
                     <View style={[styles.showGradingStripe, { backgroundColor: gradingColor }]} />
                     <View style={styles.showCardInner}>
@@ -742,7 +743,9 @@ export default function DogProfileScreen() {
                               </Text>
                             </View>
                           ) : null}
-                          <Ionicons name="chevron-forward" size={14} color="#CBD5E1" style={{ marginTop: 4 }} />
+                          {result.showEventId ? (
+                            <Ionicons name="chevron-forward" size={14} color="#CBD5E1" style={{ marginTop: 4 }} />
+                          ) : null}
                         </View>
                       </View>
                     </View>
