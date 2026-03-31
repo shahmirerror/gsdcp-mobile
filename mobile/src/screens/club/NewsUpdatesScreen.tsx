@@ -90,11 +90,24 @@ export default function NewsUpdatesScreen() {
                 </View>
                 <Text style={styles.title}>{item.title}</Text>
                 {isOpen && (
-                  <Text style={styles.body}>{bodyText}</Text>
+                  <View style={styles.body}>
+                    {bodyText
+                      .split("\n\n")
+                      .map((para) => para.replace(/\n/g, " ").trim())
+                      .filter((para) => para.length > 0)
+                      .map((para, i, arr) => (
+                        <Text
+                          key={i}
+                          style={[styles.bodyText, i < arr.length - 1 && styles.bodyPara]}
+                        >
+                          {para}
+                        </Text>
+                      ))}
+                  </View>
                 )}
                 {!isOpen && (
                   <Text style={styles.bodyPreview} numberOfLines={2}>
-                    {bodyText}
+                    {bodyText.replace(/\n/g, " ")}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -141,6 +154,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: { fontSize: 15, fontWeight: "700", color: COLORS.text, marginBottom: 6, lineHeight: 21 },
-  body: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
+  body: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border },
+  bodyText: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 20 },
+  bodyPara: { marginBottom: 10 },
   bodyPreview: { fontSize: 13, color: COLORS.textMuted, lineHeight: 19 },
 });

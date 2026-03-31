@@ -99,9 +99,20 @@ export default function RulesRegulationsScreen() {
                     />
                   </View>
                   {isOpen && (
-                    <Text style={styles.chapterBody}>
-                      {stripHtml(rule.content)}
-                    </Text>
+                    <View style={styles.chapterBody}>
+                      {stripHtml(rule.content)
+                        .split("\n\n")
+                        .map((para) => para.replace(/\n/g, " ").trim())
+                        .filter((para) => para.length > 0)
+                        .map((para, i, arr) => (
+                          <Text
+                            key={i}
+                            style={[styles.chapterBodyText, i < arr.length - 1 && styles.chapterBodyPara]}
+                          >
+                            {para}
+                          </Text>
+                        ))}
+                    </View>
                   )}
                 </TouchableOpacity>
               );
@@ -163,12 +174,11 @@ const styles = StyleSheet.create({
   chapterNum: { fontSize: 12, fontWeight: "800", color: COLORS.primary },
   chapterTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: COLORS.text },
   chapterBody: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    lineHeight: 21,
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+  chapterBodyText: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 21 },
+  chapterBodyPara: { marginBottom: 10 },
 });
