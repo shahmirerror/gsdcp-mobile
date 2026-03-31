@@ -152,7 +152,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
   return (
     <>
-      <View style={[styles.tabBar, { paddingBottom: insets.bottom }]}>
+      <View style={[styles.tabBar, { paddingBottom: insets.bottom, height: tabBarHeight }]}>
         {visibleRoutes.map((route) => {
           const globalIndex = state.routes.findIndex((r) => r.name === route.name);
           const isFocused = state.index === globalIndex;
@@ -358,7 +358,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    height: 60,
     alignItems: "center",
   },
   tabBarOverlay: {
