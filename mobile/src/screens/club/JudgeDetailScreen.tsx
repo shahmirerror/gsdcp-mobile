@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -50,7 +51,7 @@ export default function JudgeDetailScreen() {
 
   const [imgError, setImgError] = useState(false);
 
-  const { data: judge, isLoading } = useQuery({
+  const { data: judge, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/all-judges", id],
     queryFn: () => fetchJudgeDetail(id),
   });
@@ -68,6 +69,9 @@ export default function JudgeDetailScreen() {
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+      }
     >
       {/* Hero banner — same pattern as Dog/Breeder/Kennel profiles */}
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
