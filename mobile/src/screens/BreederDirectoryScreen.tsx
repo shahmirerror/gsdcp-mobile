@@ -8,8 +8,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
-  Modal,
-  Pressable,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -21,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeders, Breeder } from "../lib/api";
 import type { BreedersStackParamList } from "../navigation/AppNavigator";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 type Nav = NativeStackNavigationProp<BreedersStackParamList, "BreederDirectory">;
 
@@ -295,14 +294,10 @@ export default function BreederDirectoryScreen() {
       )}
 
       {/* Breeder Quick-View Popup */}
-      <Modal
+      <BottomSheetModal
         visible={!!selectedBreeder}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setSelectedBreeder(null)}
+        onClose={() => setSelectedBreeder(null)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedBreeder(null)} />
           {selectedBreeder && (() => {
             const b = selectedBreeder;
             const hasImg = b.imageUrl && !b.imageUrl.includes("user-not-found");
@@ -315,7 +310,6 @@ export default function BreederDirectoryScreen() {
               .toUpperCase() || "?";
             return (
               <View style={styles.popupContent}>
-                <View style={styles.modalHandle} />
 
                 {/* Kennel Row — tappable link to profile */}
                 <Text style={styles.popupRowLabel}>Kennel</Text>
@@ -426,19 +420,13 @@ export default function BreederDirectoryScreen() {
               </View>
             );
           })()}
-        </View>
-      </Modal>
+      </BottomSheetModal>
 
-      <Modal
+      <BottomSheetModal
         visible={showInfoModal}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setShowInfoModal(false)}
+        onClose={() => setShowInfoModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowInfoModal(false)} />
-          <View style={[styles.popupContent, { paddingBottom: 28 }]}>
-            <View style={styles.modalHandle} />
+          <View style={styles.popupContent}>
             <View style={styles.infoModalHeader}>
               <Ionicons name="ribbon-outline" size={32} color={COLORS.primary} />
               <Text style={styles.infoModalTitle}>Active Breeders</Text>
@@ -468,19 +456,13 @@ export default function BreederDirectoryScreen() {
               <Text style={styles.infoModalCloseText}>Got it</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+      </BottomSheetModal>
 
-      <Modal
+      <BottomSheetModal
         visible={showFilterModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowFilterModal(false)}
+        onClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)} />
           <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
@@ -536,8 +518,7 @@ export default function BreederDirectoryScreen() {
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -826,30 +807,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "600",
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-    paddingTop: 12,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginBottom: 16,
-  },
+  modalContent: { paddingHorizontal: 24 },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -944,14 +902,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
     marginVertical: SPACING.md,
   },
-  popupContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
+  popupContent: { paddingHorizontal: 24 },
   popupHeader: {
     flexDirection: "row",
     alignItems: "flex-start",

@@ -8,8 +8,6 @@ import {
   ActivityIndicator,
   Dimensions,
   RefreshControl,
-  Modal,
-  Pressable,
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import { fetchDashboard, fetchNews, stripHtml, NewsItem, RecentMating } from "../lib/api";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -332,14 +331,11 @@ export default function DashboardScreen() {
     </ScrollView>
 
     {/* Mating preview modal */}
-    <Modal visible={!!previewMating} animationType="slide" transparent onRequestClose={() => setPreviewMating(null)}>
-      <View style={styles.modalOverlay}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setPreviewMating(null)} />
+    <BottomSheetModal visible={!!previewMating} onClose={() => setPreviewMating(null)}>
         {previewMating && (() => {
           const date = parseMatingDate(previewMating.mating_date);
           return (
             <View style={styles.modalContent}>
-              <View style={styles.modalHandle} />
 
               <View style={styles.previewHeader}>
                 {previewMating.kennel_image ? (
@@ -448,8 +444,7 @@ export default function DashboardScreen() {
             </View>
           );
         })()}
-      </View>
-    </Modal>
+    </BottomSheetModal>
     </View>
   );
 }
@@ -771,13 +766,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
-  modalContent: {
-    backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 24, paddingBottom: 36, paddingTop: 12,
-  },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB", alignSelf: "center", marginBottom: 16 },
+  modalContent: { paddingHorizontal: 24 },
 
   previewHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: 16, gap: 14 },
   previewKennelImage: { width: 64, height: 64, borderRadius: 32, borderWidth: 1, borderColor: COLORS.border, flexShrink: 0 },

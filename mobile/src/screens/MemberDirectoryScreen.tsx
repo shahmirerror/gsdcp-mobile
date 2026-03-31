@@ -7,8 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Modal,
-  Pressable,
   ScrollView,
   RefreshControl,
   Image,
@@ -20,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMembersPage, Member, MembersPage } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 function getInitials(name: string): string {
   return name
@@ -316,10 +315,7 @@ export default function MemberDirectoryScreen() {
       )}
 
       {/* Filter Modal */}
-      <Modal visible={showFilterModal} transparent animationType="slide">
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowFilterModal(false)} />
-        <View style={styles.modalSheet}>
-          <View style={styles.modalHandle} />
+      <BottomSheetModal visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filters</Text>
             <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
@@ -376,8 +372,7 @@ export default function MemberDirectoryScreen() {
           <TouchableOpacity style={styles.applyBtn} onPress={applyFilters} data-testid="btn-apply-filters">
             <Text style={styles.applyBtnText}>Apply Filters</Text>
           </TouchableOpacity>
-        </View>
-      </Modal>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -484,16 +479,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: FONT_SIZES.lg, fontWeight: "600", color: COLORS.text },
   emptyDesc: { fontSize: FONT_SIZES.md, color: COLORS.textMuted, textAlign: "center", paddingHorizontal: SPACING.xxl },
 
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)" },
-  modalSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: SPACING.lg,
-    paddingBottom: 40,
-    maxHeight: "75%",
-  },
-  modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: COLORS.border, alignSelf: "center", marginBottom: SPACING.md },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACING.md },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACING.md, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm },
   modalTitle: { fontSize: FONT_SIZES.lg, fontWeight: "700", color: COLORS.text },
   resetText: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, fontWeight: "600" },
 
@@ -510,6 +496,7 @@ const styles = StyleSheet.create({
 
   applyBtn: {
     marginTop: SPACING.lg,
+    marginHorizontal: SPACING.lg,
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.full,
     paddingVertical: 14,

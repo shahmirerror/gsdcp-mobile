@@ -8,8 +8,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
-  Modal,
-  Pressable,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -21,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchKennels, Kennel, KennelOwner } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelDirectory">;
 
@@ -323,21 +322,16 @@ export default function KennelDirectoryScreen() {
         />
       )}
 
-      <Modal
+      <BottomSheetModal
         visible={!!previewKennel}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPreviewKennel(null)}
+        onClose={() => setPreviewKennel(null)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setPreviewKennel(null)} />
           {previewKennel && (() => {
             const hasImg = previewKennel.imageUrl && !previewKennel.imageUrl.includes("user-not-found") && !previewImgErr;
             const initials = previewKennel.kennelName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
             const year = formatYear(previewKennel.activeSince);
             return (
               <View style={styles.modalContent}>
-                <View style={styles.modalHandle} />
                 <View style={styles.previewHeader}>
                   {hasImg ? (
                     <Image source={{ uri: previewKennel.imageUrl }} style={styles.previewImage} resizeMode="cover" onError={() => setPreviewImgErr(true)} />
@@ -390,22 +384,13 @@ export default function KennelDirectoryScreen() {
               </View>
             );
           })()}
-        </View>
-      </Modal>
+      </BottomSheetModal>
 
-      <Modal
+      <BottomSheetModal
         visible={showFilterModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowFilterModal(false)}
+        onClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable
-            style={styles.modalBackdrop}
-            onPress={() => setShowFilterModal(false)}
-          />
           <View style={styles.modalContent}>
-            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Filters</Text>
               <TouchableOpacity
@@ -472,8 +457,7 @@ export default function KennelDirectoryScreen() {
               <Text style={styles.applyButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+      </BottomSheetModal>
     </View>
   );
 }
@@ -668,30 +652,7 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.md,
     fontWeight: "600",
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-    paddingTop: 12,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#D1D5DB",
-    alignSelf: "center",
-    marginBottom: 16,
-  },
+  modalContent: { paddingHorizontal: 24 },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
