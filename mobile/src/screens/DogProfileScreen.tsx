@@ -946,6 +946,15 @@ export default function DogProfileScreen() {
                     return next;
                   });
                 };
+                const uniqueDobs = [
+                  ...new Set(
+                    puppies
+                      .map((p: ProgenyPuppy) => p.dob)
+                      .filter(Boolean)
+                  ),
+                ];
+                const singleLitterDob =
+                  uniqueDobs.length === 1 ? (uniqueDobs[0] as string) : null;
                 return (
                   <View key={`${partner.id}-${i}`} style={styles.litterCard}>
                     <TouchableOpacity
@@ -1013,6 +1022,9 @@ export default function DogProfileScreen() {
                     >
                       <Text style={styles.litterDividerText}>
                         {puppyCount} {puppyCount === 1 ? "Puppy" : "Puppies"}
+                        {singleLitterDob
+                          ? `  ·  ${formatDate(singleLitterDob)}`
+                          : ""}
                       </Text>
                       <Ionicons
                         name={isOpen ? "chevron-up" : "chevron-down"}
