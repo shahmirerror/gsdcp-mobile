@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
+import { formatDate } from "../lib/dateUtils";
 import {
   fetchDog,
   DogDetail,
@@ -32,30 +33,6 @@ import { DogListItem } from "../components/DogListItem";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-function formatDob(dob: string): string {
-  const parts = dob.split("-");
-  if (parts.length !== 3) return dob;
-  const day = parseInt(parts[2], 10);
-  const monthIndex = parseInt(parts[1], 10) - 1;
-  const year = parts[0];
-  if (monthIndex < 0 || monthIndex > 11) return dob;
-  return `${day} ${MONTHS[monthIndex]} ${year}`;
-}
 
 function DetailItem({
   icon,
@@ -651,7 +628,7 @@ export default function DogProfileScreen() {
                   label="Date of Birth"
                   value={
                     dog.dob
-                      ? `${formatDob(dog.dob)}${age ? ` (${age})` : ""}`
+                      ? `${formatDate(dog.dob)}${age ? ` (${age})` : ""}`
                       : "Unknown"
                   }
                 />
@@ -1062,7 +1039,7 @@ export default function DogProfileScreen() {
                           const label =
                             dobKey === "Unknown"
                               ? "Unknown DOB"
-                              : formatDob(dobKey);
+                              : formatDate(dobKey);
                           return (
                             <View key={dobKey}>
                               <View style={styles.puppyDobHeader}>
@@ -1198,7 +1175,7 @@ export default function DogProfileScreen() {
                                   size={11}
                                   color={COLORS.textMuted}
                                 />{" "}
-                                {result.date}
+                                {formatDate(result.date)}
                               </Text>
                             ) : null}
                           </View>

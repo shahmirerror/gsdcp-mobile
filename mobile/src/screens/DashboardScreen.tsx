@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { formatDate } from "../lib/dateUtils";
 import { fetchDashboard, fetchNews, stripHtml, NewsItem, RecentMating } from "../lib/api";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -43,7 +44,7 @@ function parseMatingDate(dateStr: string): { day: string; month: string; year: s
     day: String(day),
     month: MONTHS[monthIdx] ?? "???",
     year,
-    full: `${day} ${MONTHS[monthIdx]} ${year}`,
+    full: formatDate(dateStr),
   };
 }
 

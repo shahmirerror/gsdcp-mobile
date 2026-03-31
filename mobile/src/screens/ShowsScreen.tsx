@@ -19,21 +19,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchShows, Show, ShowJudge } from "../lib/api";
+import { formatDate } from "../lib/dateUtils";
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-function formatDate(dateStr: string): string {
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIndex = parseInt(parts[1], 10) - 1;
-  const year = parts[0];
-  if (monthIndex < 0 || monthIndex > 11) return dateStr;
-  return `${day} ${MONTHS[monthIndex]} ${year}`;
-}
 
 function formatDateRange(dates: string[]): string {
   if (!dates || dates.length === 0) return "TBA";

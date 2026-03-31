@@ -20,23 +20,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
 import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry, fetchMeetingStatus, MeetingStatusResult, bookMeetingSeat } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
+import { formatDate } from "../lib/dateUtils";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-function formatDate(dateStr: string): string {
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIndex = parseInt(parts[1], 10) - 1;
-  const year = parts[0];
-  if (monthIndex < 0 || monthIndex > 11) return dateStr;
-  return `${day} ${MONTHS[monthIndex]} ${year}`;
-}
 
 const EVENT_TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Show: "trophy",

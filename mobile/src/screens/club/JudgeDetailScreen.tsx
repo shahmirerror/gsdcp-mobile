@@ -17,14 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudgeDetail, stripHtml, JudgeShow } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
-
-const MONTHS = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
-
-function formatShowDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr.toUpperCase();
-  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
+import { formatDate } from "../../lib/dateUtils";
 
 const heroBg = require("../../../assets/hero-bg.jpg");
 
@@ -182,7 +175,7 @@ export default function JudgeDetailScreen() {
                       {i < judge.shows!.length - 1 && <View style={styles.apptLine} />}
                     </View>
                     <View style={styles.appointmentContent}>
-                      <Text style={styles.apptDate}>{formatShowDate(show.start_date)}</Text>
+                      <Text style={styles.apptDate}>{formatDate(show.start_date)}</Text>
                       <Text style={styles.apptName}>{show.title}</Text>
                       {(show.venue || show.city) && (
                         <Text style={styles.apptMeta}>

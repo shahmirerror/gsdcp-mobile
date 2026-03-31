@@ -18,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { formatDate } from "../lib/dateUtils";
 import { fetchRecentMatings, RecentMating } from "../lib/api";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -32,7 +33,7 @@ function parseMatingDate(dateStr: string): { day: string; month: string; year: s
     day: String(day),
     month: MONTHS[monthIdx] ?? "???",
     year,
-    full: `${day} ${MONTHS[monthIdx]} ${year}`,
+    full: formatDate(dateStr),
   };
 }
 
