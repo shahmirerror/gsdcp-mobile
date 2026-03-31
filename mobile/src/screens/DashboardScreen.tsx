@@ -308,7 +308,7 @@ export default function DashboardScreen() {
                 key={item.id}
                 style={[styles.newsItem, i < recentNews.length - 1 && styles.newsItemBorder]}
                 activeOpacity={0.7}
-                onPress={() => navigation.navigate("TheClubTab", { screen: "NewsUpdates" })}
+                onPress={() => navigation.navigate("TheClubTab", { screen: "NewsDetail", params: { item } })}
                 data-testid={`card-news-dash-${item.id}`}
               >
                 <View style={styles.newsIconWrap}>
