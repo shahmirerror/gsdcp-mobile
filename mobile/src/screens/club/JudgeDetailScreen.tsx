@@ -166,7 +166,7 @@ export default function JudgeDetailScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Ionicons name="calendar-outline" size={18} color={COLORS.accent} />
-                <Text style={styles.sectionTitle}>Notable Appointments</Text>
+                <Text style={styles.sectionTitle}>Recorded Appointments</Text>
               </View>
               <View style={styles.appointmentsCard}>
                 {judge.shows.map((show: JudgeShow, i: number) => (
