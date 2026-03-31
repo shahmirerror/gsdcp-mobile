@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from "react";
 import {
   View,
   Text,
@@ -37,7 +37,9 @@ function isValidImage(url: string | null): boolean {
   return url.startsWith("http");
 }
 
-function MemberListItem({ member, onPress }: { member: Member; onPress: () => void }) {
+const Separator = memo(() => <View style={styles.separator} />);
+
+const MemberListItem = memo(function MemberListItem({ member, onPress }: { member: Member; onPress: () => void }) {
   const initials = getInitials(member.member_name);
   const hasImage = isValidImage(member.imageUrl);
   return (
@@ -71,7 +73,9 @@ function MemberListItem({ member, onPress }: { member: Member; onPress: () => vo
       <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
     </TouchableOpacity>
   );
-}
+});
+
+const keyExtractor = (item: Member) => item.id;
 
 export default function MemberDirectoryScreen() {
   const insets = useSafeAreaInsets();
@@ -193,6 +197,19 @@ export default function MemberDirectoryScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const totalLoaded = allMembers.length;
+
+  const renderItem = useCallback(({ item }: { item: Member }) => (
+    <MemberListItem
+      member={item}
+      onPress={() => {
+        if (user && item.id === user.member_id) {
+          navigation.navigate("ProfileTab");
+        } else {
+          navigation.push("MemberProfile", { id: item.id, member: item });
+        }
+      }}
+    />
+  ), [user, navigation]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -320,9 +337,9 @@ export default function MemberDirectoryScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={Separator}
           showsVerticalScrollIndicator={false}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}
@@ -334,18 +351,7 @@ export default function MemberDirectoryScreen() {
               colors={[COLORS.primary]}
             />
           }
-          renderItem={({ item }) => (
-            <MemberListItem
-              member={item}
-              onPress={() => {
-                if (user && item.id === user.member_id) {
-                  navigation.navigate("ProfileTab");
-                } else {
-                  navigation.push("MemberProfile", { id: item.id, member: item });
-                }
-              }}
-            />
-          )}
+          renderItem={renderItem}
           ListFooterComponent={
             isFetchingNextPage ? (
               <View style={styles.footerLoader}>
