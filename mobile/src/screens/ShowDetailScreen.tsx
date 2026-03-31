@@ -96,6 +96,9 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
         {entry.KP && (
           <Text style={styles.resultKp}>KP {entry.KP}</Text>
         )}
+        {entry.owner_names ? (
+          <Text style={styles.resultOwner} numberOfLines={1}>{entry.owner_names}</Text>
+        ) : null}
       </View>
       <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
     </TouchableOpacity>
@@ -177,6 +180,15 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile }: {
           </View>
         ) : null}
       </View>
+      {entry.owner_names ? (
+        <View style={styles.popupOwnerRow}>
+          <Ionicons name="person-outline" size={13} color={COLORS.textMuted} />
+          <Text style={styles.popupOwnerText} numberOfLines={2}>
+            {entry.owner_names}
+            {entry.owner_membership_nos ? `  ·  ${entry.owner_membership_nos}` : ""}
+          </Text>
+        </View>
+      ) : null}
       <TouchableOpacity style={styles.popupBtn} activeOpacity={0.8} onPress={onViewProfile}>
         <Ionicons name="paw-outline" size={16} color="#fff" />
         <Text style={styles.popupBtnText}>View Dog Profile</Text>
@@ -1447,6 +1459,12 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 1,
   },
+  resultOwner: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: 2,
+    fontStyle: "italic",
+  },
   emptyState: {
     alignItems: "center",
     paddingVertical: 48,
@@ -1855,6 +1873,20 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: "center",
     marginBottom: 4,
+  },
+  popupOwnerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 10,
+    marginBottom: 2,
+    paddingHorizontal: SPACING.md,
+  },
+  popupOwnerText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    flex: 1,
+    textAlign: "center",
   },
   popupChipRow: {
     flexDirection: "row",

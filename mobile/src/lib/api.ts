@@ -255,6 +255,9 @@ export type ShowResultEntry = {
   class: string;
   imageUrl: string | null;
   hair: string | null;
+  owner_names: string | null;
+  owner_ids: string | null;
+  owner_membership_nos: string | null;
 };
 
 export type ShowDetail = Show & {
