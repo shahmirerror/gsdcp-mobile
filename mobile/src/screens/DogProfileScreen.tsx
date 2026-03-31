@@ -780,59 +780,62 @@ export default function DogProfileScreen() {
           const pct = (n: number, total: number) =>
             total > 0 ? (n / total * 100).toFixed(2) + "%" : "0.00%";
 
-          const renderGradeBlock = (
-            role: string,
+          // Renders one HD or ED sub-block within an entity section
+          const renderTypeBlock = (
+            typeLabel: string,
+            ownRating: string | null | undefined,
             grades: HereditaryGrades | null | undefined,
-            navId?: string,
           ) => {
-            if (!grades) return null;
-            const totalOffspring = gradesTotal(grades);
-            const radiographed = gradesRadiographed(grades);
+            if (!ownRating && !grades) return null;
+            const totalOffspring = grades ? gradesTotal(grades) : 0;
+            const radiographed   = grades ? gradesRadiographed(grades) : 0;
             return (
-              <View style={styles.healthBlock}>
-                <View style={styles.healthBlockHeader}>
-                  <Text style={styles.healthBlockRole}>{role}</Text>
-                  {navId ? (
-                    <TouchableOpacity onPress={() => navigation.push("DogProfile", { id: navId })} activeOpacity={0.7}>
-                      <Text style={styles.healthBlockNavLink}>View Profile →</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-                <View style={styles.healthStats}>
-                  <View style={styles.healthStatItem}>
-                    <Text style={styles.healthStatValue}>{totalOffspring}</Text>
-                    <Text style={styles.healthStatLabel}>Total Offspring</Text>
+              <View style={styles.healthTypeBlock}>
+                <Text style={styles.healthTypeLabel}>{typeLabel}</Text>
+                {ownRating ? (
+                  <View style={styles.healthOwnRatingRow}>
+                    <Text style={styles.healthOwnRatingLabel}>Rating</Text>
+                    <Text style={styles.healthOwnRatingValue}>{ownRating}</Text>
                   </View>
-                  <View style={styles.healthStatDivider} />
-                  <View style={styles.healthStatItem}>
-                    <Text style={styles.healthStatValue}>{radiographed}</Text>
-                    <Text style={styles.healthStatLabel}>Radiographed</Text>
-                  </View>
-                </View>
-                <View style={styles.healthTable}>
-                  <View style={styles.healthTableHeader}>
-                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableRatingCell]}>Rating</Text>
-                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Number</Text>
-                    <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Percentage</Text>
-                  </View>
-                  {COLS.map((c, ri) => (
-                    <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
-                      <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
-                      <Text style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
-                      <Text style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, radiographed)}</Text>
+                ) : null}
+                {grades ? (
+                  <>
+                    <View style={[styles.healthStats, ownRating ? { marginTop: 8 } : {}]}>
+                      <View style={styles.healthStatItem}>
+                        <Text style={styles.healthStatValue}>{totalOffspring}</Text>
+                        <Text style={styles.healthStatLabel}>Total Offspring</Text>
+                      </View>
+                      <View style={styles.healthStatDivider} />
+                      <View style={styles.healthStatItem}>
+                        <Text style={styles.healthStatValue}>{radiographed}</Text>
+                        <Text style={styles.healthStatLabel}>Radiographed</Text>
+                      </View>
                     </View>
-                  ))}
-                </View>
+                    <View style={styles.healthTable}>
+                      <View style={styles.healthTableHeader}>
+                        <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableRatingCell]}>Rating</Text>
+                        <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Number</Text>
+                        <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Percentage</Text>
+                      </View>
+                      {COLS.map((c, ri) => (
+                        <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
+                          <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
+                          <Text style={styles.healthTableCell}>{grades[c.key] ?? 0}</Text>
+                          <Text style={styles.healthTableCell}>{pct(grades[c.key] as number || 0, radiographed)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                ) : null}
               </View>
             );
           };
 
-          const sections = [
-            { key: "hd", label: "HD — Hip Dysplasia",   data: hdHereditary, ownRating: dog.hd || null },
-            { key: "ed", label: "ED — Elbow Dysplasia", data: edHereditary, ownRating: dog.ed || null },
-          ].filter((s) => s.data || s.ownRating);
+          const hasThisDog = !!(dog.hd || dog.ed || hdHereditary?.kids || edHereditary?.kids);
+          const hasSire    = !!(hdHereditary?.sire || edHereditary?.sire);
+          const hasDam     = !!(hdHereditary?.dam  || edHereditary?.dam);
 
-          if (sections.length === 0) {
+          if (!hasThisDog && !hasSire && !hasDam) {
             return (
               <View style={styles.emptyState}>
                 <View style={styles.emptyIconWrap}>
@@ -846,67 +849,61 @@ export default function DogProfileScreen() {
 
           return (
             <View style={{ gap: 20 }}>
-              {sections.map((s) => (
-                <View key={s.key} style={styles.healthSection}>
+              {/* ── This Dog ── */}
+              {hasThisDog ? (
+                <View style={styles.healthSection}>
                   <View style={styles.healthSectionHeader}>
                     <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
-                    <Text style={styles.healthSectionTitle}>{s.label}</Text>
+                    <Text style={styles.healthSectionTitle}>This Dog</Text>
                   </View>
-
-                  {/* 1. This Dog — own rating + offspring breakdown */}
                   <View style={styles.healthBlock}>
-                    <View style={styles.healthBlockHeader}>
-                      <Text style={styles.healthBlockRole}>This Dog</Text>
-                    </View>
-                    {s.ownRating ? (
-                      <View style={styles.healthOwnRatingRow}>
-                        <Text style={styles.healthOwnRatingLabel}>Rating</Text>
-                        <Text style={styles.healthOwnRatingValue}>{s.ownRating}</Text>
-                      </View>
-                    ) : null}
-                    {s.data?.kids ? (() => {
-                      const g = s.data!.kids!;
-                      const totalOffspring = gradesTotal(g);
-                      const radiographed = gradesRadiographed(g);
-                      return (
-                        <>
-                          <View style={[styles.healthStats, s.ownRating ? { marginTop: 8 } : {}]}>
-                            <View style={styles.healthStatItem}>
-                              <Text style={styles.healthStatValue}>{totalOffspring}</Text>
-                              <Text style={styles.healthStatLabel}>Total Offspring</Text>
-                            </View>
-                            <View style={styles.healthStatDivider} />
-                            <View style={styles.healthStatItem}>
-                              <Text style={styles.healthStatValue}>{radiographed}</Text>
-                              <Text style={styles.healthStatLabel}>Radiographed</Text>
-                            </View>
-                          </View>
-                          <View style={styles.healthTable}>
-                            <View style={styles.healthTableHeader}>
-                              <Text style={[styles.healthTableCell, styles.healthTableHeaderText, styles.healthTableRatingCell]}>Rating</Text>
-                              <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Number</Text>
-                              <Text style={[styles.healthTableCell, styles.healthTableHeaderText]}>Percentage</Text>
-                            </View>
-                            {COLS.map((c, ri) => (
-                              <View key={c.key} style={[styles.healthTableRow, ri % 2 === 1 && styles.healthTableRowAlt]}>
-                                <Text style={[styles.healthTableCell, styles.healthTableRowLabel, styles.healthTableRatingCell]}>{c.label}</Text>
-                                <Text style={styles.healthTableCell}>{g[c.key] ?? 0}</Text>
-                                <Text style={styles.healthTableCell}>{pct(g[c.key] as number || 0, radiographed)}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        </>
-                      );
-                    })() : null}
+                    {renderTypeBlock("HD — Hip Dysplasia",   dog.hd, hdHereditary?.kids)}
+                    {renderTypeBlock("ED — Elbow Dysplasia", dog.ed, edHereditary?.kids)}
                   </View>
-
-                  {/* 2. Sire */}
-                  {renderGradeBlock("Sire", s.data?.sire, dog.sire_id || undefined)}
-
-                  {/* 3. Dam */}
-                  {renderGradeBlock("Dam", s.data?.dam, dog.dam_id || undefined)}
                 </View>
-              ))}
+              ) : null}
+
+              {/* ── Sire ── */}
+              {hasSire ? (
+                <View style={styles.healthSection}>
+                  <View style={styles.healthSectionHeader}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
+                      <Text style={styles.healthSectionTitle}>Sire</Text>
+                    </View>
+                    {dog.sire_id ? (
+                      <TouchableOpacity onPress={() => (navigation as any).push("DogProfile", { id: dog.sire_id })} activeOpacity={0.7}>
+                        <Text style={styles.healthBlockNavLink}>View Profile →</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                  <View style={styles.healthBlock}>
+                    {renderTypeBlock("HD — Hip Dysplasia",   null, hdHereditary?.sire)}
+                    {renderTypeBlock("ED — Elbow Dysplasia", null, edHereditary?.sire)}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* ── Dam ── */}
+              {hasDam ? (
+                <View style={styles.healthSection}>
+                  <View style={styles.healthSectionHeader}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Ionicons name="heart-circle-outline" size={18} color={COLORS.primary} />
+                      <Text style={styles.healthSectionTitle}>Dam</Text>
+                    </View>
+                    {dog.dam_id ? (
+                      <TouchableOpacity onPress={() => (navigation as any).push("DogProfile", { id: dog.dam_id })} activeOpacity={0.7}>
+                        <Text style={styles.healthBlockNavLink}>View Profile →</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                  <View style={styles.healthBlock}>
+                    {renderTypeBlock("HD — Hip Dysplasia",   null, hdHereditary?.dam)}
+                    {renderTypeBlock("ED — Elbow Dysplasia", null, edHereditary?.dam)}
+                  </View>
+                </View>
+              ) : null}
             </View>
           );
         })()}
@@ -1374,6 +1371,7 @@ const styles = StyleSheet.create({
   healthSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1412,6 +1410,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.primary,
     textDecorationLine: "underline",
+  },
+  healthTypeBlock: {
+    marginTop: 4,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(15,92,59,0.06)",
+  },
+  healthTypeLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   healthOwnRatingRow: {
     flexDirection: "row",
