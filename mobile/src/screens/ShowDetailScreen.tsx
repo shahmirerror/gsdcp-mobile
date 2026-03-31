@@ -139,11 +139,12 @@ function JudgePopupSheet({ judge, onClose, onViewProfile }: {
   );
 }
 
-function DogPopupSheet({ entry, kpLine, onClose, onViewProfile }: {
+function DogPopupSheet({ entry, kpLine, onClose, onViewProfile, onViewOwner }: {
   entry: ShowResultEntry;
   kpLine: string;
   onClose: () => void;
   onViewProfile: () => void;
+  onViewOwner: (id: string) => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!entry.imageUrl && !imgErr;
@@ -180,15 +181,38 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile }: {
           </View>
         ) : null}
       </View>
-      {entry.owner_names ? (
-        <View style={styles.popupOwnerRow}>
-          <Ionicons name="person-outline" size={13} color={COLORS.textMuted} />
-          <Text style={styles.popupOwnerText} numberOfLines={2}>
-            {entry.owner_names}
-            {entry.owner_membership_nos ? `  ·  ${entry.owner_membership_nos}` : ""}
-          </Text>
-        </View>
-      ) : null}
+      {(() => {
+        const ids   = entry.owner_ids?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
+        const names = entry.owner_names?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
+        const nos   = entry.owner_membership_nos?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
+        if (!names.length) return null;
+        return (
+          <View style={{ width: "100%" }}>
+            {names.map((name, i) => {
+              const id = ids[i] ?? null;
+              const no = nos[i] ?? null;
+              const label = no ? `${name}  ·  ${no}` : name;
+              return id ? (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.popupOwnerRow}
+                  activeOpacity={0.7}
+                  onPress={() => onViewOwner(id)}
+                >
+                  <Ionicons name="person-outline" size={13} color={COLORS.primary} />
+                  <Text style={[styles.popupOwnerText, { color: COLORS.primary }]} numberOfLines={1}>{label}</Text>
+                  <Ionicons name="chevron-forward" size={12} color={COLORS.primary} />
+                </TouchableOpacity>
+              ) : (
+                <View key={i} style={styles.popupOwnerRow}>
+                  <Ionicons name="person-outline" size={13} color={COLORS.textMuted} />
+                  <Text style={styles.popupOwnerText} numberOfLines={1}>{label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        );
+      })()}
       <TouchableOpacity style={styles.popupBtn} activeOpacity={0.8} onPress={onViewProfile}>
         <Ionicons name="paw-outline" size={16} color="#fff" />
         <Text style={styles.popupBtnText}>View Dog Profile</Text>
@@ -847,6 +871,10 @@ export default function ShowDetailScreen() {
             onViewProfile={() => {
               setPopupDog(null);
               navigation.push("DogProfile", { id: popupDog.dog_id, name: popupDog.dog_name.trim() });
+            }}
+            onViewOwner={(id) => {
+              setPopupDog(null);
+              navigation.push("MemberProfile", { id });
             }}
           />
         ) : null}
