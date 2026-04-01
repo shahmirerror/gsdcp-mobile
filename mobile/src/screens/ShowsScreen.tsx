@@ -25,6 +25,26 @@ const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+function getSeasonForDate(dateStr: string): string {
+  const parts = dateStr.split("-");
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (month >= 8) {
+    return `${year} – ${year + 1}`;
+  }
+  return `${year - 1} – ${year}`;
+}
+
+function getCurrentSeason(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  if (month >= 8) {
+    return `${year} – ${year + 1}`;
+  }
+  return `${year - 1} – ${year}`;
+}
+
 
 function formatDateRange(dates: string[]): string {
   if (!dates || dates.length === 0) return "TBA";
@@ -121,29 +141,36 @@ export default function ShowsScreen() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [typeFilter, setTypeFilter] = useState<string>("Show");
+  const [seasonFilter, setSeasonFilter] = useState<string>(getCurrentSeason());
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempStatus, setTempStatus] = useState<string>("All");
   const [tempType, setTempType] = useState<string>("Show");
+  const [tempSeason, setTempSeason] = useState<string>(getCurrentSeason());
   const [previewShow, setPreviewShow] = useState<Show | null>(null);
 
   const activeFilterCount =
-    (statusFilter !== "All" ? 1 : 0) + (typeFilter !== "All" ? 1 : 0);
+    (statusFilter !== "All" ? 1 : 0) +
+    (typeFilter !== "All" ? 1 : 0) +
+    (seasonFilter !== "All" ? 1 : 0);
 
   const openFilters = () => {
     setTempStatus(statusFilter);
     setTempType(typeFilter);
+    setTempSeason(seasonFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setStatusFilter(tempStatus);
     setTypeFilter(tempType);
+    setSeasonFilter(tempSeason);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempStatus("All");
     setTempType("All");
+    setTempSeason("All");
   };
 
   const { data: shows, isLoading, isError, refetch, isRefetching } = useQuery<Show[]>({
@@ -159,6 +186,17 @@ export default function ShowsScreen() {
   const statuses = useMemo(() => {
     if (!shows) return [];
     return [...new Set(shows.map((s) => s.status))];
+  }, [shows]);
+
+  const seasons = useMemo(() => {
+    if (!shows) return [];
+    const set = new Set<string>();
+    for (const s of shows) {
+      if (s.dates && s.dates.length > 0) {
+        set.add(getSeasonForDate(s.dates[0]));
+      }
+    }
+    return [...set].sort((a, b) => b.localeCompare(a));
   }, [shows]);
 
   const filtered = useMemo(() => {
@@ -183,8 +221,14 @@ export default function ShowsScreen() {
       results = results.filter((s) => s.event_type === typeFilter);
     }
 
+    if (seasonFilter !== "All") {
+      results = results.filter(
+        (s) => s.dates && s.dates.length > 0 && getSeasonForDate(s.dates[0]) === seasonFilter,
+      );
+    }
+
     return results;
-  }, [shows, search, statusFilter, typeFilter]);
+  }, [shows, search, statusFilter, typeFilter, seasonFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -227,6 +271,15 @@ export default function ShowsScreen() {
 
       {activeFilterCount > 0 && (
         <View style={styles.activeFiltersRow}>
+          {seasonFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Ionicons name="calendar-outline" size={12} color={COLORS.primary} />
+              <Text style={styles.activeChipText}>{seasonFilter}</Text>
+              <TouchableOpacity onPress={() => setSeasonFilter("All")} data-testid="btn-remove-season-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
           {statusFilter !== "All" && (
             <View style={styles.activeChip}>
               <Text style={styles.activeChipText}>{statusFilter}</Text>
@@ -244,7 +297,7 @@ export default function ShowsScreen() {
             </View>
           )}
           <TouchableOpacity
-            onPress={() => { setStatusFilter("All"); setTypeFilter("All"); }}
+            onPress={() => { setStatusFilter("All"); setTypeFilter("All"); setSeasonFilter("All"); }}
             data-testid="btn-clear-all-filters"
           >
             <Text style={styles.clearAllText}>Clear all</Text>
@@ -377,6 +430,28 @@ export default function ShowsScreen() {
                 <Text style={styles.resetText}>Reset</Text>
               </TouchableOpacity>
             </View>
+
+            <Text style={styles.filterSectionTitle}>Season</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
+              <TouchableOpacity
+                style={[styles.filterOption, tempSeason === "All" && styles.filterOptionActive]}
+                onPress={() => setTempSeason("All")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterOptionText, tempSeason === "All" && styles.filterOptionTextActive]}>All</Text>
+              </TouchableOpacity>
+              {seasons.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.filterOption, tempSeason === opt && styles.filterOptionActive]}
+                  onPress={() => setTempSeason(opt)}
+                  activeOpacity={0.7}
+                  data-testid={`filter-season-${opt.replace(/\s/g, "-")}`}
+                >
+                  <Text style={[styles.filterOptionText, tempSeason === opt && styles.filterOptionTextActive]}>{opt}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             <Text style={styles.filterSectionTitle}>Status</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
