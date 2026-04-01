@@ -130,6 +130,9 @@ export default function MemberDirectoryScreen() {
     setTempTypeFilter("All");
   };
 
+  const memberType =
+    typeFilter === "T-" ? "Temporary" : typeFilter === "P-" ? "Permanent" : undefined;
+
   const {
     data,
     isLoading,
@@ -140,9 +143,12 @@ export default function MemberDirectoryScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<MembersPage>({
-    queryKey: ["members-pages", debouncedSearch],
+    queryKey: ["members-pages", debouncedSearch, typeFilter],
     queryFn: ({ pageParam }) =>
-      fetchMembersPage(pageParam as number, { q: debouncedSearch || undefined }),
+      fetchMembersPage(pageParam as number, {
+        q: debouncedSearch || undefined,
+        type: memberType,
+      }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage?.pagination?.hasMorePages
@@ -182,11 +188,8 @@ export default function MemberDirectoryScreen() {
     if (cityFilter !== "All") {
       results = results.filter((m) => m.city === cityFilter);
     }
-    if (typeFilter !== "All") {
-      results = results.filter((m) => m.membership_no?.startsWith(typeFilter));
-    }
     return results;
-  }, [allMembers, countryFilter, cityFilter, typeFilter]);
+  }, [allMembers, countryFilter, cityFilter]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

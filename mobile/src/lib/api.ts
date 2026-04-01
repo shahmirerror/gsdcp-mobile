@@ -1065,10 +1065,11 @@ export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
 
 export async function fetchMembersPage(
   page: number = 1,
-  options?: { q?: string },
+  options?: { q?: string; type?: "Permanent" | "Temporary" },
 ): Promise<MembersPage> {
   const params = new URLSearchParams({ page: String(page) });
   if (options?.q) params.set("q", options.q);
+  if (options?.type) params.set("type", options.type);
   const res = await fetch(`${BASE_URL}/members?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch members");
