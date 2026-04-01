@@ -10,7 +10,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchAbout, stripHtml } from "../../lib/api";
@@ -42,24 +41,25 @@ export default function AboutGSDCPScreen() {
         />
       }
     >
-      <LinearGradient
-        colors={[COLORS.primaryDark, COLORS.primary]}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
           data-testid="button-back"
         >
-          <Ionicons name="chevron-back" size={22} color="#fff" />
+          <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
           <Text style={styles.backText}>The Club</Text>
         </TouchableOpacity>
-        <View style={styles.headerIconWrap}>
-          <Ionicons name="information-circle" size={34} color={COLORS.accent} />
+        <View style={styles.headerContent}>
+          <View style={styles.headerIconWrap}>
+            <Ionicons name="information-circle" size={26} color={COLORS.primary} />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>About GSDCP</Text>
+            <Text style={styles.headerSub}>Our history, mission and objectives</Text>
+          </View>
         </View>
-        <Text style={styles.headerTitle}>About GSDCP</Text>
-        <Text style={styles.headerSub}>Our history, mission and objectives</Text>
-      </LinearGradient>
+      </View>
 
       {isLoading ? (
         <ActivityIndicator
@@ -79,29 +79,22 @@ export default function AboutGSDCPScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 20,
-    paddingBottom: 28,
-    alignItems: "center",
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  backBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    marginBottom: 20,
-    gap: 4,
-  },
-  backText: { fontSize: 15, color: "#fff", fontWeight: "600" },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 16 },
+  backText: { fontSize: 15, color: COLORS.primary, fontWeight: "600" },
+  headerContent: { flexDirection: "row", alignItems: "center", gap: 14 },
   headerIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
+    width: 48, height: 48, borderRadius: 14,
+    backgroundColor: "rgba(15,92,58,0.1)",
+    justifyContent: "center", alignItems: "center",
   },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  headerSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  headerTitle: { fontSize: 20, fontWeight: "800", color: COLORS.text },
+  headerSub: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
   section: {
     marginHorizontal: 16,
     marginTop: 24,

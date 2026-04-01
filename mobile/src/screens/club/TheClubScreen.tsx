@@ -3,7 +3,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import type { TheClubStackParamList } from "../../navigation/AppNavigator";
 
@@ -78,18 +77,15 @@ export default function TheClubScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 32 }}
     >
-      <LinearGradient
-        colors={[COLORS.primaryDark, COLORS.primary]}
-        style={[styles.header, { paddingTop: insets.top + 20 }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <View style={styles.headerIconWrap}>
-          <Ionicons name="shield-checkmark" size={36} color={COLORS.accent} />
+          <Ionicons name="shield-checkmark" size={26} color={COLORS.primary} />
         </View>
-        <Text style={styles.headerTitle}>The Club</Text>
-        <Text style={styles.headerSubtitle}>
-          German Shepherd Dog Club of Pakistan
-        </Text>
-      </LinearGradient>
+        <View>
+          <Text style={styles.headerTitle}>The Club</Text>
+          <Text style={styles.headerSubtitle}>German Shepherd Dog Club of Pakistan</Text>
+        </View>
+      </View>
 
       <View style={styles.listWrap}>
         {SECTIONS.map((section, index) => (
@@ -121,29 +117,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   headerIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: "rgba(15,92,58,0.1)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 14,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: 0.3,
+    color: COLORS.text,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.65)",
-    marginTop: 4,
+    color: COLORS.textMuted,
+    marginTop: 2,
   },
   listWrap: {
     marginHorizontal: 16,
