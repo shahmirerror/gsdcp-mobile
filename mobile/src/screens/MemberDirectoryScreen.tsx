@@ -291,8 +291,8 @@ export default function MemberDirectoryScreen() {
 
       {/* Results meta */}
       {!isLoading && !isError && (
-        <View style={styles.resultsMeta}>
-          <Text style={styles.resultsText}>
+        <View style={styles.countRow}>
+          <Text style={styles.count}>
             {filtered.length} member{filtered.length !== 1 ? "s" : ""}
             {hasNextPage ? ` (${totalLoaded} loaded)` : ""}
           </Text>
@@ -424,29 +424,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.lg,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  searchInput: { flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.text, paddingVertical: 0 },
+  searchInput: { flex: 1, height: 44, fontSize: FONT_SIZES.md, color: COLORS.text },
   filterBtn: {
-    width: 40, height: 40,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.background,
+    width: 44, height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
     borderWidth: 1, borderColor: COLORS.border,
     justifyContent: "center", alignItems: "center",
   },
@@ -462,17 +459,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xs,
-    gap: SPACING.sm,
+    gap: 8,
+    marginBottom: 4,
     flexWrap: "wrap",
   },
   activeChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(15,92,58,0.07)",
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: BORDER_RADIUS.full,
     borderWidth: 1,
     borderColor: "rgba(15,92,58,0.15)",
@@ -491,14 +488,13 @@ const styles = StyleSheet.create({
 
   chipsContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, flexDirection: "row", alignItems: "center" },
 
-  resultsMeta: {
-    paddingHorizontal: SPACING.md, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    backgroundColor: "#fff",
+  countRow: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
   },
-  resultsText: { fontSize: 12, color: COLORS.textMuted, fontWeight: "500" },
+  count: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
 
-  list: { paddingTop: SPACING.sm, paddingBottom: 32 },
+  list: { paddingTop: SPACING.sm, paddingBottom: SPACING.lg },
   separator: { height: 1, backgroundColor: COLORS.border, marginLeft: 72 },
 
   listItem: {

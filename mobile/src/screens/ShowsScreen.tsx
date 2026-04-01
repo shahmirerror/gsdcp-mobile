@@ -515,7 +515,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
     gap: SPACING.sm,
   },
   searchContainer: {
