@@ -36,7 +36,6 @@ function isValidImage(url: string | null): boolean {
   return url.startsWith("http");
 }
 
-const Separator = memo(() => <View style={styles.separator} />);
 
 const MemberListItem = memo(function MemberListItem({ member, onPress }: { member: Member; onPress: () => void }) {
   const initials = getInitials(member.member_name);
@@ -317,7 +316,6 @@ export default function MemberDirectoryScreen() {
           data={filtered}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={Separator}
           showsVerticalScrollIndicator={false}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}
@@ -494,16 +492,18 @@ const styles = StyleSheet.create({
   },
   count: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
 
-  list: { paddingTop: SPACING.sm, paddingBottom: SPACING.lg },
-  separator: { height: 1, backgroundColor: COLORS.border, marginLeft: 72 },
+  list: { padding: SPACING.lg, paddingTop: SPACING.sm },
 
   listItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-    backgroundColor: "#fff",
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
   },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
