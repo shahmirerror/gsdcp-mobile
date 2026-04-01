@@ -154,11 +154,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
   return (
     <>
-<<<<<<< HEAD
-      <View style={[styles.tabBar, { height: tabBarHeight, paddingBottom: effectiveBottomInset }]}>
-=======
       <View style={[styles.tabBar, { paddingBottom: insets.bottom, height: tabBarHeight }]}>
->>>>>>> a9f955270c834b70bfc0ed4a6f27b4b57cf6eabf
         {visibleRoutes.map((route) => {
           const globalIndex = state.routes.findIndex((r) => r.name === route.name);
           const isFocused = state.index === globalIndex;
