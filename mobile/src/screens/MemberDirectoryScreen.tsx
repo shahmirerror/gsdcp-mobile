@@ -242,7 +242,7 @@ export default function MemberDirectoryScreen() {
           <Ionicons
             name="options-outline"
             size={18}
-            color={activeFilterCount > 0 ? COLORS.primary : COLORS.textMuted}
+            color={activeFilterCount > 0 ? "#fff" : COLORS.textMuted}
           />
           {activeFilterCount > 0 && (
             <View style={styles.filterBadge}>
@@ -251,6 +251,43 @@ export default function MemberDirectoryScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {activeFilterCount > 0 && (
+        <View style={styles.activeFiltersRow}>
+          {typeFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>
+                {typeFilter === "T-" ? "Temporary" : "Permanent"}
+              </Text>
+              <TouchableOpacity onPress={() => setTypeFilter("All")} data-testid="btn-remove-type-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {countryFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{countryFilter}</Text>
+              <TouchableOpacity onPress={() => setCountryFilter("All")} data-testid="btn-remove-country-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {cityFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{cityFilter}</Text>
+              <TouchableOpacity onPress={() => setCityFilter("All")} data-testid="btn-remove-city-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => { setTypeFilter("All"); setCountryFilter("All"); setCityFilter("All"); }}
+            data-testid="btn-clear-all-filters"
+          >
+            <Text style={styles.clearAllText}>Clear all</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Results meta */}
       {!isLoading && !isError && (
@@ -413,14 +450,44 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border,
     justifyContent: "center", alignItems: "center",
   },
-  filterBtnActive: { borderColor: COLORS.primary, backgroundColor: "rgba(15,92,59,0.06)" },
+  filterBtnActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   filterBadge: {
     position: "absolute", top: -4, right: -4,
     width: 16, height: 16, borderRadius: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     justifyContent: "center", alignItems: "center",
   },
   filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  activeFiltersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
+    gap: SPACING.sm,
+    flexWrap: "wrap",
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,92,58,0.07)",
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
+  },
+  activeChipText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  clearAllText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    marginLeft: 4,
+  },
 
   chipsContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, flexDirection: "row", alignItems: "center" },
 
