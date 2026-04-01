@@ -120,10 +120,10 @@ export default function ShowsScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
-  const [typeFilter, setTypeFilter] = useState<string>("All");
+  const [typeFilter, setTypeFilter] = useState<string>("Show");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempStatus, setTempStatus] = useState<string>("All");
-  const [tempType, setTempType] = useState<string>("All");
+  const [tempType, setTempType] = useState<string>("Show");
   const [previewShow, setPreviewShow] = useState<Show | null>(null);
 
   const activeFilterCount =
