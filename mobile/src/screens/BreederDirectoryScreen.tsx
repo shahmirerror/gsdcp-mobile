@@ -62,11 +62,6 @@ function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () =
         <Text style={styles.itemName} numberOfLines={1}>{breeder.name}</Text>
         <Text style={styles.itemSub} numberOfLines={1}>{breeder.kennelName}</Text>
         <View style={styles.badges}>
-          {breeder.totalLitters > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{breeder.totalLitters} litters</Text>
-            </View>
-          )}
           {breeder.location ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{breeder.location}</Text>
@@ -360,9 +355,6 @@ export default function BreederDirectoryScreen() {
                       <Text style={styles.popupMemberNo}>Member {b.membership_no}</Text>
                     ) : null}
                     <View style={styles.popupBreederMeta}>
-                      {b.totalLitters > 0 ? (
-                        <Text style={styles.popupKennel}>{b.totalLitters} litters</Text>
-                      ) : null}
                       {b.breederType ? (() => {
                         const ts = tierBadgeStyles(b.breederType);
                         return (
@@ -395,28 +387,6 @@ export default function BreederDirectoryScreen() {
                     ) : null}
                   </View>
                 ) : null}
-
-                {/* Actions */}
-                <View style={styles.popupActions}>
-                  <TouchableOpacity
-                    style={styles.popupBtnOutline}
-                    onPress={() => setSelectedBreeder(null)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.popupBtnOutlineText}>Close</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.popupBtnPrimary}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      setSelectedBreeder(null);
-                      navigation.navigate("BreederProfile", { id: b.memberId, name: b.name, breederData: b });
-                    }}
-                  >
-                    <Text style={styles.popupBtnPrimaryText}>View Full Profile</Text>
-                    <Ionicons name="arrow-forward" size={16} color="#fff" />
-                  </TouchableOpacity>
-                </View>
               </View>
             );
           })()}

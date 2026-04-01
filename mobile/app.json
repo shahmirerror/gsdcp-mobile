@@ -4,14 +4,16 @@
     "slug": "gsdcp-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo-square.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/logo-landscape.png",
       "backgroundColor": "#FFFFFF",
       "resizeMode": "contain"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "org.gsdcp.mobile",
@@ -23,7 +25,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo-square.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0F5C3A"
       },
       "package": "org.gsdcp.mobile",
@@ -35,11 +37,17 @@
       ]
     },
     "web": {
-      "favicon": "./assets/logo-square.png",
+      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "scheme": "gsdcp",
+    "extra": {
+      "eas": {
+        "projectId": "1dbe2f8d-6c82-4071-b167-9e6e4d4621a4"
+      }
+    },
     "plugins": [
+      "expo-font",
       [
         "expo-image-picker",
         {

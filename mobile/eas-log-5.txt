@@ -1,0 +1,5 @@
+{"name":"turtle-launcher","hostname":"launcher-android-5b5758b585-555xm","pid":1,"service":"launcher","phase":"SPIN_UP_BUILDER","level":50,"msg":"","time":"2026-03-30T10:06:35.715Z","v":0}
+{"name":"turtle-launcher","hostname":"launcher-android-5b5758b585-555xm","pid":1,"service":"launcher","phase":"SPIN_UP_BUILDER","level":50,"msg":"Worker configuration failed.","time":"2026-03-30T10:06:35.715Z","v":0}
+{"name":"turtle-launcher","hostname":"launcher-android-5b5758b585-555xm","pid":1,"service":"launcher","phase":"SPIN_UP_BUILDER","level":50,"msg":"Try running the build again. Report the issue to https://expo.dev/contact if the problem persists.","time":"2026-03-30T10:06:35.715Z","v":0}
+{"name":"turtle-launcher","hostname":"launcher-android-5b5758b585-555xm","pid":1,"service":"launcher","phase":"SPIN_UP_BUILDER","level":30,"marker":"END_PHASE","result":"failed","msg":"End phase: SPIN_UP_BUILDER","time":"2026-03-30T10:06:35.715Z","v":0}
+

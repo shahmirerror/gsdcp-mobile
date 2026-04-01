@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -180,6 +181,7 @@ export default function CustomTabBar({
   const homeIsFocused = state.index === homeGlobalIdx;
 
   const menuBaseY = BAR_HEIGHT + insets.bottom + PROTRUDE + 16;
+
   const homeCenterX = screenWidth / 2;
 
   const renderSideTab = (
