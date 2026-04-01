@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   ScrollView,
   RefreshControl,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -19,6 +18,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMembersPage, Member, MembersPage } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 function getInitials(name: string): string {
   return name
@@ -44,7 +44,7 @@ const MemberListItem = memo(function MemberListItem({ member, onPress }: { membe
   return (
     <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-member-${member.id}`}>
       {hasImage ? (
-        <Image source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+        <LazyImage source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
       ) : (
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>

@@ -31,6 +31,7 @@ import {
 } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
+import LazyImage from "../components/LazyImage";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -104,7 +105,7 @@ function OwnerRow({
       data-testid={`btn-owner-${o.member_id}`}
     >
       {hasImg ? (
-        <Image source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
+        <LazyImage source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
       ) : (
         <View style={[styles.ownerAvatar, styles.ownerAvatarPlaceholder]}>
           <Text style={styles.ownerAvatarInitials}>
@@ -179,7 +180,7 @@ function OwnerSection({
             }}
           >
             {hasImg ? (
-              <Image source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
+              <LazyImage source={{ uri: o.imageUrl! }} style={styles.ownerAvatar} />
             ) : (
               <View style={[styles.ownerAvatar, styles.ownerAvatarPlaceholder]}>
                 <Text style={styles.ownerAvatarInitials}>

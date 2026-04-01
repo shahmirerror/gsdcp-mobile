@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Image,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -20,6 +19,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchKennels, Kennel, KennelOwner } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelDirectory">;
 
@@ -334,7 +334,7 @@ export default function KennelDirectoryScreen() {
               <View style={styles.modalContent}>
                 <View style={styles.previewHeader}>
                   {hasImg ? (
-                    <Image source={{ uri: previewKennel.imageUrl }} style={styles.previewImage} resizeMode="cover" onError={() => setPreviewImgErr(true)} />
+                    <LazyImage source={{ uri: previewKennel.imageUrl }} style={styles.previewImage} resizeMode="cover" onError={() => setPreviewImgErr(true)} />
                   ) : (
                     <View style={styles.previewAvatar}>
                       <Text style={styles.previewAvatarText}>{initials}</Text>

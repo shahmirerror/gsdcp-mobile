@@ -39,6 +39,7 @@ import {
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import { Switch } from "react-native";
+import LazyImage from "../components/LazyImage";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -643,7 +644,7 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
     <View style={styles.card}>
       <View style={styles.kennelHeader}>
         {hasImage ? (
-          <Image source={{ uri: kennel.imageUrl! }} style={styles.kennelAvatar} />
+          <LazyImage source={{ uri: kennel.imageUrl! }} style={styles.kennelAvatar} />
         ) : (
           <View style={[styles.kennelAvatar, styles.kennelAvatarPlaceholder]}>
             <Text style={styles.kennelAvatarInitials}>{initials}</Text>
@@ -2594,7 +2595,7 @@ export default function ProfileScreen() {
       <View style={styles.profileSection}>
         <TouchableOpacity activeOpacity={0.85} onPress={handleChangePhoto} disabled={photoUploading} style={styles.avatarOuter}>
           {hasPhoto ? (
-            <Image source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+            <LazyImage source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
           ) : (
             <View style={styles.avatarInner}>
               <Text style={styles.avatarInitials}>{initials}</Text>

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
@@ -18,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudges, JudgeItem } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
+import LazyImage from "../../components/LazyImage";
 
 function credentialColor(credentials: string): { bg: string; text: string } {
   if (credentials.toLowerCase().includes("fci")) return { bg: "rgba(59,130,246,0.1)", text: "#2563EB" };

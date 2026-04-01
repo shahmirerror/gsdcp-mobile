@@ -1,6 +1,7 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import type { Dog } from "../lib/api";
+import LazyImage from "./LazyImage";
 
 function hasImage(url: string | null): url is string {
   return !!url && url.length > 0;
@@ -27,7 +28,7 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       {showImage ? (
-        <Image source={{ uri: dog.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+        <LazyImage source={{ uri: dog.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
       ) : (
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>

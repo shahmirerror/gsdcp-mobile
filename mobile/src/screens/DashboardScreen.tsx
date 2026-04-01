@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Dimensions,
   RefreshControl,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +18,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import { fetchDashboard, fetchNews, stripHtml, NewsItem, RecentMating } from "../lib/api";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -339,7 +339,7 @@ export default function DashboardScreen() {
 
               <View style={styles.previewHeader}>
                 {previewMating.kennel_image ? (
-                  <Image source={{ uri: previewMating.kennel_image }} style={styles.previewKennelImage} />
+                  <LazyImage source={{ uri: previewMating.kennel_image }} style={styles.previewKennelImage} />
                 ) : (
                   <View style={[styles.previewKennelImage, styles.previewKennelImagePlaceholder]}>
                     <Ionicons name="home-outline" size={26} color={COLORS.primary} />
@@ -377,7 +377,7 @@ export default function DashboardScreen() {
                 }}
               >
                 {previewMating.sire.imageUrl ? (
-                  <Image source={{ uri: previewMating.sire.imageUrl }} style={styles.previewDogImage} />
+                  <LazyImage source={{ uri: previewMating.sire.imageUrl }} style={styles.previewDogImage} />
                 ) : (
                   <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
                     <Text style={styles.previewDogInitial}>S</Text>
@@ -408,7 +408,7 @@ export default function DashboardScreen() {
                 }}
               >
                 {previewMating.dam.imageUrl ? (
-                  <Image source={{ uri: previewMating.dam.imageUrl }} style={styles.previewDogImage} />
+                  <LazyImage source={{ uri: previewMating.dam.imageUrl }} style={styles.previewDogImage} />
                 ) : (
                   <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
                     <Text style={styles.previewDogInitial}>D</Text>

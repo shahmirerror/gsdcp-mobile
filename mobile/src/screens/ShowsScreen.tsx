@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   ScrollView,
   RefreshControl,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +18,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchShows, Show, ShowJudge } from "../lib/api";
 import { formatDate } from "../lib/dateUtils";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -46,7 +46,7 @@ function PreviewJudgeRow({ judge, onPress }: { judge: ShowJudge; onPress: () => 
     <TouchableOpacity style={styles.judgeRow} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.judgeAvatarWrap}>
         {hasImg ? (
-          <Image source={{ uri: judge.imageUrl! }} style={styles.judgeAvatarImg} onError={() => setImgError(true)} />
+          <LazyImage source={{ uri: judge.imageUrl! }} style={styles.judgeAvatarImg} onError={() => setImgError(true)} />
         ) : (
           <Text style={styles.judgeAvatarInitials}>{initials}</Text>
         )}

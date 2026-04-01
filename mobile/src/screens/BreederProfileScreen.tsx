@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeder, BreederDetail, BreederDog, Breeder } from "../lib/api";
+import LazyImage from "../components/LazyImage";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -73,7 +74,7 @@ function BreederDogItem({
       data-testid={`card-dog-${dog.id}`}
     >
       {hasImg ? (
-        <Image source={{ uri: dog.imageUrl }} style={styles.dogAvatar} resizeMode="cover" />
+        <LazyImage source={{ uri: dog.imageUrl }} style={styles.dogAvatar} resizeMode="cover" />
       ) : (
         <View style={styles.dogAvatarFallback}>
           <Text style={styles.dogAvatarText}>{initials}</Text>
@@ -224,7 +225,7 @@ export default function BreederProfileScreen() {
       <View style={styles.profileSection}>
         <View style={styles.avatarOuter}>
           {hasImage ? (
-            <Image source={{ uri: breeder.imageUrl }} style={styles.avatarPhoto} resizeMode="cover" />
+            <LazyImage source={{ uri: breeder.imageUrl }} style={styles.avatarPhoto} resizeMode="cover" />
           ) : (
             <View style={styles.avatarInner}>
               <Text style={styles.avatarInitials}>{initials}</Text>

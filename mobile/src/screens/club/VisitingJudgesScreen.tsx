@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
@@ -18,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchVisitingJudges, JudgeItem } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
+import LazyImage from "../../components/LazyImage";
 
 function credentialColor(credentials: string): { bg: string; text: string } {
   const c = credentials.toLowerCase();

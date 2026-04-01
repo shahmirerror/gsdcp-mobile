@@ -21,6 +21,7 @@ import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, 
 import { useAuth } from "../contexts/AuthContext";
 import BottomSheetModal from "../components/BottomSheetModal";
 import { formatDate } from "../lib/dateUtils";
+import LazyImage from "../components/LazyImage";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -69,7 +70,7 @@ function JudgeRow({ judge, onPress }: { judge: ShowJudge; onPress: () => void })
     <TouchableOpacity style={styles.judgeRow} onPress={onPress} activeOpacity={0.7} data-testid={`judge-${judge.id}`}>
       <View style={styles.judgeAvatar}>
         {hasImg ? (
-          <Image source={{ uri: judge.imageUrl }} style={styles.judgeAvatarImg} onError={() => setImgError(true)} />
+          <LazyImage source={{ uri: judge.imageUrl }} style={styles.judgeAvatarImg} onError={() => setImgError(true)} />
         ) : (
           <Text style={styles.judgeAvatarInitials}>{initials}</Text>
         )}
@@ -116,7 +117,7 @@ function JudgePopupSheet({ judge, onClose, onViewProfile }: {
     <View style={styles.popupInner}>
       <View style={styles.popupAvatarWrap}>
         {hasImg ? (
-          <Image source={{ uri: judge.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
+          <LazyImage source={{ uri: judge.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
         ) : (
           <View style={styles.popupAvatarFallback}>
             <Text style={styles.popupAvatarInitials}>{initials}</Text>
@@ -151,7 +152,7 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile, onViewOwner }: {
     <View style={styles.popupInner}>
       <View style={styles.popupAvatarWrap}>
         {hasImg ? (
-          <Image source={{ uri: entry.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
+          <LazyImage source={{ uri: entry.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
         ) : (
           <View style={[styles.popupAvatarFallback, { backgroundColor: `${COLORS.primary}15` }]}>
             <Ionicons name="paw" size={32} color={COLORS.primary} />

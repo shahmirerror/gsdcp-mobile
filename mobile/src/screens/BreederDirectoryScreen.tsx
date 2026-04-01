@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Image,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -20,6 +19,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeders, Breeder } from "../lib/api";
 import type { BreedersStackParamList } from "../navigation/AppNavigator";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 type Nav = NativeStackNavigationProp<BreedersStackParamList, "BreederDirectory">;
 
@@ -52,7 +52,7 @@ function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () =
   return (
     <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-breeder-${breeder.id}`}>
       {hasImage ? (
-        <Image source={{ uri: breeder.imageUrl }} style={styles.avatarImage} resizeMode="cover" />
+        <LazyImage source={{ uri: breeder.imageUrl }} style={styles.avatarImage} resizeMode="cover" />
       ) : (
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
@@ -317,7 +317,7 @@ export default function BreederDirectoryScreen() {
                   }}
                 >
                   {hasKennelImg ? (
-                    <Image source={{ uri: b.kennelImage }} style={styles.popupAvatar} resizeMode="cover" />
+                    <LazyImage source={{ uri: b.kennelImage }} style={styles.popupAvatar} resizeMode="cover" />
                   ) : (
                     <View style={styles.popupAvatarFallback}>
                       <Ionicons name="home-outline" size={28} color={COLORS.primary} />
@@ -343,7 +343,7 @@ export default function BreederDirectoryScreen() {
                   }}
                 >
                   {hasImg ? (
-                    <Image source={{ uri: b.imageUrl }} style={styles.popupAvatar} resizeMode="cover" />
+                    <LazyImage source={{ uri: b.imageUrl }} style={styles.popupAvatar} resizeMode="cover" />
                   ) : (
                     <View style={styles.popupAvatarFallback}>
                       <Text style={styles.popupAvatarText}>{popupInitials}</Text>
