@@ -1,86 +1,109 @@
-import { ScrollView, View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
+import { fetchTeam, TeamMember } from "../../lib/api";
 
-const TEAM = [
-  {
-    role: "President",
-    name: "Maj. (Retd.) Tariq Mehmood",
-    city: "Lahore",
-    since: "2022",
-    icon: "shield-checkmark" as const,
-    color: COLORS.primary,
-  },
-  {
-    role: "Vice President",
-    name: "Dr. Asim Nawaz",
-    city: "Islamabad",
-    since: "2022",
-    icon: "shield-half" as const,
-    color: COLORS.primary,
-  },
-  {
-    role: "Secretary General",
-    name: "Khalid Hussain",
-    city: "Lahore",
-    since: "2022",
-    icon: "create" as const,
-    color: "#3B82F6",
-  },
-  {
-    role: "Treasurer",
-    name: "Imran Sheikh",
-    city: "Karachi",
-    since: "2022",
-    icon: "wallet" as const,
-    color: COLORS.accent,
-  },
-  {
-    role: "Chief Breed Warden",
-    name: "Mian Nadeem Akhtar",
-    city: "Lahore",
-    since: "2020",
-    icon: "ribbon" as const,
-    color: "#8B5CF6",
-  },
-  {
-    role: "Technical Director",
-    name: "Zulfiqar Ali",
-    city: "Rawalpindi",
-    since: "2022",
-    icon: "settings" as const,
-    color: "#64748B",
-  },
-  {
-    role: "Committee Member",
-    name: "Faheem Asghar",
-    city: "Sialkot",
-    since: "2022",
-    icon: "person" as const,
-    color: COLORS.textSecondary,
-  },
-  {
-    role: "Committee Member",
-    name: "Arif Butt",
-    city: "Lahore",
-    since: "2022",
-    icon: "person" as const,
-    color: COLORS.textSecondary,
-  },
+const COMMITTEE_ORDER = [
+  "The Managing Committee",
+  "National Breed Council",
+  "National Show Committee",
+  "Group Breed Wardens",
+  "Regional Show Team Leaders",
+  "Breed Wardens",
 ];
+
+function committeeAccent(name: string): { color: string; bg: string } {
+  if (name.includes("Managing")) return { color: COLORS.primary, bg: "rgba(15,92,58,0.1)" };
+  if (name.includes("Breed Council")) return { color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" };
+  if (name.includes("Show Committee")) return { color: "#3B82F6", bg: "rgba(59,130,246,0.08)" };
+  if (name.includes("Group Breed")) return { color: COLORS.accent, bg: "rgba(199,164,92,0.12)" };
+  if (name.includes("Show Team")) return { color: "#F59E0B", bg: "rgba(245,158,11,0.08)" };
+  if (name.includes("Breed Warden")) return { color: "#0891B2", bg: "rgba(8,145,178,0.08)" };
+  return { color: COLORS.textSecondary, bg: "rgba(107,114,128,0.08)" };
+}
+
+function MemberCard({ member }: { member: TeamMember }) {
+  const [imgError, setImgError] = useState(false);
+  const initials = member.full_name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+  const accent = committeeAccent(member.committee_name);
+
+  return (
+    <View style={styles.card}>
+      <View style={[styles.avatarWrap, { backgroundColor: accent.bg }]}>
+        {!imgError && member.imageUrl ? (
+          <Image
+            source={{ uri: member.imageUrl }}
+            style={styles.avatar}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <Text style={[styles.avatarInitials, { color: accent.color }]}>{initials}</Text>
+        )}
+      </View>
+      <View style={styles.cardBody}>
+        <Text style={styles.memberName}>{member.full_name}</Text>
+        <View style={[styles.positionBadge, { backgroundColor: accent.bg }]}>
+          <Text style={[styles.positionText, { color: accent.color }]}>
+            {member.position_name}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function TheTeamScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+
+  const { data: members, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["/api/mobile/team"],
+    queryFn: fetchTeam,
+  });
+
+  const grouped: Record<string, TeamMember[]> = {};
+  (members ?? []).forEach((m) => {
+    if (!grouped[m.committee_name]) grouped[m.committee_name] = [];
+    grouped[m.committee_name].push(m);
+  });
+
+  const orderedKeys = [
+    ...COMMITTEE_ORDER.filter((k) => grouped[k]),
+    ...Object.keys(grouped).filter((k) => !COMMITTEE_ORDER.includes(k)),
+  ];
 
   return (
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
+        />
+      }
     >
       <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
@@ -100,41 +123,28 @@ export default function TheTeamScreen() {
         </View>
       </LinearGradient>
 
-      <View style={styles.termNote}>
-        <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
-        <Text style={styles.termText}>Current term: 2022 – 2024</Text>
-      </View>
-
-      <View style={styles.cardsWrap}>
-        {TEAM.map((member, i) => {
-          const initials = member.name
-            .split(" ")
-            .filter((w) => /^[A-Z]/.test(w))
-            .slice(0, 2)
-            .map((w) => w[0])
-            .join("");
-          return (
-            <View key={i} style={styles.card}>
-              <View style={[styles.avatar, { backgroundColor: `${member.color}18` }]}>
-                <Text style={[styles.avatarText, { color: member.color }]}>{initials}</Text>
-              </View>
-              <View style={styles.cardBody}>
-                <View style={[styles.roleBadge, { backgroundColor: `${member.color}12` }]}>
-                  <Ionicons name={member.icon} size={11} color={member.color} />
-                  <Text style={[styles.roleText, { color: member.color }]}>{member.role}</Text>
+      {isLoading ? (
+        <ActivityIndicator style={{ marginTop: 48 }} size="large" color={COLORS.primary} />
+      ) : (
+        <View style={styles.content}>
+          {orderedKeys.map((committee) => {
+            const accent = committeeAccent(committee);
+            return (
+              <View key={committee} style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={[styles.sectionDot, { backgroundColor: accent.color }]} />
+                  <Text style={styles.sectionTitle}>{committee}</Text>
                 </View>
-                <Text style={styles.name}>{member.name}</Text>
-                <View style={styles.meta}>
-                  <Ionicons name="location-outline" size={12} color={COLORS.textMuted} />
-                  <Text style={styles.metaText}>{member.city}</Text>
-                  <Text style={styles.metaDot}>·</Text>
-                  <Text style={styles.metaText}>Since {member.since}</Text>
+                <View style={styles.cardsWrap}>
+                  {grouped[committee].map((member) => (
+                    <MemberCard key={member.team_id} member={member} />
+                  ))}
                 </View>
               </View>
-            </View>
-          );
-        })}
-      </View>
+            );
+          })}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -152,48 +162,35 @@ const styles = StyleSheet.create({
   },
   heroTitle: { fontSize: 24, fontWeight: "800", color: "#fff", textAlign: "center" },
   heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center", marginTop: 6 },
-  termNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 4,
-  },
-  termText: { fontSize: 13, color: COLORS.textMuted },
-  cardsWrap: { paddingHorizontal: 16, marginTop: 12, gap: 10 },
+  content: { paddingHorizontal: 16, marginTop: 20, gap: 24 },
+  section: { gap: 10 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
+  sectionDot: { width: 8, height: 8, borderRadius: 4 },
+  sectionTitle: { fontSize: 13, fontWeight: "700", color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 },
+  cardsWrap: { gap: 8 },
   card: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.lg,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
-    gap: 14,
+    gap: 12,
   },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+  avatarWrap: {
+    width: 52, height: 52, borderRadius: 14,
+    justifyContent: "center", alignItems: "center",
+    overflow: "hidden",
   },
-  avatarText: { fontSize: 16, fontWeight: "800" },
-  cardBody: { flex: 1 },
-  roleBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+  avatar: { width: 52, height: 52 },
+  avatarInitials: { fontSize: 17, fontWeight: "800" },
+  cardBody: { flex: 1, gap: 4 },
+  memberName: { fontSize: 15, fontWeight: "700", color: COLORS.text },
+  positionBadge: {
     alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: 6,
-    marginBottom: 4,
   },
-  roleText: { fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.3 },
-  name: { fontSize: 15, fontWeight: "700", color: COLORS.text },
-  meta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
-  metaText: { fontSize: 12, color: COLORS.textMuted },
-  metaDot: { fontSize: 12, color: COLORS.textMuted },
+  positionText: { fontSize: 11, fontWeight: "600" },
 });
