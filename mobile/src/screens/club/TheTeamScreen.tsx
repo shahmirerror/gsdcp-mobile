@@ -17,15 +17,6 @@ import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchTeam, TeamMember } from "../../lib/api";
 
-const COMMITTEE_ORDER = [
-  "The Managing Committee",
-  "National Breed Council",
-  "National Show Committee",
-  "Group Breed Wardens",
-  "Regional Show Team Leaders",
-  "Breed Wardens",
-];
-
 function committeeAccent(name: string): { color: string; bg: string } {
   if (name.includes("Managing")) return { color: COLORS.primary, bg: "rgba(15,92,58,0.1)" };
   if (name.includes("Breed Council")) return { color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" };
@@ -80,16 +71,20 @@ export default function TheTeamScreen() {
     queryFn: fetchTeam,
   });
 
+  const committeeOrder: string[] = [];
   const grouped: Record<string, TeamMember[]> = {};
   (members ?? []).forEach((m) => {
-    if (!grouped[m.committee_name]) grouped[m.committee_name] = [];
+    if (!grouped[m.committee_name]) {
+      grouped[m.committee_name] = [];
+      committeeOrder.push(m.committee_name);
+    }
     grouped[m.committee_name].push(m);
   });
 
-  const orderedKeys = [
-    ...COMMITTEE_ORDER.filter((k) => grouped[k]),
-    ...Object.keys(grouped).filter((k) => !COMMITTEE_ORDER.includes(k)),
-  ];
+  const orderedKeys = committeeOrder;
+  Object.values(grouped).forEach((list) =>
+    list.sort((a, b) => a.position_name.localeCompare(b.position_name))
+  );
 
   return (
     <ScrollView
