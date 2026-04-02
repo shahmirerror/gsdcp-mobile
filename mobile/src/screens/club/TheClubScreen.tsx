@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import type { TheClubStackParamList } from "../../navigation/AppNavigator";
 
@@ -77,15 +78,15 @@ export default function TheClubScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 32 }}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <View style={styles.headerIconWrap}>
-          <Ionicons name="shield-checkmark" size={26} color={COLORS.primary} />
+      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 28 }]}>
+        <View style={styles.heroCenter}>
+          <View style={styles.heroIconWrap}>
+            <Ionicons name="shield-checkmark" size={34} color="#fff" />
+          </View>
+          <Text style={styles.heroTitle}>The Club</Text>
+          <Text style={styles.heroSub}>German Shepherd Dog Club of Pakistan</Text>
         </View>
-        <View>
-          <Text style={styles.headerTitle}>The Club</Text>
-          <Text style={styles.headerSubtitle}>German Shepherd Dog Club of Pakistan</Text>
-        </View>
-      </View>
+      </LinearGradient>
 
       <View style={styles.listWrap}>
         {SECTIONS.map((section, index) => (
@@ -116,34 +117,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  header: { paddingHorizontal: 20, paddingBottom: 36 },
+  heroCenter: { alignItems: "center" },
+  heroIconWrap: {
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center", alignItems: "center", marginBottom: 14,
   },
-  headerIconWrap: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: "rgba(15,92,58,0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: COLORS.text,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff", textAlign: "center" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 6 },
   listWrap: {
     marginHorizontal: 16,
     marginTop: -1,

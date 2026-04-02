@@ -14,6 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudges, JudgeItem } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
@@ -74,25 +75,23 @@ export default function GSDCPJudgesScreen() {
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
       }
     >
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
           data-testid="button-back"
         >
-          <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
+          <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.85)" />
           <Text style={styles.backText}>The Club</Text>
         </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <View style={styles.headerIconWrap}>
-            <Ionicons name="ribbon" size={26} color={COLORS.accent} />
+        <View style={styles.heroCenter}>
+          <View style={styles.heroIconWrap}>
+            <Ionicons name="ribbon" size={34} color="#fff" />
           </View>
-          <View>
-            <Text style={styles.headerTitle}>GSDCP Judges</Text>
-            <Text style={styles.headerSub}>Certified local breed judges</Text>
-          </View>
+          <Text style={styles.heroTitle}>GSDCP Judges</Text>
+          <Text style={styles.heroSub}>Certified local breed judges</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       <View style={styles.infoCard}>
         <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
@@ -121,23 +120,17 @@ export default function GSDCPJudgesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  header: { paddingHorizontal: 20, paddingBottom: 32 },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 20 },
+  backText: { fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
+  heroCenter: { alignItems: "center" },
+  heroIconWrap: {
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center", alignItems: "center", marginBottom: 14,
   },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 16 },
-  backText: { fontSize: 15, color: COLORS.primary, fontWeight: "600" },
-  headerContent: { flexDirection: "row", alignItems: "center", gap: 14 },
-  headerIconWrap: {
-    width: 48, height: 48, borderRadius: 14,
-    backgroundColor: "rgba(199,164,92,0.12)",
-    justifyContent: "center", alignItems: "center",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: COLORS.text },
-  headerSub: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  heroTitle: { fontSize: 24, fontWeight: "800", color: "#fff", textAlign: "center" },
+  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center", marginTop: 6 },
   infoCard: {
     marginHorizontal: 16, marginTop: 20,
     flexDirection: "row", gap: 10,
