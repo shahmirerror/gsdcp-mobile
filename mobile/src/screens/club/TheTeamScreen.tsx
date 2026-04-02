@@ -83,7 +83,16 @@ export default function TheTeamScreen() {
 
   const orderedKeys = committeeOrder;
   Object.values(grouped).forEach((list) =>
-    list.sort((a, b) => a.position_name.localeCompare(b.position_name))
+    list.sort((a, b) => {
+      const rank = (pos: string) => {
+        const l = pos.toLowerCase();
+        if (l === "member") return 2;
+        if (l.startsWith("member")) return 1;
+        return 0;
+      };
+      const dr = rank(a.position_name) - rank(b.position_name);
+      return dr !== 0 ? dr : a.position_name.localeCompare(b.position_name);
+    })
   );
 
   return (
