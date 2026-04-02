@@ -1,5 +1,12 @@
+import { useMemo, useRef, useState } from "react";
 import { Image, Platform } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { StatusBar } from "expo-status-bar";
+import {
+  NavigationContainer,
+  type NavigationState,
+  type PartialState,
+  type NavigatorScreenParams,
+} from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -108,16 +115,48 @@ export type TheClubStackParamList = {
 
 export type RootTabParamList = {
   HomeTab: undefined;
-  DogsTab: undefined;
-  BreedersTab: undefined;
-  ShowsTab: undefined;
-  ProfileTab: undefined;
-  KennelDirectoryTab: undefined;
-  MemberDirectoryTab: undefined;
-  RecentMatingsTab: undefined;
-  TheClubTab: undefined;
+  DogsTab: NavigatorScreenParams<DogsStackParamList> | undefined;
+  BreedersTab: NavigatorScreenParams<BreedersStackParamList> | undefined;
+  ShowsTab: NavigatorScreenParams<ShowsStackParamList> | undefined;
+  ProfileTab: NavigatorScreenParams<ProfileStackParamList> | undefined;
+  KennelDirectoryTab: NavigatorScreenParams<KennelDirectoryStackParamList> | undefined;
+  MemberDirectoryTab: NavigatorScreenParams<MemberDirectoryStackParamList> | undefined;
+  RecentMatingsTab: NavigatorScreenParams<RecentMatingsStackParamList> | undefined;
+  TheClubTab: NavigatorScreenParams<TheClubStackParamList> | undefined;
   VirtualBreedingTab: undefined;
 };
+
+type NavTreeState = NavigationState | PartialState<NavigationState>;
+
+const LIGHT_STATUS_BAR_ROUTES = new Set<string>([
+  "HomeTab",
+  "LoginRegister",
+  "TheClubHome",
+]);
+
+function getActiveRouteName(state: NavTreeState | undefined): string {
+  if (!state || !state.routes || state.routes.length === 0) {
+    return "HomeTab";
+  }
+
+  const index = state.index ?? 0;
+  const route = state.routes[index] as
+    | {
+        name: string;
+        state?: NavTreeState;
+      }
+    | undefined;
+
+  if (!route) {
+    return "HomeTab";
+  }
+
+  if (route.state) {
+    return getActiveRouteName(route.state);
+  }
+
+  return route.name;
+}
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 const DogsStack = createNativeStackNavigator<DogsStackParamList>();
@@ -244,24 +283,48 @@ function TheClubStackNavigator() {
 }
 
 export default function AppNavigator() {
+  const navRef = useRef<any>(null);
+  const [activeRouteName, setActiveRouteName] = useState("HomeTab");
+
+  const statusBarStyle = useMemo<"light" | "dark">(
+    () => (LIGHT_STATUS_BAR_ROUTES.has(activeRouteName) ? "light" : "dark"),
+    [activeRouteName]
+  );
+
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        initialRouteName="HomeTab"
-        tabBar={(props) => <CustomTabBar {...props} />}
-        screenOptions={{ headerShown: false }}
+    <>
+      <NavigationContainer
+        ref={navRef}
+        onReady={() => {
+          const rootState = navRef.current?.getRootState?.() as NavTreeState | undefined;
+          setActiveRouteName(getActiveRouteName(rootState));
+        }}
+        onStateChange={(state) => {
+          setActiveRouteName(getActiveRouteName(state as NavTreeState | undefined));
+        }}
       >
-        <Tab.Screen name="DogsTab" component={DogsStackNavigator} options={{ title: "Dogs" }} />
-        <Tab.Screen name="BreedersTab" component={BreedersStackNavigator} options={{ title: "Active Breeders" }} />
-        <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: "Home" }} />
-        <Tab.Screen name="ShowsTab" component={ShowsStackNavigator} options={{ title: "Shows" }} />
-        <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
-        <Tab.Screen name="KennelDirectoryTab" component={KennelDirectoryStackNavigator} />
-        <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryStackNavigator} />
-        <Tab.Screen name="RecentMatingsTab" component={RecentMatingsStackNavigator} />
-        <Tab.Screen name="TheClubTab" component={TheClubStackNavigator} />
-        <Tab.Screen name="VirtualBreedingTab" component={VirtualBreedingScreen} />
-      </Tab.Navigator>
-    </NavigationContainer>
+        <Tab.Navigator
+          initialRouteName="HomeTab"
+          tabBar={(props) => <CustomTabBar {...props} />}
+          screenOptions={{ headerShown: false }}
+        >
+          <Tab.Screen name="DogsTab" component={DogsStackNavigator} options={{ title: "Dogs" }} />
+          <Tab.Screen name="BreedersTab" component={BreedersStackNavigator} options={{ title: "Active Breeders" }} />
+          <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: "Home" }} />
+          <Tab.Screen name="ShowsTab" component={ShowsStackNavigator} options={{ title: "Shows" }} />
+          <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
+          <Tab.Screen name="KennelDirectoryTab" component={KennelDirectoryStackNavigator} />
+          <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryStackNavigator} />
+          <Tab.Screen name="RecentMatingsTab" component={RecentMatingsStackNavigator} />
+          <Tab.Screen name="TheClubTab" component={TheClubStackNavigator} />
+          <Tab.Screen name="VirtualBreedingTab" component={VirtualBreedingScreen} />
+        </Tab.Navigator>
+      </NavigationContainer>
+      <StatusBar
+        style={statusBarStyle}
+        backgroundColor={COLORS.background}
+        translucent={false}
+      />
+    </>
   );
 }

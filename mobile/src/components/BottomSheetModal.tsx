@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo, useCallback } from "react";
 import {
   Modal,
   View,
@@ -29,46 +29,71 @@ export default function BottomSheetModal({
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
+  const animateToClosed = useCallback(() => {
+    Animated.timing(translateY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => onClose());
+  }, [onClose, translateY]);
+
+  const animateToOpen = useCallback(() => {
+    Animated.spring(translateY, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 0,
+      speed: 20,
+    }).start();
+  }, [translateY]);
+
   useEffect(() => {
     if (visible) {
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        bounciness: 0,
-        speed: 20,
-      }).start();
+      animateToOpen();
     } else {
       translateY.setValue(SCREEN_HEIGHT);
     }
-  }, [visible]);
+  }, [animateToOpen, translateY, visible]);
 
-  const panResponder = useRef(
+  const panResponder = useMemo(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
-        gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
+        visible && gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) {
+          translateY.setValue(gs.dy);
+        }
+      },
       onPanResponderRelease: (_, gs) => {
-        if (gs.dy > 60 || gs.vy > 0.5) onClose();
+        if (gs.dy > 90 || gs.vy > 0.9) {
+          animateToClosed();
+          return;
+        }
+        animateToOpen();
+      },
+      onPanResponderTerminate: () => {
+        animateToOpen();
       },
     })
-  ).current;
+  , [animateToClosed, animateToOpen, translateY, visible]);
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="none"
-      onRequestClose={onClose}
+      onRequestClose={animateToClosed}
     >
       <View style={styles.overlay}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
+        <Pressable style={styles.backdrop} onPress={animateToClosed} />
         <Animated.View
+          {...panResponder.panHandlers}
           style={[
             styles.sheet,
             { maxHeight, paddingBottom: Math.max(insets.bottom, 16) },
             { transform: [{ translateY }] },
           ]}
         >
-          <View {...panResponder.panHandlers} style={styles.handleArea}>
+          <View style={styles.handleArea}>
             <View style={styles.handle} />
           </View>
           {children}
