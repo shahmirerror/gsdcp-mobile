@@ -1538,6 +1538,10 @@ export interface TeamMember {
   committee_name: string;
   imageUrl: string;
   description?: string;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  twitter_url?: string | null;
+  youtube_url?: string | null;
 }
 
 export async function fetchTeam(): Promise<TeamMember[]> {

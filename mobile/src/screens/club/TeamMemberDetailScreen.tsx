@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-import { fetchTeamMember, stripHtml } from "../../lib/api";
+import { fetchTeamMember, stripHtml, TeamMember } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 
 const heroBg = require("../../../assets/hero-bg.jpg");
@@ -30,6 +31,20 @@ function committeeColor(name: string): string {
   if (name.includes("Breed Warden")) return "#0891B2";
   return COLORS.textSecondary;
 }
+
+type SocialLink = {
+  key: keyof Pick<TeamMember, "facebook_url" | "instagram_url" | "twitter_url" | "youtube_url">;
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  color: string;
+};
+
+const SOCIAL_LINKS: SocialLink[] = [
+  { key: "facebook_url", label: "Facebook", icon: "logo-facebook", color: "#1877F2" },
+  { key: "instagram_url", label: "Instagram", icon: "logo-instagram", color: "#E1306C" },
+  { key: "twitter_url", label: "Twitter", icon: "logo-twitter", color: "#1DA1F2" },
+  { key: "youtube_url", label: "YouTube", icon: "logo-youtube", color: "#FF0000" },
+];
 
 export default function TeamMemberDetailScreen() {
   const navigation = useNavigation();
@@ -51,6 +66,10 @@ export default function TeamMemberDetailScreen() {
   const bio = member?.description ? stripHtml(member.description) : "";
   const accentColor = member ? committeeColor(member.committee_name) : COLORS.primary;
 
+  const activeSocials = member
+    ? SOCIAL_LINKS.filter((s) => !!member[s.key])
+    : [];
+
   return (
     <ScrollView
       style={styles.container}
@@ -70,7 +89,6 @@ export default function TeamMemberDetailScreen() {
           style={[styles.backButton, { top: insets.top + 12 }]}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
-          data-testid="btn-back"
         >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
@@ -103,6 +121,22 @@ export default function TeamMemberDetailScreen() {
               <Ionicons name="shield-checkmark-outline" size={13} color={accentColor} />
               <Text style={[styles.committeeText, { color: accentColor }]}>{member.committee_name}</Text>
             </View>
+
+            {activeSocials.length > 0 && (
+              <View style={styles.socialRow}>
+                {activeSocials.map((s) => (
+                  <TouchableOpacity
+                    key={s.key}
+                    style={[styles.socialBtn, { backgroundColor: `${s.color}12`, borderColor: `${s.color}30` }]}
+                    onPress={() => Linking.openURL(member[s.key] as string)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={s.icon} size={20} color={s.color} />
+                    <Text style={[styles.socialLabel, { color: s.color }]}>{s.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {bio.length > 0 && (
@@ -184,6 +218,24 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   committeeText: { fontSize: 13, fontWeight: "600" },
+
+  socialRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 16,
+  },
+  socialBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  socialLabel: { fontSize: 13, fontWeight: "600" },
 
   section: { paddingHorizontal: 16, marginTop: 20 },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
