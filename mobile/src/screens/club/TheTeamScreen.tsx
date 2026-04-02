@@ -11,11 +11,15 @@ import {
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchTeam, TeamMember } from "../../lib/api";
+import { TheClubStackParamList } from "../../navigation/AppNavigator";
+
+type Nav = NativeStackNavigationProp<TheClubStackParamList>;
 
 function committeeAccent(name: string): { color: string; bg: string } {
   if (name.includes("Managing")) return { color: COLORS.primary, bg: "rgba(15,92,58,0.1)" };
@@ -27,7 +31,7 @@ function committeeAccent(name: string): { color: string; bg: string } {
   return { color: COLORS.textSecondary, bg: "rgba(107,114,128,0.08)" };
 }
 
-function MemberCard({ member }: { member: TeamMember }) {
+function MemberCard({ member, onPress }: { member: TeamMember; onPress?: () => void }) {
   const [imgError, setImgError] = useState(false);
   const initials = member.full_name
     .split(" ")
@@ -36,9 +40,10 @@ function MemberCard({ member }: { member: TeamMember }) {
     .map((w) => w[0].toUpperCase())
     .join("");
   const accent = committeeAccent(member.committee_name);
+  const hasProfile = !!onPress;
 
-  return (
-    <View style={styles.card}>
+  const inner = (
+    <>
       <View style={[styles.avatarWrap, { backgroundColor: accent.bg }]}>
         {!imgError && member.imageUrl ? (
           <Image
@@ -58,12 +63,22 @@ function MemberCard({ member }: { member: TeamMember }) {
           </Text>
         </View>
       </View>
-    </View>
+      {hasProfile && <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />}
+    </>
   );
+
+  if (hasProfile) {
+    return (
+      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
+        {inner}
+      </TouchableOpacity>
+    );
+  }
+  return <View style={styles.card}>{inner}</View>;
 }
 
 export default function TheTeamScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
 
   const { data: members, isLoading, refetch, isRefetching } = useQuery({
@@ -141,7 +156,11 @@ export default function TheTeamScreen() {
                 </View>
                 <View style={styles.cardsWrap}>
                   {grouped[committee].map((member) => (
-                    <MemberCard key={member.team_id} member={member} />
+                    <MemberCard
+                      key={`${member.team_id ?? member.full_name}-${member.position_name}`}
+                      member={member}
+                      onPress={member.team_id ? () => navigation.navigate("TeamMemberDetail", { id: member.team_id! }) : undefined}
+                    />
                   ))}
                 </View>
               </View>

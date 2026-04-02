@@ -31,6 +31,7 @@ import VisitingJudgesScreen from "../screens/club/VisitingJudgesScreen";
 import NewsUpdatesScreen from "../screens/club/NewsUpdatesScreen";
 import NewsDetailScreen from "../screens/club/NewsDetailScreen";
 import JudgeDetailScreen from "../screens/club/JudgeDetailScreen";
+import TeamMemberDetailScreen from "../screens/club/TeamMemberDetailScreen";
 
 import VirtualBreedingScreen from "../screens/VirtualBreedingScreen";
 import CustomTabBar from "./CustomTabBar";
@@ -103,6 +104,7 @@ export type TheClubStackParamList = {
   NewsUpdates: undefined;
   NewsDetail: { item: { id: number; title: string; content: string } };
   JudgeDetail: { id: string; backLabel?: string };
+  TeamMemberDetail: { id: string };
   ShowDetail: { id: string; name?: string };
 };
 
@@ -238,6 +240,7 @@ function TheClubStackNavigator() {
       <TheClubStack.Screen name="NewsUpdates" component={NewsUpdatesScreen} />
       <TheClubStack.Screen name="NewsDetail" component={NewsDetailScreen} />
       <TheClubStack.Screen name="JudgeDetail" component={JudgeDetailScreen} />
+      <TheClubStack.Screen name="TeamMemberDetail" component={TeamMemberDetailScreen} />
       <TheClubStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </TheClubStack.Navigator>
   );
