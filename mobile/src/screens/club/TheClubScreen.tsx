@@ -78,17 +78,14 @@ export default function TheClubScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 32 }}
     >
-      <LinearGradient
-        colors={[COLORS.primaryDark, COLORS.primary]}
-        style={[styles.header, { paddingTop: insets.top + 20 }]}
-      >
-        <View style={styles.headerIconWrap}>
-          <Ionicons name="shield-checkmark" size={36} color={COLORS.accent} />
+      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 28 }]}>
+        <View style={styles.heroCenter}>
+          <View style={styles.heroIconWrap}>
+            <Ionicons name="shield-checkmark" size={34} color="#fff" />
+          </View>
+          <Text style={styles.heroTitle}>The Club</Text>
+          <Text style={styles.heroSub}>German Shepherd Dog Club of Pakistan</Text>
         </View>
-        <Text style={styles.headerTitle}>The Club</Text>
-        <Text style={styles.headerSubtitle}>
-          German Shepherd Dog Club of Pakistan
-        </Text>
       </LinearGradient>
 
       <View style={styles.listWrap}>
@@ -120,31 +117,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    alignItems: "center",
+  header: { paddingHorizontal: 20, paddingBottom: 36 },
+  heroCenter: { alignItems: "center" },
+  heroIconWrap: {
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center", alignItems: "center", marginBottom: 14,
   },
-  headerIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: 0.3,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.65)",
-    marginTop: 4,
-  },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff", textAlign: "center" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 6 },
   listWrap: {
     marginHorizontal: 16,
     marginTop: -1,

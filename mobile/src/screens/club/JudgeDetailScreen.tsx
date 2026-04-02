@@ -19,6 +19,7 @@ import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudgeDetail, stripHtml, JudgeShow } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 import { formatDate } from "../../lib/dateUtils";
+import LazyImage from "../../components/LazyImage";
 
 const heroBg = require("../../../assets/hero-bg.jpg");
 

@@ -19,6 +19,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
+import LazyImage from "../components/LazyImage";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -208,7 +209,7 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
       {/* Kennel identity row */}
       <View style={styles.kennelHeader}>
         {hasImage ? (
-          <Image source={{ uri: kennel.imageUrl! }} style={styles.kennelAvatar} />
+          <LazyImage source={{ uri: kennel.imageUrl! }} style={styles.kennelAvatar} />
         ) : (
           <View style={[styles.kennelAvatar, styles.kennelAvatarPlaceholder]}>
             <Text style={styles.kennelAvatarInitials}>{initials}</Text>
@@ -367,7 +368,7 @@ export default function MemberProfileScreen() {
       <View style={styles.profileSection}>
         <View style={styles.avatarOuter}>
           {hasPhoto ? (
-            <Image source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+            <LazyImage source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
           ) : (
             <View style={styles.avatarInner}>
               <Text style={styles.avatarInitials}>{initials}</Text>

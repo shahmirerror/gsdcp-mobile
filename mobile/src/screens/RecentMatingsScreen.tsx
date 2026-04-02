@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   ScrollView,
   RefreshControl,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +18,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import { fetchRecentMatings, RecentMating } from "../lib/api";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -52,7 +52,7 @@ function MatingRow({ mating, onPress }: {
       <View style={styles.itemInfo}>
         <View style={styles.kennelNameRow}>
           {mating.kennel_image ? (
-            <Image source={{ uri: mating.kennel_image }} style={styles.kennelAvatar} />
+            <LazyImage source={{ uri: mating.kennel_image }} style={styles.kennelAvatar} />
           ) : (
             <View style={[styles.kennelAvatar, styles.kennelAvatarPlaceholder]}>
               <Ionicons name="home-outline" size={13} color={COLORS.primary} />
@@ -63,7 +63,7 @@ function MatingRow({ mating, onPress }: {
 
         <View style={styles.dogRow}>
           {mating.sire.imageUrl ? (
-            <Image source={{ uri: mating.sire.imageUrl }} style={styles.dogAvatar} />
+            <LazyImage source={{ uri: mating.sire.imageUrl }} style={styles.dogAvatar} />
           ) : (
             <View style={[styles.dogAvatar, styles.dogAvatarPlaceholder]}>
               <Text style={styles.dogAvatarLetter}>S</Text>
@@ -81,7 +81,7 @@ function MatingRow({ mating, onPress }: {
 
         <View style={styles.dogRow}>
           {mating.dam.imageUrl ? (
-            <Image source={{ uri: mating.dam.imageUrl }} style={styles.dogAvatar} />
+            <LazyImage source={{ uri: mating.dam.imageUrl }} style={styles.dogAvatar} />
           ) : (
             <View style={[styles.dogAvatar, styles.dogAvatarPlaceholder]}>
               <Text style={styles.dogAvatarLetter}>D</Text>
@@ -299,7 +299,7 @@ export default function RecentMatingsScreen() {
                 {/* Header */}
                 <View style={styles.previewHeader}>
                   {previewMating.kennel_image ? (
-                    <Image source={{ uri: previewMating.kennel_image }} style={styles.previewKennelImage} />
+                    <LazyImage source={{ uri: previewMating.kennel_image }} style={styles.previewKennelImage} />
                   ) : (
                     <View style={[styles.previewKennelImage, styles.previewKennelImagePlaceholder]}>
                       <Ionicons name="home-outline" size={26} color={COLORS.primary} />
@@ -335,7 +335,7 @@ export default function RecentMatingsScreen() {
                   onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.sire.id, name: previewMating.sire.name.trim() }); }}
                 >
                   {previewMating.sire.imageUrl ? (
-                    <Image source={{ uri: previewMating.sire.imageUrl }} style={styles.previewDogImage} />
+                    <LazyImage source={{ uri: previewMating.sire.imageUrl }} style={styles.previewDogImage} />
                   ) : (
                     <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
                       <Text style={styles.previewDogLabel}>S</Text>
@@ -364,7 +364,7 @@ export default function RecentMatingsScreen() {
                   onPress={() => { setPreviewMating(null); navigation.push("DogProfile", { id: previewMating.dam.id, name: previewMating.dam.name.trim() }); }}
                 >
                   {previewMating.dam.imageUrl ? (
-                    <Image source={{ uri: previewMating.dam.imageUrl }} style={styles.previewDogImage} />
+                    <LazyImage source={{ uri: previewMating.dam.imageUrl }} style={styles.previewDogImage} />
                   ) : (
                     <View style={[styles.previewDogImage, styles.previewDogImagePlaceholder]}>
                       <Text style={styles.previewDogLabel}>D</Text>

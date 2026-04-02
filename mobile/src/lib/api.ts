@@ -1065,10 +1065,11 @@ export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
 
 export async function fetchMembersPage(
   page: number = 1,
-  options?: { q?: string },
+  options?: { q?: string; type?: "Permanent" | "Temporary" },
 ): Promise<MembersPage> {
   const params = new URLSearchParams({ page: String(page) });
   if (options?.q) params.set("q", options.q);
+  if (options?.type) params.set("type", options.type);
   const res = await fetch(`${BASE_URL}/members?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch members");
@@ -1528,4 +1529,31 @@ export async function searchDogs(query: string, page = 1, perPage = 10, sex?: st
   if (!res.ok) throw new Error("Failed to search dogs");
   const json = await res.json();
   return Array.isArray(json.data) ? json.data : [];
+}
+
+export interface TeamMember {
+  team_id: string;
+  full_name: string;
+  position_name: string;
+  committee_name: string;
+  imageUrl: string;
+  description?: string;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  twitter_url?: string | null;
+  youtube_url?: string | null;
+}
+
+export async function fetchTeam(): Promise<TeamMember[]> {
+  const res = await fetch(`${BASE_URL}/team`, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error("Failed to fetch team");
+  const json = await res.json();
+  return Array.isArray(json.data?.gsdcp_team) ? json.data.gsdcp_team : [];
+}
+
+export async function fetchTeamMember(id: string): Promise<TeamMember> {
+  const res = await fetch(`${BASE_URL}/team/${id}`, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error("Failed to fetch team member");
+  const json = await res.json();
+  return json.data.gsdcp_team;
 }

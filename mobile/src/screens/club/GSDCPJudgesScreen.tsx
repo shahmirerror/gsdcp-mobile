@@ -2,9 +2,9 @@ import {
   ScrollView,
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
@@ -13,11 +13,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudges, JudgeItem } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
+import LazyImage from "../../components/LazyImage";
 
 function credentialColor(credentials: string): { bg: string; text: string } {
   if (credentials.toLowerCase().includes("fci")) return { bg: "rgba(59,130,246,0.1)", text: "#2563EB" };
@@ -74,23 +75,22 @@ export default function GSDCPJudgesScreen() {
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
       }
     >
-      <LinearGradient
-        colors={[COLORS.primaryDark, COLORS.primary]}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}
-      >
+      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.goBack()}
           data-testid="button-back"
         >
-          <Ionicons name="chevron-back" size={22} color="#fff" />
+          <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.85)" />
           <Text style={styles.backText}>The Club</Text>
         </TouchableOpacity>
-        <View style={styles.headerIconWrap}>
-          <Ionicons name="ribbon" size={34} color={COLORS.accent} />
+        <View style={styles.heroCenter}>
+          <View style={styles.heroIconWrap}>
+            <Ionicons name="ribbon" size={34} color="#fff" />
+          </View>
+          <Text style={styles.heroTitle}>GSDCP Judges</Text>
+          <Text style={styles.heroSub}>Certified local breed judges</Text>
         </View>
-        <Text style={styles.headerTitle}>GSDCP Judges</Text>
-        <Text style={styles.headerSub}>Certified local breed judges</Text>
       </LinearGradient>
 
       <View style={styles.infoCard}>
@@ -120,16 +120,17 @@ export default function GSDCPJudgesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 28, alignItems: "center" },
-  backBtn: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", marginBottom: 20, gap: 4 },
-  backText: { fontSize: 15, color: "#fff", fontWeight: "600" },
-  headerIconWrap: {
-    width: 64, height: 64, borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    justifyContent: "center", alignItems: "center", marginBottom: 12,
+  header: { paddingHorizontal: 20, paddingBottom: 32 },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 20 },
+  backText: { fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
+  heroCenter: { alignItems: "center" },
+  heroIconWrap: {
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center", alignItems: "center", marginBottom: 14,
   },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  headerSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  heroTitle: { fontSize: 24, fontWeight: "800", color: "#fff", textAlign: "center" },
+  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center", marginTop: 6 },
   infoCard: {
     marginHorizontal: 16, marginTop: 20,
     flexDirection: "row", gap: 10,

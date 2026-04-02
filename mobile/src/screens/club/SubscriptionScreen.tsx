@@ -13,8 +13,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchFees, FeeItem } from "../../lib/api";
 
@@ -87,23 +87,22 @@ export default function SubscriptionScreen() {
           />
         }
       >
-        <LinearGradient
-          colors={[COLORS.primaryDark, COLORS.primary]}
-          style={[styles.header, { paddingTop: insets.top + 12 }]}
-        >
+        <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
             data-testid="button-back"
           >
-            <Ionicons name="chevron-back" size={22} color="#fff" />
+            <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.85)" />
             <Text style={styles.backText}>The Club</Text>
           </TouchableOpacity>
-          <View style={styles.headerIconWrap}>
-            <Ionicons name="card" size={34} color={COLORS.accent} />
+          <View style={styles.heroCenter}>
+            <View style={styles.heroIconWrap}>
+              <Ionicons name="card" size={34} color="#fff" />
+            </View>
+            <Text style={styles.heroTitle}>Subscription & Fees</Text>
+            <Text style={styles.heroSub}>Membership types and fee structure</Text>
           </View>
-          <Text style={styles.headerTitle}>Subscription & Fees</Text>
-          <Text style={styles.headerSub}>Membership types and fee structure</Text>
         </LinearGradient>
 
         <View style={styles.sectionHeader}>
@@ -198,16 +197,17 @@ export default function SubscriptionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 28, alignItems: "center" },
-  backBtn: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", marginBottom: 20, gap: 4 },
-  backText: { fontSize: 15, color: "#fff", fontWeight: "600" },
-  headerIconWrap: {
-    width: 64, height: 64, borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    justifyContent: "center", alignItems: "center", marginBottom: 12,
+  header: { paddingHorizontal: 20, paddingBottom: 32 },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 20 },
+  backText: { fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
+  heroCenter: { alignItems: "center" },
+  heroIconWrap: {
+    width: 72, height: 72, borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center", alignItems: "center", marginBottom: 14,
   },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  headerSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  heroTitle: { fontSize: 24, fontWeight: "800", color: "#fff", textAlign: "center" },
+  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center", marginTop: 6 },
   sectionHeader: { paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: COLORS.text },
   categoriesWrap: { paddingHorizontal: 16, gap: 20 },

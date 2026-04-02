@@ -8,7 +8,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Image,
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +21,7 @@ import { fetchDogsPage, Dog, DogsPage } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import type { DogsStackParamList } from "../navigation/AppNavigator";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 type Nav = NativeStackNavigationProp<DogsStackParamList, "DogSearch">;
 
@@ -227,7 +227,7 @@ export default function DogSearchScreen() {
 
               <View style={styles.dogPreviewHeader}>
                 {previewDog.imageUrl ? (
-                  <Image source={{ uri: previewDog.imageUrl }} style={styles.dogPreviewImage} resizeMode="cover" />
+                  <LazyImage source={{ uri: previewDog.imageUrl }} style={styles.dogPreviewImage} resizeMode="cover" />
                 ) : (
                   <View style={styles.dogPreviewAvatar}>
                     <Text style={styles.dogPreviewAvatarText}>

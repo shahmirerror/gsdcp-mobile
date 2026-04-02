@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   ScrollView,
   RefreshControl,
-  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -19,6 +18,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMembersPage, Member, MembersPage } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import BottomSheetModal from "../components/BottomSheetModal";
+import LazyImage from "../components/LazyImage";
 
 function getInitials(name: string): string {
   return name
@@ -36,7 +36,6 @@ function isValidImage(url: string | null): boolean {
   return url.startsWith("http");
 }
 
-const Separator = memo(() => <View style={styles.separator} />);
 
 const MemberListItem = memo(function MemberListItem({ member, onPress }: { member: Member; onPress: () => void }) {
   const initials = getInitials(member.member_name);
@@ -44,7 +43,7 @@ const MemberListItem = memo(function MemberListItem({ member, onPress }: { membe
   return (
     <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-member-${member.id}`}>
       {hasImage ? (
-        <Image source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+        <LazyImage source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
       ) : (
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
@@ -130,6 +129,9 @@ export default function MemberDirectoryScreen() {
     setTempTypeFilter("All");
   };
 
+  const memberType =
+    typeFilter === "T-" ? "Temporary" : typeFilter === "P-" ? "Permanent" : undefined;
+
   const {
     data,
     isLoading,
@@ -140,9 +142,12 @@ export default function MemberDirectoryScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<MembersPage>({
-    queryKey: ["members-pages", debouncedSearch],
+    queryKey: ["members-pages", debouncedSearch, typeFilter],
     queryFn: ({ pageParam }) =>
-      fetchMembersPage(pageParam as number, { q: debouncedSearch || undefined }),
+      fetchMembersPage(pageParam as number, {
+        q: debouncedSearch || undefined,
+        type: memberType,
+      }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage?.pagination?.hasMorePages
@@ -182,11 +187,8 @@ export default function MemberDirectoryScreen() {
     if (cityFilter !== "All") {
       results = results.filter((m) => m.city === cityFilter);
     }
-    if (typeFilter !== "All") {
-      results = results.filter((m) => m.membership_no?.startsWith(typeFilter));
-    }
     return results;
-  }, [allMembers, countryFilter, cityFilter, typeFilter]);
+  }, [allMembers, countryFilter, cityFilter]);
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -239,7 +241,7 @@ export default function MemberDirectoryScreen() {
           <Ionicons
             name="options-outline"
             size={18}
-            color={activeFilterCount > 0 ? COLORS.primary : COLORS.textMuted}
+            color={activeFilterCount > 0 ? "#fff" : COLORS.textMuted}
           />
           {activeFilterCount > 0 && (
             <View style={styles.filterBadge}>
@@ -249,10 +251,47 @@ export default function MemberDirectoryScreen() {
         </TouchableOpacity>
       </View>
 
+      {activeFilterCount > 0 && (
+        <View style={styles.activeFiltersRow}>
+          {typeFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>
+                {typeFilter === "T-" ? "Temporary" : "Permanent"}
+              </Text>
+              <TouchableOpacity onPress={() => setTypeFilter("All")} data-testid="btn-remove-type-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {countryFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{countryFilter}</Text>
+              <TouchableOpacity onPress={() => setCountryFilter("All")} data-testid="btn-remove-country-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {cityFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{cityFilter}</Text>
+              <TouchableOpacity onPress={() => setCityFilter("All")} data-testid="btn-remove-city-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => { setTypeFilter("All"); setCountryFilter("All"); setCityFilter("All"); }}
+            data-testid="btn-clear-all-filters"
+          >
+            <Text style={styles.clearAllText}>Clear all</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Results meta */}
       {!isLoading && !isError && (
-        <View style={styles.resultsMeta}>
-          <Text style={styles.resultsText}>
+        <View style={styles.countRow}>
+          <Text style={styles.count}>
             {filtered.length} member{filtered.length !== 1 ? "s" : ""}
             {hasNextPage ? ` (${totalLoaded} loaded)` : ""}
           </Text>
@@ -277,7 +316,6 @@ export default function MemberDirectoryScreen() {
           data={filtered}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={Separator}
           showsVerticalScrollIndicator={false}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}
@@ -384,60 +422,88 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.lg,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  searchInput: { flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.text, paddingVertical: 0 },
+  searchInput: { flex: 1, height: 44, fontSize: FONT_SIZES.md, color: COLORS.text },
   filterBtn: {
-    width: 40, height: 40,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.background,
+    width: 44, height: 44,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
     borderWidth: 1, borderColor: COLORS.border,
     justifyContent: "center", alignItems: "center",
   },
-  filterBtnActive: { borderColor: COLORS.primary, backgroundColor: "rgba(15,92,59,0.06)" },
+  filterBtnActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   filterBadge: {
     position: "absolute", top: -4, right: -4,
     width: 16, height: 16, borderRadius: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.accent,
     justifyContent: "center", alignItems: "center",
   },
   filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  activeFiltersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
+  },
+  activeChipText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
+  clearAllText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    marginLeft: 4,
+  },
 
   chipsContent: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm, flexDirection: "row", alignItems: "center" },
 
-  resultsMeta: {
-    paddingHorizontal: SPACING.md, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    backgroundColor: "#fff",
+  countRow: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
   },
-  resultsText: { fontSize: 12, color: COLORS.textMuted, fontWeight: "500" },
+  count: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
 
-  list: { paddingTop: SPACING.sm, paddingBottom: 32 },
-  separator: { height: 1, backgroundColor: COLORS.border, marginLeft: 72 },
+  list: { padding: SPACING.lg, paddingTop: SPACING.sm },
 
   listItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-    backgroundColor: "#fff",
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.sm,
   },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
