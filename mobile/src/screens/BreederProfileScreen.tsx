@@ -511,7 +511,15 @@ export default function BreederProfileScreen() {
         </View>
 
         <Text style={styles.breederName}>{breeder.name}</Text>
-        <Text style={styles.kennelText}>{breeder.kennelName}</Text>
+        <TouchableOpacity
+          style={styles.kennelLink}
+          onPress={() => navigation.navigate("KennelProfile", { id: breeder.id, name: breeder.kennelName })}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="home-outline" size={13} color={COLORS.primary} />
+          <Text style={styles.kennelLinkText}>{breeder.kennelName}</Text>
+          <Ionicons name="chevron-forward" size={13} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.tabBar}>
@@ -538,7 +546,17 @@ export default function BreederProfileScreen() {
               <Text style={styles.cardHeading}>Details</Text>
               <View style={styles.detailsGrid}>
                 <DetailItem icon="person" label="Name" value={breeder.name} />
-                <DetailItem icon="home" label="Kennel" value={breeder.kennelName} />
+                <TouchableOpacity
+                  onPress={() => navigation.navigate("KennelProfile", { id: breeder.id, name: breeder.kennelName })}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.linkableDetailItem}>
+                    <View style={{ flex: 1 }}>
+                      <DetailItem icon="home" label="Kennel" value={breeder.kennelName} />
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.primary} style={{ marginLeft: 8 }} />
+                  </View>
+                </TouchableOpacity>
                 {breeder.membership_no ? (
                   <DetailItem icon="card" label="Membership No." value={breeder.membership_no} />
                 ) : null}
@@ -724,6 +742,25 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#64748B",
     marginTop: 4,
+  },
+  kennelLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: "rgba(15,92,59,0.07)",
+  },
+  kennelLinkText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  linkableDetailItem: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   tabBar: {
     flexDirection: "row",
