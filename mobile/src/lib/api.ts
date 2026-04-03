@@ -1557,3 +1557,136 @@ export async function fetchTeamMember(id: string): Promise<TeamMember> {
   const json = await res.json();
   return json.data.gsdcp_team;
 }
+
+/* ── HD/ED Registrations ─────────────────────────────── */
+export type HDEDRegistration = {
+  id: string;
+  dog: { id: string; name: string; KP: string; foreign_reg_no: string | null };
+  hd_grade: string | null;
+  ed_grade: string | null;
+  xray_date: string | null;
+  certificate_no: string | null;
+  status: string | null;
+};
+
+export type HDEDRegistrationPayload = {
+  user_id: number;
+  dog_id: number;
+  hd_grade: string;
+  ed_grade: string;
+  xray_date: string;
+  certificate_no?: string;
+  institute?: string;
+  remarks?: string;
+};
+
+export async function fetchHDEDRegistrations(
+  userId: number, page = 1, perPage = 10
+): Promise<{ registrations: HDEDRegistration[]; total: number }> {
+  const res = await fetch(`${BASE_URL}/hd-ed-registrations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ user_id: userId, page, per_page: perPage }),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED registrations");
+  return {
+    registrations: Array.isArray(json.data?.registrations) ? json.data.registrations : [],
+    total: json.data?.total ?? 0,
+  };
+}
+
+export async function submitHDEDRegistration(
+  payload: HDEDRegistrationPayload,
+  token?: string | null,
+): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/new-hd-ed-registration`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    if (res.ok) return;
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
+  }
+}
+
+/* ── Single Dog Registration ─────────────────────────── */
+export type SingleDogRegistration = {
+  id: string;
+  dog_name: string;
+  sex: string | null;
+  KP: string | null;
+  dob: string | null;
+  status: string | null;
+};
+
+export type SingleDogRegistrationPayload = {
+  user_id: number;
+  kennel_id?: string | null;
+  dog_name: string;
+  sex: string;
+  color: string;
+  hair: string;
+  date_of_birth: string;
+  microchip?: string;
+  foreign_reg_no?: string;
+  sire_id?: number;
+  sire_name?: string;
+  sire_kp?: string;
+  dam_id?: number;
+  dam_name?: string;
+  dam_kp?: string;
+  remarks?: string;
+};
+
+export async function fetchSingleDogRegistrations(
+  userId: number, page = 1, perPage = 10
+): Promise<{ registrations: SingleDogRegistration[]; total: number }> {
+  const res = await fetch(`${BASE_URL}/single-dog-registrations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ user_id: userId, page, per_page: perPage }),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch single dog registrations");
+  return {
+    registrations: Array.isArray(json.data?.registrations) ? json.data.registrations : [],
+    total: json.data?.total ?? 0,
+  };
+}
+
+export async function submitSingleDogRegistration(
+  payload: SingleDogRegistrationPayload,
+  token?: string | null,
+): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/new-single-dog-registration`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    if (res.ok) return;
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
+  }
+}

@@ -35,6 +35,8 @@ import {
   searchDogs, DogSearchResult,
   verifySire, verifyDam, SireVerification,
   updateProfile, uploadProfilePhoto, fetchCities, City, fetchProfileShow,
+  fetchHDEDRegistrations, submitHDEDRegistration, HDEDRegistration,
+  fetchSingleDogRegistrations, submitSingleDogRegistration, SingleDogRegistration,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -43,15 +45,17 @@ import LazyImage from "../components/LazyImage";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
-type TabId = "detail" | "kennel" | "dogs" | "stud" | "litter-inspection" | "litter-registration";
+type TabId = "detail" | "kennel" | "dogs" | "stud" | "litter-inspection" | "litter-registration" | "hd-ed" | "single-dog-reg";
 
 const TABS: { id: TabId; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: "detail",               label: "Detail",             icon: "person-outline"       },
-  { id: "kennel",               label: "Kennel",             icon: "home-outline"         },
-  { id: "dogs",                 label: "Dogs",               icon: "paw-outline"          },
-  { id: "stud",                 label: "Stud Certificates",  icon: "ribbon-outline"       },
-  { id: "litter-inspection",    label: "Litter Inspections", icon: "search-outline"       },
+  { id: "detail",               label: "Detail",               icon: "person-outline"       },
+  { id: "kennel",               label: "Kennel",               icon: "home-outline"         },
+  { id: "dogs",                 label: "Dogs",                 icon: "paw-outline"          },
+  { id: "stud",                 label: "Stud Certificates",    icon: "ribbon-outline"       },
+  { id: "litter-inspection",    label: "Litter Inspections",   icon: "search-outline"       },
   { id: "litter-registration",  label: "Litter Registrations", icon: "document-text-outline" },
+  { id: "hd-ed",                label: "HD/ED",                icon: "medkit-outline"       },
+  { id: "single-dog-reg",       label: "Dog Registration",     icon: "add-circle-outline"   },
 ];
 
 /* ── helpers ──────────────────────────────────────────── */
@@ -2479,6 +2483,494 @@ function LitterRegistrationTab() {
   );
 }
 
+/* ── Tab: HD/ED Registration ────────────────────────── */
+const HD_GRADES = ["Normal", "Fast Normal", "Noch Zugelassen", "Mittlere HD", "Schwere HD"];
+const ED_GRADES = ["ED-Normal (0)", "ED Grade 1", "ED Grade 2", "ED Grade 3"];
+
+function GradeSelector({
+  label, required, value, options, onChange,
+}: {
+  label: string; required?: boolean; value: string; options: string[]; onChange: (v: string) => void;
+}) {
+  return (
+    <View style={fStyles.field}>
+      <Text style={fStyles.label}>
+        {label}{required ? <Text style={fStyles.required}> *</Text> : null}
+      </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {options.map((opt) => {
+          const active = value === opt;
+          return (
+            <TouchableOpacity
+              key={opt}
+              activeOpacity={0.75}
+              onPress={() => onChange(opt)}
+              style={{
+                paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+                backgroundColor: active ? COLORS.primary : "rgba(15,92,59,0.07)",
+                borderWidth: 1, borderColor: active ? COLORS.primary : COLORS.border,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "600", color: active ? "#fff" : COLORS.textMuted }}>
+                {opt}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function HDEDTab() {
+  const { user } = useAuth();
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [selectedDog, setSelectedDog] = useState<DogOption | null>(null);
+  const [form, setForm] = useState({ hd_grade: "", ed_grade: "", xray_date: "", certificate_no: "", institute: "", remarks: "" });
+  const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
+
+  const { data: memberDetail } = useQuery<MemberDetail>({
+    queryKey: ["member-detail", user ? `member-${user.id}` : null],
+    queryFn: () => fetchMemberDetail(`member-${user!.id}`),
+    enabled: !!user,
+    staleTime: 300_000,
+  });
+  const allOwnedDogs: MemberOwnedDog[] = memberDetail?.ownedDogs?.length
+    ? memberDetail.ownedDogs
+    : (user?.myDogs as MemberOwnedDog[] ?? []);
+  const dogOptions: DogOption[] = allOwnedDogs.map(d => ({
+    id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color,
+  }));
+
+  const [allRegs, setAllRegs] = useState<HDEDRegistration[]>([]);
+  const [regTotal, setRegTotal] = useState(0);
+  const [regPage, setRegPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const REG_PER_PAGE = 10;
+
+  const { data: page1, isLoading: regsLoading, refetch } = useQuery({
+    queryKey: ["hded-registrations", user?.id],
+    queryFn: () => fetchHDEDRegistrations(user!.id, 1, REG_PER_PAGE),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (page1) { setAllRegs(page1.registrations); setRegTotal(page1.total); setRegPage(1); }
+  }, [page1]);
+
+  const loadMore = async () => {
+    if (loadingMore || allRegs.length >= regTotal) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetchHDEDRegistrations(user!.id, regPage + 1, REG_PER_PAGE);
+      setAllRegs(prev => [...prev, ...res.registrations]);
+      setRegPage(p => p + 1);
+    } finally { setLoadingMore(false); }
+  };
+
+  const resetForm = () => {
+    setSelectedDog(null);
+    setForm({ hd_grade: "", ed_grade: "", xray_date: "", certificate_no: "", institute: "", remarks: "" });
+    setSubmitError("");
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedDog)          { setSubmitError("Please select a dog."); return; }
+    if (!form.hd_grade)        { setSubmitError("HD grade is required."); return; }
+    if (!form.ed_grade)        { setSubmitError("ED grade is required."); return; }
+    if (!form.xray_date.trim()) { setSubmitError("X-Ray date is required."); return; }
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await submitHDEDRegistration({
+        user_id:        user!.id,
+        dog_id:         parseInt(selectedDog.id.replace(/^dog-/, ""), 10),
+        hd_grade:       form.hd_grade,
+        ed_grade:       form.ed_grade,
+        xray_date:      form.xray_date,
+        certificate_no: form.certificate_no.trim() || undefined,
+        institute:      form.institute.trim() || undefined,
+        remarks:        form.remarks.trim() || undefined,
+      }, user!.token);
+      resetForm();
+      setShowForm(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
+      refetch();
+    } catch (e: any) {
+      setSubmitError(e.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (showForm) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => { setShowForm(false); resetForm(); }} />
+        <Text style={styles.cardHeading}>New HD/ED Registration</Text>
+
+        <FormSection title="DOG" />
+        <DogDropdown
+          label="Select Dog"
+          required
+          mode="local"
+          localOptions={dogOptions}
+          selected={selectedDog}
+          onSelect={setSelectedDog}
+          onClear={() => setSelectedDog(null)}
+        />
+
+        <View style={styles.divider} />
+        <FormSection title="HIP DYSPLASIA (HD)" />
+        <GradeSelector label="HD Grade" required value={form.hd_grade} options={HD_GRADES} onChange={set("hd_grade")} />
+
+        <View style={styles.divider} />
+        <FormSection title="ELBOW DYSPLASIA (ED)" />
+        <GradeSelector label="ED Grade" required value={form.ed_grade} options={ED_GRADES} onChange={set("ed_grade")} />
+
+        <View style={styles.divider} />
+        <FormSection title="X-RAY DETAILS" />
+        <CalendarDatePicker label="X-Ray Date" required value={form.xray_date} onChange={set("xray_date")} />
+        <FormField label="Certificate Number" value={form.certificate_no} onChangeText={set("certificate_no")} placeholder="e.g. HD-2024-001" />
+        <FormField label="Institute / Clinic" value={form.institute} onChangeText={set("institute")} placeholder="Name of veterinary institute" />
+        <FormField label="Remarks" value={form.remarks} onChangeText={set("remarks")} placeholder="Optional remarks" multiline />
+
+        {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
+        <SubmitBtn
+          label={submitting ? "Submitting…" : "Submit HD/ED Registration"}
+          onPress={handleSubmit}
+          disabled={submitting}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.card}>
+      <ListHeader title="HD/ED Registrations" onNew={() => { resetForm(); setShowForm(true); }} />
+      {submitSuccess && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>HD/ED registration submitted successfully.</Text>
+        </View>
+      )}
+      {regsLoading ? (
+        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+      ) : allRegs.length === 0 ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons name="medkit-outline" size={20} color={COLORS.textMuted} />
+          <Text style={tStyles.emptyRowText}>No HD/ED registrations yet</Text>
+        </View>
+      ) : (
+        <View style={tStyles.certList}>
+          {allRegs.map((r, i) => (
+            <View
+              key={r.id}
+              style={[tStyles.certRow, i < allRegs.length - 1 && tStyles.certRowBorder]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={tStyles.certSire} numberOfLines={1}>
+                  {r.dog?.name ?? "—"}
+                </Text>
+                <Text style={tStyles.certKP}>
+                  {r.dog?.KP ? `KP: ${r.dog.KP}` : r.dog?.foreign_reg_no ?? ""}
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                  {r.hd_grade ? (
+                    <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#1D4ED8" }}>HD: {r.hd_grade}</Text>
+                    </View>
+                  ) : null}
+                  {r.ed_grade ? (
+                    <View style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#15803D" }}>ED: {r.ed_grade}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                {r.xray_date ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
+                    <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
+                    <Text style={tStyles.certDate}>X-Ray: {formatDate(r.xray_date)}</Text>
+                  </View>
+                ) : null}
+              </View>
+              {r.status ? (
+                <View style={[tStyles.statusPill, { backgroundColor: r.status === "Approved" ? "#DCFCE7" : r.status === "Rejected" ? "#FEE2E2" : "#FEF9C3" }]}>
+                  <Text style={[tStyles.statusPillText, { color: r.status === "Approved" ? "#166534" : r.status === "Rejected" ? "#991B1B" : "#854D0E" }]}>
+                    {r.status}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
+          {allRegs.length < regTotal && (
+            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMore} disabled={loadingMore} activeOpacity={0.7}>
+              {loadingMore
+                ? <ActivityIndicator size="small" color={COLORS.primary} />
+                : <Text style={tStyles.loadMoreText}>Load more ({regTotal - allRegs.length} remaining)</Text>}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ── Tab: Single Dog Registration ───────────────────── */
+const SEX_OPTIONS = ["Male", "Female"];
+const HAIR_OPTIONS = ["Short (S)", "Long (L)"];
+const COLOR_OPTIONS = ["Black & Tan", "Sable", "Black & Gold", "Bi-Color", "All Black", "All White", "Other"];
+
+function OptionPillSelector({
+  label, required, value, options, onChange,
+}: {
+  label: string; required?: boolean; value: string; options: string[]; onChange: (v: string) => void;
+}) {
+  return (
+    <View style={fStyles.field}>
+      <Text style={fStyles.label}>
+        {label}{required ? <Text style={fStyles.required}> *</Text> : null}
+      </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {options.map((opt) => {
+          const active = value === opt;
+          return (
+            <TouchableOpacity
+              key={opt}
+              activeOpacity={0.75}
+              onPress={() => onChange(opt)}
+              style={{
+                paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+                backgroundColor: active ? COLORS.primary : "rgba(15,92,59,0.07)",
+                borderWidth: 1, borderColor: active ? COLORS.primary : COLORS.border,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "600", color: active ? "#fff" : COLORS.textMuted }}>
+                {opt}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function SingleDogRegTab() {
+  const { user } = useAuth();
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const [selectedSire, setSelectedSire] = useState<DogOption | null>(null);
+  const [selectedDam,  setSelectedDam]  = useState<DogOption | null>(null);
+
+  const [form, setForm] = useState({
+    dog_name: "", sex: "", color: "", hair: "", date_of_birth: "",
+    microchip: "", foreign_reg_no: "", remarks: "",
+  });
+  const set = (key: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [key]: v }));
+
+  const [allRegs, setAllRegs] = useState<SingleDogRegistration[]>([]);
+  const [regTotal, setRegTotal] = useState(0);
+  const [regPage, setRegPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const REG_PER_PAGE = 10;
+
+  const { data: page1, isLoading: regsLoading, refetch } = useQuery({
+    queryKey: ["single-dog-registrations", user?.id],
+    queryFn: () => fetchSingleDogRegistrations(user!.id, 1, REG_PER_PAGE),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (page1) { setAllRegs(page1.registrations); setRegTotal(page1.total); setRegPage(1); }
+  }, [page1]);
+
+  const loadMore = async () => {
+    if (loadingMore || allRegs.length >= regTotal) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetchSingleDogRegistrations(user!.id, regPage + 1, REG_PER_PAGE);
+      setAllRegs(prev => [...prev, ...res.registrations]);
+      setRegPage(p => p + 1);
+    } finally { setLoadingMore(false); }
+  };
+
+  const resetForm = () => {
+    setSelectedSire(null);
+    setSelectedDam(null);
+    setForm({ dog_name: "", sex: "", color: "", hair: "", date_of_birth: "", microchip: "", foreign_reg_no: "", remarks: "" });
+    setSubmitError("");
+  };
+
+  const hairApiValue = (h: string) => {
+    if (h.startsWith("Short")) return "S";
+    if (h.startsWith("Long")) return "L";
+    return h;
+  };
+
+  const handleSubmit = async () => {
+    if (!form.dog_name.trim()) { setSubmitError("Dog name is required."); return; }
+    if (!form.sex)             { setSubmitError("Sex is required."); return; }
+    if (!form.color)           { setSubmitError("Color is required."); return; }
+    if (!form.hair)            { setSubmitError("Hair type is required."); return; }
+    if (!form.date_of_birth.trim()) { setSubmitError("Date of birth is required."); return; }
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await submitSingleDogRegistration({
+        user_id:        user!.id,
+        dog_name:       form.dog_name.trim(),
+        sex:            form.sex,
+        color:          form.color,
+        hair:           hairApiValue(form.hair),
+        date_of_birth:  form.date_of_birth,
+        microchip:      form.microchip.trim() || undefined,
+        foreign_reg_no: form.foreign_reg_no.trim() || undefined,
+        sire_id:        selectedSire ? parseInt(selectedSire.id.replace(/^dog-/, ""), 10) : undefined,
+        sire_name:      selectedSire?.name || undefined,
+        sire_kp:        selectedSire?.KP || undefined,
+        dam_id:         selectedDam ? parseInt(selectedDam.id.replace(/^dog-/, ""), 10) : undefined,
+        dam_name:       selectedDam?.name || undefined,
+        dam_kp:         selectedDam?.KP || undefined,
+        remarks:        form.remarks.trim() || undefined,
+      }, user!.token);
+      resetForm();
+      setShowForm(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
+      refetch();
+    } catch (e: any) {
+      setSubmitError(e.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (showForm) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => { setShowForm(false); resetForm(); }} />
+        <Text style={styles.cardHeading}>Single Dog Registration</Text>
+
+        <FormSection title="DOG INFORMATION" />
+        <FormField label="Dog Name" required value={form.dog_name} onChangeText={set("dog_name")} placeholder="Full registered name" />
+        <OptionPillSelector label="Sex" required value={form.sex} options={SEX_OPTIONS} onChange={set("sex")} />
+        <OptionPillSelector label="Coat Color" required value={form.color} options={COLOR_OPTIONS} onChange={set("color")} />
+        <OptionPillSelector label="Hair Type" required value={form.hair} options={HAIR_OPTIONS} onChange={set("hair")} />
+        <CalendarDatePicker label="Date of Birth" required value={form.date_of_birth} onChange={set("date_of_birth")} />
+
+        <View style={styles.divider} />
+        <FormSection title="IDENTIFICATION (OPTIONAL)" />
+        <FormField label="Microchip Number" value={form.microchip} onChangeText={set("microchip")} placeholder="15-digit microchip number" keyboardType="numeric" />
+        <FormField label="Foreign Registration No." value={form.foreign_reg_no} onChangeText={set("foreign_reg_no")} placeholder="e.g. SZ 123456" />
+
+        <View style={styles.divider} />
+        <FormSection title="SIRE (OPTIONAL)" />
+        <DogDropdown
+          label="Sire"
+          mode="remote"
+          sexFilter="Male"
+          selected={selectedSire}
+          onSelect={setSelectedSire}
+          onClear={() => setSelectedSire(null)}
+        />
+
+        <View style={styles.divider} />
+        <FormSection title="DAM (OPTIONAL)" />
+        <DogDropdown
+          label="Dam"
+          mode="remote"
+          sexFilter="Female"
+          selected={selectedDam}
+          onSelect={setSelectedDam}
+          onClear={() => setSelectedDam(null)}
+        />
+
+        <View style={styles.divider} />
+        <FormSection title="ADDITIONAL NOTES" />
+        <FormField label="Remarks" value={form.remarks} onChangeText={set("remarks")} placeholder="Any additional information" multiline />
+
+        {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
+        <SubmitBtn
+          label={submitting ? "Submitting…" : "Submit Registration"}
+          onPress={handleSubmit}
+          disabled={submitting}
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.card}>
+      <ListHeader title="Dog Registrations" onNew={() => { resetForm(); setShowForm(true); }} />
+      {submitSuccess && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>Dog registration submitted successfully.</Text>
+        </View>
+      )}
+      {regsLoading ? (
+        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+      ) : allRegs.length === 0 ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons name="paw-outline" size={20} color={COLORS.textMuted} />
+          <Text style={tStyles.emptyRowText}>No dog registrations yet</Text>
+        </View>
+      ) : (
+        <View style={tStyles.certList}>
+          {allRegs.map((r, i) => (
+            <View
+              key={r.id}
+              style={[tStyles.certRow, i < allRegs.length - 1 && tStyles.certRowBorder]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={tStyles.certSire} numberOfLines={1}>{r.dog_name}</Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
+                  {r.sex ? (
+                    <View style={{ backgroundColor: r.sex.toLowerCase() === "male" ? "#EFF6FF" : "#FDF2F8", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 9 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: r.sex.toLowerCase() === "male" ? "#1D4ED8" : "#9D174D" }}>{r.sex}</Text>
+                    </View>
+                  ) : null}
+                  {r.KP ? <Text style={tStyles.certDate}>KP: {r.KP}</Text> : null}
+                </View>
+                {r.dob ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
+                    <Text style={tStyles.certDate}>DOB: {formatDate(r.dob)}</Text>
+                  </View>
+                ) : null}
+              </View>
+              {r.status ? (
+                <View style={[tStyles.statusPill, { backgroundColor: r.status === "Approved" ? "#DCFCE7" : r.status === "Rejected" ? "#FEE2E2" : "#FEF9C3" }]}>
+                  <Text style={[tStyles.statusPillText, { color: r.status === "Approved" ? "#166534" : r.status === "Rejected" ? "#991B1B" : "#854D0E" }]}>
+                    {r.status}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
+          {allRegs.length < regTotal && (
+            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMore} disabled={loadingMore} activeOpacity={0.7}>
+              {loadingMore
+                ? <ActivityIndicator size="small" color={COLORS.primary} />
+                : <Text style={tStyles.loadMoreText}>Load more ({regTotal - allRegs.length} remaining)</Text>}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
 /* ── Screen ─────────────────────────────────────────── */
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -2577,6 +3069,8 @@ export default function ProfileScreen() {
       case "stud":                 return <StudCertTab />;
       case "litter-inspection":    return <LitterInspectionTab />;
       case "litter-registration":  return <LitterRegistrationTab />;
+      case "hd-ed":                return <HDEDTab />;
+      case "single-dog-reg":       return <SingleDogRegTab />;
     }
   }
 
