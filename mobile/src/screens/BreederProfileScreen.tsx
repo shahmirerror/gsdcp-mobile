@@ -242,7 +242,7 @@ export default function BreederProfileScreen() {
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
+            onPressIn={() => setActiveTab(tab.key)}
             activeOpacity={0.7}
           >
             <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
