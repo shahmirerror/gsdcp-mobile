@@ -93,30 +93,39 @@ export default function BreederDirectoryScreen() {
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
   const [countryFilter, setCountryFilter] = useState<string>("All");
+  const [typeFilter, setTypeFilter] = useState<string>("All");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
   const [tempCountry, setTempCountry] = useState<string>("All");
+  const [tempType, setTempType] = useState<string>("All");
   const [selectedBreeder, setSelectedBreeder] = useState<Breeder | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
 
+  const BREEDER_TYPES = ["Gold Breeder", "Silver Breeder", "Bronze Breeder"];
+
   const activeFilterCount =
-    (cityFilter !== "All" ? 1 : 0) + (countryFilter !== "All" ? 1 : 0);
+    (cityFilter !== "All" ? 1 : 0) +
+    (countryFilter !== "All" ? 1 : 0) +
+    (typeFilter !== "All" ? 1 : 0);
 
   const openFilters = () => {
     setTempCity(cityFilter);
     setTempCountry(countryFilter);
+    setTempType(typeFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setCityFilter(tempCity);
     setCountryFilter(tempCountry);
+    setTypeFilter(tempType);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempCity("All");
     setTempCountry("All");
+    setTempType("All");
   };
 
   const { data: breeders, isLoading, isError, refetch, isRefetching } = useQuery<Breeder[]>({
@@ -170,8 +179,12 @@ export default function BreederDirectoryScreen() {
       results = results.filter((b) => b.city === cityFilter);
     }
 
+    if (typeFilter !== "All") {
+      results = results.filter((b) => b.breederType === typeFilter);
+    }
+
     return results;
-  }, [breeders, search, countryFilter, cityFilter]);
+  }, [breeders, search, countryFilter, cityFilter, typeFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -238,8 +251,16 @@ export default function BreederDirectoryScreen() {
               </TouchableOpacity>
             </View>
           )}
+          {typeFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>{typeFilter}</Text>
+              <TouchableOpacity onPress={() => setTypeFilter("All")} data-testid="btn-remove-type-filter">
+                <Ionicons name="close" size={14} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity
-            onPress={() => { setCityFilter("All"); setCountryFilter("All"); }}
+            onPress={() => { setCityFilter("All"); setCountryFilter("All"); setTypeFilter("All"); }}
             data-testid="btn-clear-all-filters"
           >
             <Text style={styles.clearAllText}>Clear all</Text>
@@ -482,6 +503,31 @@ export default function BreederDirectoryScreen() {
                   <Text style={[styles.filterOptionText, tempCity === opt && styles.filterOptionTextActive]}>{opt}</Text>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+
+            <Text style={styles.filterSectionTitle}>Breeder Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
+              <TouchableOpacity
+                style={[styles.filterOption, tempType === "All" && styles.filterOptionActive]}
+                onPress={() => setTempType("All")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterOptionText, tempType === "All" && styles.filterOptionTextActive]}>All</Text>
+              </TouchableOpacity>
+              {BREEDER_TYPES.map((opt) => {
+                const isActive = tempType === opt;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.filterOption, isActive && styles.filterOptionActive]}
+                    onPress={() => setTempType(opt)}
+                    activeOpacity={0.7}
+                    data-testid={`filter-type-${opt}`}
+                  >
+                    <Text style={[styles.filterOptionText, isActive && styles.filterOptionTextActive]}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             <TouchableOpacity style={styles.applyButton} onPress={applyFilters} activeOpacity={0.8} data-testid="btn-apply-filters">
