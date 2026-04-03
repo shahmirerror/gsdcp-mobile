@@ -706,6 +706,7 @@ export type BreederDog = {
   sex: string;
   dateOfBirth: string | null;
   color: string | null;
+  hair: string | null;
   imageUrl: string;
   owner: string | null;
   breeder: string | null;

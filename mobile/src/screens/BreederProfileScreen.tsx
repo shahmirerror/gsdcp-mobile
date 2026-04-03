@@ -100,6 +100,11 @@ function BreederDogItem({
               <Text style={styles.dogBadgeText}>{dog.color}</Text>
             </View>
           ) : null}
+          {dog.hair ? (
+            <View style={styles.dogBadge}>
+              <Text style={styles.dogBadgeText}>{dog.hair}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
       {dog.titles.length > 0 && (
@@ -155,6 +160,7 @@ function DogQuickView({
   if (reg)  rows.push({ icon: "document-outline", label: "Reg No.",     value: reg });
   if (dog.breed) rows.push({ icon: "paw-outline",  label: "Breed",      value: dog.breed });
   if (dog.color) rows.push({ icon: "color-palette-outline", label: "Color", value: dog.color });
+  if (dog.hair)  rows.push({ icon: "brush-outline",          label: "Hair",  value: dog.hair });
   const dob = formatDOB(dog.dateOfBirth);
   if (dob)  rows.push({ icon: "calendar-outline", label: "Date of Birth", value: dob });
   if (dog.sire)  rows.push({ icon: "male-outline",   label: "Sire",     value: dog.sire });
