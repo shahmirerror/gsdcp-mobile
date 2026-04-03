@@ -306,77 +306,83 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
     );
   }
 
+  const showSearch = dogs.length > 10;
+
   return (
     <View>
-      {/* Search bar */}
-      <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={17} color={COLORS.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search by name, KP, or reg no…"
-            placeholderTextColor={COLORS.textMuted}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPressIn={() => setQuery("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      {showSearch && (
+        <>
+          {/* Search bar */}
+          <View style={styles.searchRow}>
+            <View style={styles.searchBox}>
+              <Ionicons name="search-outline" size={17} color={COLORS.textMuted} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search by name, KP, or reg no…"
+                placeholderTextColor={COLORS.textMuted}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+              />
+              {query.length > 0 && (
+                <TouchableOpacity onPressIn={() => setQuery("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
-      {/* Filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-        {SEX_OPTIONS.map((opt) => (
-          <TouchableOpacity
-            key={opt}
-            style={[styles.chip, sex === opt && styles.chipActive]}
-            onPressIn={() => setSex(opt)}
-            activeOpacity={0.75}
-          >
-            {opt !== "All" && (
+          {/* Filter chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+            {SEX_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[styles.chip, sex === opt && styles.chipActive]}
+                onPressIn={() => setSex(opt)}
+                activeOpacity={0.75}
+              >
+                {opt !== "All" && (
+                  <Ionicons
+                    name={opt === "Male" ? "male-outline" : "female-outline"}
+                    size={12}
+                    color={sex === opt ? "#fff" : COLORS.textSecondary}
+                    style={{ marginRight: 4 }}
+                  />
+                )}
+                <Text style={[styles.chipText, sex === opt && styles.chipTextActive]}>{opt}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.chip, titlesOnly && styles.chipActiveGold]}
+              onPressIn={() => setTitlesOnly((v) => !v)}
+              activeOpacity={0.75}
+            >
               <Ionicons
-                name={opt === "Male" ? "male-outline" : "female-outline"}
+                name="ribbon-outline"
                 size={12}
-                color={sex === opt ? "#fff" : COLORS.textSecondary}
+                color={titlesOnly ? "#fff" : COLORS.textSecondary}
                 style={{ marginRight: 4 }}
               />
-            )}
-            <Text style={[styles.chipText, sex === opt && styles.chipTextActive]}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity
-          style={[styles.chip, titlesOnly && styles.chipActiveGold]}
-          onPressIn={() => setTitlesOnly((v) => !v)}
-          activeOpacity={0.75}
-        >
-          <Ionicons
-            name="ribbon-outline"
-            size={12}
-            color={titlesOnly ? "#fff" : COLORS.textSecondary}
-            style={{ marginRight: 4 }}
-          />
-          <Text style={[styles.chipText, titlesOnly && styles.chipTextActive]}>Titled Only</Text>
-        </TouchableOpacity>
-      </ScrollView>
+              <Text style={[styles.chipText, titlesOnly && styles.chipTextActive]}>Titled Only</Text>
+            </TouchableOpacity>
+          </ScrollView>
 
-      {/* Result count / clear */}
-      <View style={styles.resultRow}>
-        <Text style={styles.resultCount}>
-          {filtered.length} {filtered.length === 1 ? "dog" : "dogs"}{hasActiveFilter ? " found" : ""}
-        </Text>
-        {hasActiveFilter && (
-          <TouchableOpacity onPressIn={() => { setQuery(""); setSex("All"); setTitlesOnly(false); }} activeOpacity={0.7}>
-            <Text style={styles.clearText}>Clear filters</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          {/* Result count / clear */}
+          <View style={styles.resultRow}>
+            <Text style={styles.resultCount}>
+              {filtered.length} {filtered.length === 1 ? "dog" : "dogs"}{hasActiveFilter ? " found" : ""}
+            </Text>
+            {hasActiveFilter && (
+              <TouchableOpacity onPressIn={() => { setQuery(""); setSex("All"); setTitlesOnly(false); }} activeOpacity={0.7}>
+                <Text style={styles.clearText}>Clear filters</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      )}
 
       {/* Dog list */}
       {filtered.length > 0 ? (
