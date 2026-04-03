@@ -41,6 +41,7 @@ import JudgeDetailScreen from "../screens/club/JudgeDetailScreen";
 import TeamMemberDetailScreen from "../screens/club/TeamMemberDetailScreen";
 
 import VirtualBreedingScreen from "../screens/VirtualBreedingScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import CustomTabBar from "./CustomTabBar";
 
 export type DogsStackParamList = {
@@ -71,6 +72,7 @@ export type ShowsStackParamList = {
 export type ProfileStackParamList = {
   ProfileHome: undefined;
   LoginRegister: undefined;
+  ForgotPassword: undefined;
   KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
@@ -225,7 +227,10 @@ function ProfileStackNavigator() {
           <ProfileStack.Screen name="ShowDetail" component={ShowDetailScreen} />
         </>
       ) : (
-        <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+        <>
+          <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+          <ProfileStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        </>
       )}
     </ProfileStack.Navigator>
   );

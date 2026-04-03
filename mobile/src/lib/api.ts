@@ -1666,6 +1666,31 @@ export async function fetchSingleDogRegistrations(
   };
 }
 
+/* ── Forgot Password ─────────────────────────────────── */
+export async function forgotPassword(payload: {
+  membership_no?: string;
+  email?: string;
+  username?: string;
+}): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error("Unexpected response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Request failed. Please try again.");
+  }
+  return { message: json.message ?? "Password reset instructions sent." };
+}
+
 export async function submitSingleDogRegistration(
   payload: SingleDogRegistrationPayload,
   token?: string | null,

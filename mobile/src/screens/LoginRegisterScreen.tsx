@@ -486,6 +486,7 @@ export default function LoginRegisterScreen() {
 
               <TouchableOpacity
                 style={styles.forgotRow}
+                onPress={() => navigation.navigate("ForgotPassword")}
                 data-testid="btn-forgot-password"
               >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
@@ -562,6 +563,7 @@ export default function LoginRegisterScreen() {
 
               <TouchableOpacity
                 style={styles.forgotRow}
+                onPress={() => navigation.navigate("ForgotPassword")}
                 data-testid="btn-forgot-password-user"
               >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
