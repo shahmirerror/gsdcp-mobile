@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   StyleSheet,
   Image,
   ImageBackground,
@@ -268,7 +269,31 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
 }
 
 /* ── Tab: Dogs ─────────────────────────────────────── */
+type SexFilter = "All" | "Male" | "Female";
+
 function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d: MemberOwnedDog) => void }) {
+  const [query, setQuery]           = useState("");
+  const [sex, setSex]               = useState<SexFilter>("All");
+  const [titlesOnly, setTitlesOnly] = useState(false);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return dogs.filter((d) => {
+      if (sex !== "All" && d.sex?.toLowerCase() !== sex.toLowerCase()) return false;
+      if (titlesOnly && d.titles.length === 0) return false;
+      if (q) {
+        const inName = d.dog_name.toLowerCase().includes(q);
+        const inKP   = (d.KP ?? "").toLowerCase().includes(q);
+        const inReg  = (d.foreign_reg_no ?? "").toLowerCase().includes(q);
+        if (!inName && !inKP && !inReg) return false;
+      }
+      return true;
+    });
+  }, [dogs, query, sex, titlesOnly]);
+
+  const SEX_OPTIONS: SexFilter[] = ["All", "Male", "Female"];
+  const hasActiveFilter = query.trim() !== "" || sex !== "All" || titlesOnly;
+
   if (dogs.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -283,13 +308,90 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
 
   return (
     <View>
-      {dogs.map((dog) => (
-        <DogListItem
-          key={dog.id}
-          dog={toListDog(dog)}
-          onPress={() => onDogPress(dog)}
-        />
-      ))}
+      {/* Search bar */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={17} color={COLORS.textMuted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search by name, KP, or reg no…"
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPressIn={() => setQuery("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Filter chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {SEX_OPTIONS.map((opt) => (
+          <TouchableOpacity
+            key={opt}
+            style={[styles.chip, sex === opt && styles.chipActive]}
+            onPressIn={() => setSex(opt)}
+            activeOpacity={0.75}
+          >
+            {opt !== "All" && (
+              <Ionicons
+                name={opt === "Male" ? "male-outline" : "female-outline"}
+                size={12}
+                color={sex === opt ? "#fff" : COLORS.textSecondary}
+                style={{ marginRight: 4 }}
+              />
+            )}
+            <Text style={[styles.chipText, sex === opt && styles.chipTextActive]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity
+          style={[styles.chip, titlesOnly && styles.chipActiveGold]}
+          onPressIn={() => setTitlesOnly((v) => !v)}
+          activeOpacity={0.75}
+        >
+          <Ionicons
+            name="ribbon-outline"
+            size={12}
+            color={titlesOnly ? "#fff" : COLORS.textSecondary}
+            style={{ marginRight: 4 }}
+          />
+          <Text style={[styles.chipText, titlesOnly && styles.chipTextActive]}>Titled Only</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Result count / clear */}
+      <View style={styles.resultRow}>
+        <Text style={styles.resultCount}>
+          {filtered.length} {filtered.length === 1 ? "dog" : "dogs"}{hasActiveFilter ? " found" : ""}
+        </Text>
+        {hasActiveFilter && (
+          <TouchableOpacity onPressIn={() => { setQuery(""); setSex("All"); setTitlesOnly(false); }} activeOpacity={0.7}>
+            <Text style={styles.clearText}>Clear filters</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Dog list */}
+      {filtered.length > 0 ? (
+        filtered.map((dog) => (
+          <DogListItem key={dog.id} dog={toListDog(dog)} onPress={() => onDogPress(dog)} />
+        ))
+      ) : (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="search-outline" size={28} color={COLORS.primary} />
+          </View>
+          <Text style={styles.emptyTitle}>No matches</Text>
+          <Text style={styles.emptyDesc}>Try adjusting your search or filters.</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -650,4 +752,53 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full, backgroundColor: COLORS.primary,
   },
   goBackBtnText: { fontSize: FONT_SIZES.sm, fontWeight: "700", color: "#fff" },
+
+  searchRow: { marginBottom: 10 },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    height: 44,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  searchIcon: { marginRight: 8 },
+  searchInput: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text,
+    height: "100%",
+  },
+
+  filterRow: { flexDirection: "row", gap: 8, paddingBottom: 12 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: "#fff",
+  },
+  chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  chipActiveGold: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  chipText: { fontSize: 12, fontWeight: "600", color: COLORS.textSecondary },
+  chipTextActive: { color: "#fff" },
+
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  resultCount: { fontSize: 12, fontWeight: "600", color: COLORS.textMuted },
+  clearText: { fontSize: 12, fontWeight: "700", color: COLORS.primary },
 });
