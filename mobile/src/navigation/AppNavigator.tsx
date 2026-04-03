@@ -299,11 +299,15 @@ export default function AppNavigator() {
       <NavigationContainer
         ref={navRef}
         onReady={() => {
-          const rootState = navRef.current?.getRootState?.() as NavTreeState | undefined;
-          setActiveRouteName(getActiveRouteName(rootState));
+          const rootState = navRef.current?.getRootState?.();
+          if (rootState) {
+            setActiveRouteName(getActiveRouteName(rootState as NavTreeState));
+          }
         }}
         onStateChange={(state) => {
-          setActiveRouteName(getActiveRouteName(state as NavTreeState | undefined));
+          if (state) {
+            setActiveRouteName(getActiveRouteName(state as NavTreeState));
+          }
         }}
       >
         <Tab.Navigator

@@ -25,9 +25,9 @@ type Nav = NativeStackNavigationProp<BreedersStackParamList, "BreederDirectory">
 
 function tierBadgeStyles(tier: string): { bg: object; text: object } {
   const t = tier.toLowerCase();
-  if (t === "gold")   return { bg: styles.badgeGold,   text: styles.badgeGoldText };
-  if (t === "silver") return { bg: styles.badgeSilver, text: styles.badgeSilverText };
-  if (t === "bronze") return { bg: styles.badgeBronze, text: styles.badgeBronzeText };
+  if (t === "gold breeder")   return { bg: styles.badgeGold,   text: styles.badgeGoldText };
+  if (t === "silver breeder") return { bg: styles.badgeSilver, text: styles.badgeSilverText };
+  if (t === "bronze breeder") return { bg: styles.badgeBronze, text: styles.badgeBronzeText };
   return { bg: styles.badgeTier, text: styles.badgeTierText };
 }
 
@@ -402,20 +402,20 @@ export default function BreederDirectoryScreen() {
               <Text style={styles.infoModalTitle}>Active Breeders</Text>
             </View>
             <Text style={styles.infoModalBody}>
-              This directory lists GSDCP-registered kennel owners who are actively breeding German Shepherd Dogs.
+              This directory lists GSDCP registered kennel owners who are actively breeding German Shepherd Dogs.
             </Text>
             <View style={styles.infoTierList}>
               <View style={styles.infoTierRow}>
                 <View style={[styles.badge, styles.badgeGold]}><Text style={[styles.badgeText, styles.badgeGoldText]}>Gold</Text></View>
-                <Text style={styles.infoTierDesc}>Top-tier breeders with an outstanding breeding record and club standing.</Text>
+                <Text style={styles.infoTierDesc}>Top-tier breeders with 2 or more litters bred in a span of a year.</Text>
               </View>
               <View style={styles.infoTierRow}>
                 <View style={[styles.badge, styles.badgeSilver]}><Text style={[styles.badgeText, styles.badgeSilverText]}>Silver</Text></View>
-                <Text style={styles.infoTierDesc}>Established breeders with a strong history of quality litters.</Text>
+                <Text style={styles.infoTierDesc}>Established breeders with 2 or more litters bred in a span of 2 years.</Text>
               </View>
               <View style={styles.infoTierRow}>
                 <View style={[styles.badge, styles.badgeBronze]}><Text style={[styles.badgeText, styles.badgeBronzeText]}>Bronze</Text></View>
-                <Text style={styles.infoTierDesc}>Active breeders building their reputation within the club.</Text>
+                <Text style={styles.infoTierDesc}>Active breeders with 2 or more litters bred in a span of 3 years.</Text>
               </View>
             </View>
             <TouchableOpacity

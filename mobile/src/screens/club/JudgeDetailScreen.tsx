@@ -125,7 +125,7 @@ export default function JudgeDetailScreen() {
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
                 <Text style={styles.statValue}>{judge.shows.length}</Text>
-                <Text style={styles.statLabel}>SHOWS JUDGED</Text>
+                <Text style={styles.statLabel}>GSDCP SHOWS JUDGED SINCE 2014</Text>
               </View>
             </View>
           )}
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statBox: {
-    flex: 1, maxWidth: 160,
+    flex: 1, maxWidth: 205,
     backgroundColor: "#fff", borderRadius: BORDER_RADIUS.md,
     borderWidth: 1, borderColor: "#E8E8E4",
     alignItems: "center", paddingVertical: 14,

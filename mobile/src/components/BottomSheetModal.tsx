@@ -54,10 +54,10 @@ export default function BottomSheetModal({
     }
   }, [animateToOpen, translateY, visible]);
 
-  const panResponder = useMemo(
+  const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
-        visible && gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
+        gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
       onPanResponderMove: (_, gs) => {
         if (gs.dy > 0) {
           translateY.setValue(gs.dy);
@@ -74,7 +74,7 @@ export default function BottomSheetModal({
         animateToOpen();
       },
     })
-  , [animateToClosed, animateToOpen, translateY, visible]);
+  ).current;
 
   return (
     <Modal

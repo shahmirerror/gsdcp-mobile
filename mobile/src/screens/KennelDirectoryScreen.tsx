@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import {
   View,
   Text,
+  Image,
   TextInput,
   FlatList,
   TouchableOpacity,
@@ -32,7 +33,12 @@ function formatYear(dateStr: string | null): string | null {
 function OwnerRow({ owner, styles }: { owner: KennelOwner; styles: any }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!owner.imageUrl && !owner.imageUrl.includes("user-not-found") && !imgErr;
-  const initials = owner.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials = (owner.name || "?")
+    .split(" ")
+    .map((w) => w[0] || "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <View style={styles.ownerRow}>
       {hasImg ? (
@@ -77,9 +83,9 @@ function KennelListItem({
     kennel.imageUrl &&
     !kennel.imageUrl.includes("user-not-found") &&
     !imgError;
-  const initials = kennel.kennelName
+  const initials = (kennel.kennelName || "?")
     .split(" ")
-    .map((w) => w[0])
+    .map((w) => w[0] || "")
     .join("")
     .slice(0, 2)
     .toUpperCase();
@@ -183,9 +189,9 @@ export default function KennelDirectoryScreen() {
     if (q) {
       results = results.filter(
         (k) =>
-          k.kennelName.toLowerCase().includes(q) ||
-          k.city.toLowerCase().includes(q) ||
-          k.location.toLowerCase().includes(q),
+          (k.kennelName || "").toLowerCase().includes(q) ||
+          (k.city || "").toLowerCase().includes(q) ||
+          (k.location || "").toLowerCase().includes(q),
       );
     }
 
@@ -328,7 +334,12 @@ export default function KennelDirectoryScreen() {
       >
           {previewKennel && (() => {
             const hasImg = previewKennel.imageUrl && !previewKennel.imageUrl.includes("user-not-found") && !previewImgErr;
-            const initials = previewKennel.kennelName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+            const initials = (previewKennel.kennelName || "?")
+              .split(" ")
+              .map((w) => w[0] || "")
+              .join("")
+              .slice(0, 2)
+              .toUpperCase();
             const year = formatYear(previewKennel.activeSince);
             return (
               <View style={styles.modalContent}>
