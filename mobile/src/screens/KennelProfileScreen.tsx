@@ -258,7 +258,7 @@ export default function KennelProfileScreen() {
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
+            onPressIn={() => setActiveTab(tab.key)}
             activeOpacity={0.7}
           >
             <Text
@@ -356,32 +356,57 @@ export default function KennelProfileScreen() {
                   {owners.length === 1 ? "Owner" : "Owners"}
                 </Text>
                 <View style={styles.detailsGrid}>
-                  {owners.map((owner, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.ownerRow,
-                        i < owners.length - 1 && styles.ownerRowBorder,
-                      ]}
-                    >
-                      <View style={styles.ownerAvatar}>
-                        <Text style={styles.ownerInitial}>
-                          {owner.name[0]?.toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={styles.ownerInfo}>
-                        <Text style={styles.ownerName}>{owner.name}</Text>
-                        {owner.membership_no ? (
-                          <Text style={styles.ownerMeta}>
-                            Membership: {owner.membership_no}
+                  {owners.map((owner, i) => {
+                    const canLink = !!owner.member_id;
+                    const inner = (
+                      <>
+                        <View style={styles.ownerAvatar}>
+                          <Text style={styles.ownerInitial}>
+                            {owner.name[0]?.toUpperCase()}
                           </Text>
-                        ) : null}
-                        {owner.phone ? (
-                          <Text style={styles.ownerMeta}>{owner.phone}</Text>
-                        ) : null}
+                        </View>
+                        <View style={styles.ownerInfo}>
+                          <Text style={styles.ownerName}>{owner.name}</Text>
+                          {owner.membership_no ? (
+                            <Text style={styles.ownerMeta}>
+                              Membership: {owner.membership_no}
+                            </Text>
+                          ) : null}
+                          {owner.phone ? (
+                            <Text style={styles.ownerMeta}>{owner.phone}</Text>
+                          ) : null}
+                        </View>
+                        {canLink && (
+                          <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+                        )}
+                      </>
+                    );
+                    return canLink ? (
+                      <TouchableOpacity
+                        key={i}
+                        style={[
+                          styles.ownerRow,
+                          i < owners.length - 1 && styles.ownerRowBorder,
+                        ]}
+                        onPress={() =>
+                          navigation.navigate("MemberProfile", { id: owner.member_id! })
+                        }
+                        activeOpacity={0.7}
+                      >
+                        {inner}
+                      </TouchableOpacity>
+                    ) : (
+                      <View
+                        key={i}
+                        style={[
+                          styles.ownerRow,
+                          i < owners.length - 1 && styles.ownerRowBorder,
+                        ]}
+                      >
+                        {inner}
                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
             )}

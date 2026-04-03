@@ -839,6 +839,7 @@ export type KennelMating = {
 };
 
 export type KennelOwner = {
+  member_id?: string | null;
   name: string;
   phone: string | null;
   email: string | null;
