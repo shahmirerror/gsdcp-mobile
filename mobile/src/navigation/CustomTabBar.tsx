@@ -110,8 +110,8 @@ const MENU_ITEMS = [
 ];
 
 const HOME_BTN_SIZE = 58;
-const BAR_HEIGHT = 62;
-const PROTRUDE = 20; // px the home button rises above the bar
+const BAR_HEIGHT = 74;
+const PROTRUDE = 28; // px the home button rises above the bar
 
 export default function CustomTabBar({
   state,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.textMuted,
     letterSpacing: 0.2,
-    marginTop: 4,
+    marginTop: 6,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
