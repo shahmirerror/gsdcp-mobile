@@ -29,11 +29,15 @@
         "backgroundColor": "#FFFFFF"
       },
       "package": "org.gsdcp.mobile",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_IMAGES"
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -53,6 +57,14 @@
         {
           "photosPermission": "Used to select a profile photo from your library.",
           "cameraPermission": "Used to take a new profile photo."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0F5C3A",
+          "sounds": []
         }
       ]
     ]
