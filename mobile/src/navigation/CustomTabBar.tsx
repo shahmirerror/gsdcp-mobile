@@ -269,6 +269,9 @@ export default function CustomTabBar({
             resizeMode="contain"
           />
         </TouchableOpacity>
+        {!isOverlay && !menuOpen && (
+          <Text style={styles.holdHint}>Press & Hold</Text>
+        )}
       </Animated.View>
     );
   };
@@ -454,6 +457,13 @@ const styles = StyleSheet.create({
   homeLogo: {
     width: 32,
     height: 32,
+  },
+  holdHint: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    letterSpacing: 0.2,
+    marginTop: 4,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
