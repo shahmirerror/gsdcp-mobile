@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { registerPushToken, unregisterPushToken } from "../lib/notifications";
 
 const AUTHORIZE_URL = "https://gsdcp.org/api/mobile/authorize";
 const STORAGE_KEY = "gsdcp_auth_user";
@@ -115,9 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
     setUser(authUser);
+
+    // Register FCM push token after successful login (non-blocking)
+    registerPushToken(authUser.id);
   };
 
   const logout = async () => {
+    // Notify server and remove FCM token before clearing session
+    if (user?.id) {
+      await unregisterPushToken(user.id);
+    }
     await AsyncStorage.removeItem(STORAGE_KEY);
     setUser(null);
   };
