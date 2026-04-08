@@ -1599,6 +1599,44 @@ export async function fetchHDEDRegistrations(
   };
 }
 
+/* ── HD/ED Requests (new) ─────────────────────────────── */
+export type HDEDRequest = {
+  id: string;
+  dog: { id: string; name: string; KP: string | null; foreign_reg_no: string | null } | null;
+  hd_grade: string | null;
+  ed_grade: string | null;
+  xray_date: string | null;
+  certificate_no: string | null;
+  institute: string | null;
+  remarks: string | null;
+  status: string | null;
+  created_at: string | null;
+};
+
+export async function fetchHDEDRequests(
+  token: string | null,
+): Promise<HDEDRequest[]> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/hded-requests`, { headers });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED requests");
+  return Array.isArray(json.data) ? json.data : (json.data?.requests ?? json.data?.data ?? []);
+}
+
+export async function fetchHDEDRequestDetail(
+  id: string,
+  token: string | null,
+): Promise<HDEDRequest> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const numericId = id.replace(/^hded-/, "");
+  const res = await fetch(`${BASE_URL}/hded-requests/${numericId}`, { headers });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED request");
+  return json.data;
+}
+
 export async function submitHDEDRegistration(
   payload: HDEDRegistrationPayload,
   token?: string | null,
