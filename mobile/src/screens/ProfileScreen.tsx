@@ -4843,7 +4843,7 @@ function HDEDTab() {
                     { label: "HD/ED Evaluation", key: "HDED_charge" },
                     { label: "DNA Testing", key: "DNA_charge" },
                     { label: "GBW Fee", key: "GBW_charge" },
-                  ].filter(({ key }) => dogInfo.charges![key as keyof typeof dogInfo.charges] != null)
+                  ].filter(({ key }) => { const v = dogInfo.charges![key as keyof typeof dogInfo.charges]; return v != null && v !== ""; })
                    .map(({ label, key }) => (
                     <View key={key} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                       <Text style={{ fontSize: 13, color: COLORS.textMuted }}>{label}</Text>
@@ -4857,7 +4857,7 @@ function HDEDTab() {
                     <Text style={{ fontSize: 13, fontWeight: "700", color: "#166534" }}>Total</Text>
                     <Text style={{ fontSize: 13, fontWeight: "700", color: "#166534" }}>
                       PKR {(() => {
-                        const parse = (s: any) => s != null ? (parseInt(String(s).replace(/,/g, ""), 10) || 0) : 0;
+                        const parse = (s: any) => (s != null && s !== "") ? (parseInt(String(s).replace(/,/g, ""), 10) || 0) : 0;
                         const c = dogInfo.charges!;
                         return (parse(c.HDED_charge) + parse(c.DNA_charge) + parse(c.GBW_charge)).toLocaleString();
                       })()}
