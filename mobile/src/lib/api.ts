@@ -1639,6 +1639,23 @@ export async function fetchHDEDRequestDetail(
   return request;
 }
 
+export type HDEDDogInfo = {
+  eligible: boolean;
+  message?: string | null;
+};
+
+export async function fetchHDEDDogInfo(userId: number, dogId: number): Promise<HDEDDogInfo> {
+  const res = await fetch(
+    `${BASE_URL}/hded-request/fetch-information?user_id=${userId}&dog_id=${dogId}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const json = await res.json();
+  if (!json.success) {
+    return { eligible: false, message: json.error?.message ?? json.message ?? "This dog cannot be submitted." };
+  }
+  return { eligible: true, message: json.data?.message ?? null };
+}
+
 export async function submitHDEDRegistration(
   payload: HDEDRegistrationPayload,
   token?: string | null,

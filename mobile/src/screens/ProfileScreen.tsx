@@ -61,6 +61,8 @@ import {
   City,
   fetchProfileShow,
   submitNewHDEDRequest,
+  fetchHDEDDogInfo,
+  HDEDDogInfo,
   fetchHDEDRequests,
   fetchHDEDRequestDetail,
   HDEDRequest,
@@ -4649,6 +4651,17 @@ function HDEDTab() {
       staleTime: 60_000,
     });
 
+  const dogNumericId = selectedDog ? parseInt(selectedDog.id.replace(/^dog-/, ""), 10) : null;
+  const {
+    data: dogInfo,
+    isLoading: dogInfoLoading,
+  } = useQuery<HDEDDogInfo>({
+    queryKey: ["hded-dog-info", user?.id, dogNumericId],
+    queryFn: () => fetchHDEDDogInfo(user!.id, dogNumericId!),
+    enabled: !!selectedDog && !!user && dogNumericId !== null,
+    staleTime: 0,
+  });
+
   const resetForm = () => {
     setSelectedDog(null);
     setSubmitError("");
@@ -4810,11 +4823,32 @@ function HDEDTab() {
           onClear={() => setSelectedDog(null)}
         />
 
+        {selectedDog && dogInfoLoading ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Checking eligibility…</Text>
+          </View>
+        ) : null}
+
+        {selectedDog && !dogInfoLoading && dogInfo ? (
+          dogInfo.eligible ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, padding: 12, backgroundColor: "#DCFCE7", borderRadius: 8 }}>
+              <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+              <Text style={{ fontSize: 13, color: "#166534", fontWeight: "500" }}>This dog is eligible for an HD/ED request.</Text>
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, padding: 12, backgroundColor: "#FEE2E2", borderRadius: 8 }}>
+              <Ionicons name="alert-circle" size={16} color="#DC2626" />
+              <Text style={{ flex: 1, fontSize: 13, color: "#991B1B", fontWeight: "500" }}>{dogInfo.message ?? "This dog cannot be submitted for a new request."}</Text>
+            </View>
+          )
+        ) : null}
+
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn
           label={submitting ? "Submitting…" : "Submit Request"}
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || dogInfoLoading || (!!dogInfo && !dogInfo.eligible)}
         />
       </View>
     );
