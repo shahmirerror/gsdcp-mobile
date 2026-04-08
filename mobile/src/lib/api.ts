@@ -1718,20 +1718,41 @@ export async function submitNewHDEDRequest(userId: number, dogId: number): Promi
 export type SingleDogRegistration = {
   id: string;
   dog_name: string;
-  sex: string | null;
-  KP: string | null;
-  dob: string | null;
   status: string | null;
-  color: string | null;
-  hair: string | null;
-  microchip: string | null;
-  foreign_reg_no: string | null;
-  sire_name: string | null;
-  sire_kp: string | null;
-  dam_name: string | null;
-  dam_kp: string | null;
-  remarks: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+};
+
+export type SDRProofFile = {
+  id: number;
+  name: string;
   created_at: string | null;
+};
+
+export type SDRRequestDetail = {
+  id: string;
+  dog: {
+    id: string;
+    name: string;
+    hair: string | null;
+    sex: string | null;
+    KP: string | null;
+    foreign_reg_no: string | null;
+    color: string | null;
+    microchip: string | null;
+  };
+  height: string | null;
+  testicles: string | null;
+  neutered: string | null;
+  bite: string | null;
+  dentition_faults: string | null;
+  DNA_status: string | null;
+  status: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+  docs: SDRProofFile[];
+  vids: SDRProofFile[];
+  pics: SDRProofFile[];
 };
 
 export type SingleDogRegistrationPayload = {
@@ -1762,20 +1783,25 @@ export async function fetchSingleDogRegistrations(
   );
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch registrations");
-  return Array.isArray(json.data) ? json.data : (json.data?.requests ?? json.data?.registrations ?? []);
+  return json.data?.requests ?? [];
 }
 
 export async function fetchSDRRequestDetail(
   id: string,
   userId: number,
-): Promise<SingleDogRegistration> {
+): Promise<SDRRequestDetail> {
   const res = await fetch(
     `${BASE_URL}/sdr-requests/${id}?user_id=${userId}`,
     { headers: { Accept: "application/json" } },
   );
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch request");
-  return json.data?.request ?? json.data;
+  return {
+    ...(json.data?.request ?? {}),
+    docs: json.data?.docs ?? [],
+    vids: json.data?.vids ?? [],
+    pics: json.data?.pics ?? [],
+  };
 }
 
 /* ── Forgot Password ─────────────────────────────────── */

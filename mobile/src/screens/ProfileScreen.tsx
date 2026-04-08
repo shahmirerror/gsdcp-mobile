@@ -70,6 +70,8 @@ import {
   fetchSDRRequestDetail,
   submitSingleDogRegistration,
   SingleDogRegistration,
+  SDRRequestDetail,
+  SDRProofFile,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -5101,7 +5103,7 @@ function SingleDogRegTab() {
   const {
     data: sdrDetail,
     isLoading: sdrDetailLoading,
-  } = useQuery<SingleDogRegistration>({
+  } = useQuery<SDRRequestDetail>({
     queryKey: ["sdr-request-detail", selectedRequest?.id],
     queryFn: () => fetchSDRRequestDetail(selectedRequest!.id, user!.id),
     enabled: !!selectedRequest && !!user,
@@ -5296,60 +5298,96 @@ function SingleDogRegTab() {
   }
 
   if (selectedRequest) {
-    const r = sdrDetail ?? selectedRequest;
+    const status = sdrDetail?.status ?? selectedRequest.status;
+    const statusBg = status === "Request Approved and Posted" ? "#DCFCE7" : status?.toLowerCase().includes("reject") ? "#FEE2E2" : "#FEF9C3";
+    const statusColor = status === "Request Approved and Posted" ? "#166534" : status?.toLowerCase().includes("reject") ? "#991B1B" : "#854D0E";
+
+    const InfoRow = ({ label, value }: { label: string; value: string | null | undefined }) =>
+      value ? (
+        <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
+          <Text style={{ fontSize: 13, color: COLORS.textMuted, flexShrink: 0, marginRight: 12 }}>{label}</Text>
+          <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{value}</Text>
+        </View>
+      ) : null;
+
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedRequest(null)} />
-        <Text style={styles.cardHeading}>{r.dog_name}</Text>
-        {r.status ? (
-          <View style={[tStyles.statusPill, { alignSelf: "flex-start", marginBottom: 12, backgroundColor: r.status === "Approved" ? "#DCFCE7" : r.status === "Rejected" ? "#FEE2E2" : "#FEF9C3" }]}>
-            <Text style={[tStyles.statusPillText, { color: r.status === "Approved" ? "#166534" : r.status === "Rejected" ? "#991B1B" : "#854D0E" }]}>{r.status}</Text>
+        <Text style={styles.cardHeading}>{sdrDetail?.dog?.name ?? selectedRequest.dog_name}</Text>
+        {status ? (
+          <View style={[tStyles.statusPill, { alignSelf: "flex-start", marginBottom: 14, backgroundColor: statusBg }]}>
+            <Text style={[tStyles.statusPillText, { color: statusColor }]}>{status}</Text>
           </View>
-        ) : null}
-
-        <FormSection title="DOG INFORMATION" />
-        {[
-          { label: "KP Number", value: r.KP },
-          { label: "Sex", value: r.sex },
-          { label: "Color", value: r.color },
-          { label: "Hair", value: r.hair },
-          { label: "Date of Birth", value: r.dob ? formatDate(r.dob) : null },
-          { label: "Microchip", value: r.microchip },
-          { label: "Foreign Reg. No.", value: r.foreign_reg_no },
-        ].filter(f => f.value).map(f => (
-          <View key={f.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
-            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>{f.label}</Text>
-            <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{f.value}</Text>
-          </View>
-        ))}
-
-        {(r.sire_name || r.dam_name) ? (
-          <>
-            <FormSection title="PARENTAGE" />
-            {r.sire_name ? (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
-                <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Sire</Text>
-                <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{r.sire_name}{r.sire_kp ? ` (${r.sire_kp})` : ""}</Text>
-              </View>
-            ) : null}
-            {r.dam_name ? (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
-                <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Dam</Text>
-                <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{r.dam_name}{r.dam_kp ? ` (${r.dam_kp})` : ""}</Text>
-              </View>
-            ) : null}
-          </>
-        ) : null}
-
-        {r.remarks ? (
-          <>
-            <FormSection title="REMARKS" />
-            <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 20 }}>{r.remarks}</Text>
-          </>
         ) : null}
 
         {sdrDetailLoading ? (
-          <ActivityIndicator style={{ marginTop: 12 }} size="small" color={COLORS.primary} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Loading details…</Text>
+          </View>
+        ) : null}
+
+        {sdrDetail ? (
+          <>
+            <FormSection title="APPOINTMENT" />
+            <InfoRow label="Date" value={sdrDetail.appointment_date ? formatDate(sdrDetail.appointment_date) : null} />
+            <InfoRow label="Time" value={sdrDetail.appointment_time?.slice(0, 5) ?? null} />
+
+            <FormSection title="DOG" />
+            <InfoRow label="KP Number" value={sdrDetail.dog?.KP} />
+            <InfoRow label="Sex" value={sdrDetail.dog?.sex} />
+            <InfoRow label="Color" value={sdrDetail.dog?.color} />
+            <InfoRow label="Hair" value={sdrDetail.dog?.hair} />
+            <InfoRow label="Microchip" value={sdrDetail.dog?.microchip} />
+            <InfoRow label="Foreign Reg. No." value={sdrDetail.dog?.foreign_reg_no} />
+
+            <FormSection title="ASSESSMENT" />
+            <InfoRow label="Height" value={sdrDetail.height} />
+            <InfoRow label="Bite" value={sdrDetail.bite} />
+            <InfoRow label="Dentition Faults" value={sdrDetail.dentition_faults} />
+            <InfoRow label="Neutered" value={sdrDetail.neutered} />
+            <InfoRow label="Testicles" value={sdrDetail.testicles} />
+            <InfoRow label="DNA Status" value={sdrDetail.DNA_status} />
+
+            {sdrDetail.pics?.length > 0 ? (
+              <>
+                <FormSection title="PHOTOS" />
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                  {sdrDetail.pics.map((p: SDRProofFile) => (
+                    <LazyImage
+                      key={p.id}
+                      uri={`https://gsdcp.org/public/sdr_pic_proof/${p.name}`}
+                      style={{ width: 90, height: 90, borderRadius: 8 }}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : null}
+
+            {sdrDetail.docs?.length > 0 ? (
+              <>
+                <FormSection title="DOCUMENTS" />
+                {sdrDetail.docs.map((d: SDRProofFile) => (
+                  <View key={d.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
+                    <Ionicons name="document-outline" size={16} color={COLORS.primary} />
+                    <Text style={{ fontSize: 13, color: COLORS.text, flex: 1 }} numberOfLines={1}>{d.name}</Text>
+                  </View>
+                ))}
+              </>
+            ) : null}
+
+            {sdrDetail.vids?.length > 0 ? (
+              <>
+                <FormSection title="VIDEOS" />
+                {sdrDetail.vids.map((v: SDRProofFile) => (
+                  <View key={v.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
+                    <Ionicons name="videocam-outline" size={16} color={COLORS.primary} />
+                    <Text style={{ fontSize: 13, color: COLORS.text, flex: 1 }} numberOfLines={1}>{v.name}</Text>
+                  </View>
+                ))}
+              </>
+            ) : null}
+          </>
         ) : null}
       </View>
     );
@@ -5408,60 +5446,11 @@ function SingleDogRegTab() {
                 <Text style={tStyles.certSire} numberOfLines={1}>
                   {r.dog_name}
                 </Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    gap: 8,
-                    marginTop: 4,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {r.sex ? (
-                    <View
-                      style={{
-                        backgroundColor:
-                          r.sex.toLowerCase() === "male"
-                            ? "#EFF6FF"
-                            : "#FDF2F8",
-                        paddingHorizontal: 7,
-                        paddingVertical: 2,
-                        borderRadius: 9,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "600",
-                          color:
-                            r.sex.toLowerCase() === "male"
-                              ? "#1D4ED8"
-                              : "#9D174D",
-                        }}
-                      >
-                        {r.sex}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {r.KP ? (
-                    <Text style={tStyles.certDate}>KP: {r.KP}</Text>
-                  ) : null}
-                </View>
-                {r.dob ? (
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                      marginTop: 4,
-                    }}
-                  >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={12}
-                      color={COLORS.textMuted}
-                    />
+                {r.appointment_date ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                    <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
                     <Text style={tStyles.certDate}>
-                      DOB: {formatDate(r.dob)}
+                      {formatDate(r.appointment_date)}{r.appointment_time ? `  ·  ${r.appointment_time.slice(0, 5)}` : ""}
                     </Text>
                   </View>
                 ) : null}
