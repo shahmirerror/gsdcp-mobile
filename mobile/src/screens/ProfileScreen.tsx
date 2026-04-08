@@ -2523,8 +2523,29 @@ function GradeSelector({
   );
 }
 
+const hdedStyles = StyleSheet.create({
+  card: {
+    flexDirection: "row", alignItems: "center",
+    paddingVertical: 12, paddingHorizontal: 2,
+    borderBottomWidth: 1, borderBottomColor: "#F1F5F9", gap: 12,
+  },
+  cardLeft: { justifyContent: "center" },
+  iconBox: {
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: "rgba(15,92,59,0.08)",
+    justifyContent: "center", alignItems: "center",
+  },
+  cardBody: { flex: 1, gap: 2 },
+  dogName: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
+  dogKP: { fontSize: 12, color: COLORS.textMuted },
+  dateRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 },
+  dateText: { fontSize: 12, color: COLORS.textMuted },
+  cardRight: { alignItems: "flex-end", justifyContent: "center", gap: 2 },
+});
+
 function HDEDTab() {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -2656,27 +2677,42 @@ function HDEDTab() {
         </View>
       ) : (
         <View style={tStyles.certList}>
-          {hdedRequests.map((r, i) => (
-            <View key={r.id} style={[tStyles.certRow, i < hdedRequests.length - 1 && tStyles.certRowBorder]}>
-              <View style={{ flex: 1 }}>
-                <Text style={tStyles.certSire} numberOfLines={1}>{r.dog?.name ?? "—"}</Text>
-                <Text style={tStyles.certKP}>{r.dog?.KP ? `KP: ${r.dog.KP}` : r.dog?.foreign_reg_no ?? ""}</Text>
+          {hdedRequests.map((r) => (
+            <TouchableOpacity
+              key={r.id}
+              activeOpacity={0.7}
+              onPress={() => r.dog && navigation.push("DogProfile", { id: r.dog.id, name: r.dog.name })}
+              style={hdedStyles.card}
+            >
+              <View style={hdedStyles.cardLeft}>
+                <View style={hdedStyles.iconBox}>
+                  <Ionicons name="fitness-outline" size={18} color={COLORS.primary} />
+                </View>
+              </View>
+              <View style={hdedStyles.cardBody}>
+                <Text style={hdedStyles.dogName} numberOfLines={1}>{r.dog?.name?.trim() ?? "—"}</Text>
+                <Text style={hdedStyles.dogKP}>
+                  {r.dog?.KP ? `KP: ${r.dog.KP}` : r.dog?.foreign_reg_no ?? ""}
+                </Text>
                 {r.appointment_date ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
-                    <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
-                    <Text style={tStyles.certDate}>
+                  <View style={hdedStyles.dateRow}>
+                    <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} />
+                    <Text style={hdedStyles.dateText}>
                       {formatDate(r.appointment_date)}
                       {r.appointment_time ? `  ·  ${r.appointment_time.slice(0, 5)}` : ""}
                     </Text>
                   </View>
                 ) : null}
               </View>
-              {r.status ? (
-                <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg }]}>
-                  <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
-                </View>
-              ) : null}
-            </View>
+              <View style={hdedStyles.cardRight}>
+                {r.status ? (
+                  <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg, marginBottom: 6 }]}>
+                    <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
+                  </View>
+                ) : null}
+                <Ionicons name="chevron-forward" size={14} color={COLORS.textMuted} />
+              </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
