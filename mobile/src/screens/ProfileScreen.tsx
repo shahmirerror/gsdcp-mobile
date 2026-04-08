@@ -3047,7 +3047,7 @@ export default function ProfileScreen() {
     id:            user.member_id,
     member_name:   user.name,
     membership_no: user.membership_no ?? "",
-    imageUrl:      user.photo ? `https://gsdcp.org/storage/photos/${user.photo}?v=${photoVersion}` : null,
+    imageUrl:      user.photo ? `https://gsdcp.org/public/members/profile_pic/${user.photo}?v=${photoVersion}` : null,
     city:          user.city,
     country:       user.country,
   };
