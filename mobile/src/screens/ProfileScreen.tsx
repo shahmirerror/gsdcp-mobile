@@ -35,7 +35,7 @@ import {
   searchDogs, DogSearchResult,
   verifySire, verifyDam, SireVerification,
   updateProfile, uploadProfilePhoto, fetchCities, City, fetchProfileShow,
-  fetchHDEDRegistrations, submitHDEDRegistration, HDEDRegistration,
+  submitHDEDRegistration,
   fetchHDEDRequests, HDEDRequest,
   fetchSingleDogRegistrations, submitSingleDogRegistration, SingleDogRegistration,
 } from "../lib/api";
@@ -2525,7 +2525,6 @@ function GradeSelector({
 
 function HDEDTab() {
   const { user } = useAuth();
-  const [subTab, setSubTab] = useState<"registrations" | "requests">("registrations");
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -2547,39 +2546,12 @@ function HDEDTab() {
     id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color,
   }));
 
-  const [allRegs, setAllRegs] = useState<HDEDRegistration[]>([]);
-  const [regTotal, setRegTotal] = useState(0);
-  const [regPage, setRegPage] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const REG_PER_PAGE = 10;
-
-  const { data: page1, isLoading: regsLoading, refetch } = useQuery({
-    queryKey: ["hded-registrations", user?.id],
-    queryFn: () => fetchHDEDRegistrations(user!.id, 1, REG_PER_PAGE),
-    enabled: !!user,
-    staleTime: 30_000,
-  });
-
   const { data: hdedRequests = [], isLoading: requestsLoading, refetch: refetchRequests } = useQuery<HDEDRequest[]>({
     queryKey: ["hded-requests", user?.id],
     queryFn: () => fetchHDEDRequests(user!.token),
     enabled: !!user,
     staleTime: 30_000,
   });
-
-  useEffect(() => {
-    if (page1) { setAllRegs(page1.registrations); setRegTotal(page1.total); setRegPage(1); }
-  }, [page1]);
-
-  const loadMore = async () => {
-    if (loadingMore || allRegs.length >= regTotal) return;
-    setLoadingMore(true);
-    try {
-      const res = await fetchHDEDRegistrations(user!.id, regPage + 1, REG_PER_PAGE);
-      setAllRegs(prev => [...prev, ...res.registrations]);
-      setRegPage(p => p + 1);
-    } finally { setLoadingMore(false); }
-  };
 
   const resetForm = () => {
     setSelectedDog(null);
@@ -2609,7 +2581,7 @@ function HDEDTab() {
       setShowForm(false);
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 5000);
-      refetch();
+      refetchRequests();
     } catch (e: any) {
       setSubmitError(e.message ?? "Submission failed. Please try again.");
     } finally {
@@ -2668,145 +2640,65 @@ function HDEDTab() {
 
   return (
     <View style={styles.card}>
-      {/* Sub-tab toggle */}
-      <View style={{ flexDirection: "row", backgroundColor: "#F1F5F9", borderRadius: 10, padding: 3, marginBottom: 16 }}>
-        {([["registrations", "Registrations"], ["requests", "My Requests"]] as const).map(([id, label]) => (
-          <TouchableOpacity
-            key={id}
-            style={{ flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: "center",
-              backgroundColor: subTab === id ? "#fff" : "transparent" }}
-            onPressIn={() => setSubTab(id)}
-            activeOpacity={0.8}
-          >
-            <Text style={{ fontSize: 12, fontWeight: "700",
-              color: subTab === id ? COLORS.primary : COLORS.textMuted }}>
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {subTab === "registrations" ? (
-        <>
-          <ListHeader title="HD/ED Registrations" onNew={() => { resetForm(); setShowForm(true); }} />
-          {submitSuccess && (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
-              <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
-              <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>HD/ED registration submitted successfully.</Text>
-            </View>
-          )}
-          {regsLoading ? (
-            <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
-          ) : allRegs.length === 0 ? (
-            <View style={tStyles.emptyRow}>
-              <Ionicons name="medkit-outline" size={20} color={COLORS.textMuted} />
-              <Text style={tStyles.emptyRowText}>No HD/ED registrations yet</Text>
-            </View>
-          ) : (
-            <View style={tStyles.certList}>
-              {allRegs.map((r, i) => (
-                <View key={r.id} style={[tStyles.certRow, i < allRegs.length - 1 && tStyles.certRowBorder]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={tStyles.certSire} numberOfLines={1}>{r.dog?.name ?? "—"}</Text>
-                    <Text style={tStyles.certKP}>{r.dog?.KP ? `KP: ${r.dog.KP}` : r.dog?.foreign_reg_no ?? ""}</Text>
-                    <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                      {r.hd_grade ? (
-                        <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                          <Text style={{ fontSize: 11, fontWeight: "600", color: "#1D4ED8" }}>HD: {r.hd_grade}</Text>
-                        </View>
-                      ) : null}
-                      {r.ed_grade ? (
-                        <View style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                          <Text style={{ fontSize: 11, fontWeight: "600", color: "#15803D" }}>ED: {r.ed_grade}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    {r.xray_date ? (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
-                        <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
-                        <Text style={tStyles.certDate}>X-Ray: {formatDate(r.xray_date)}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  {r.status ? (
-                    <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg }]}>
-                      <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
-                    </View>
-                  ) : null}
-                </View>
-              ))}
-              {allRegs.length < regTotal && (
-                <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMore} disabled={loadingMore} activeOpacity={0.7}>
-                  {loadingMore
-                    ? <ActivityIndicator size="small" color={COLORS.primary} />
-                    : <Text style={tStyles.loadMoreText}>Load more ({regTotal - allRegs.length} remaining)</Text>}
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </>
+      <ListHeader title="HD/ED Requests" onNew={() => { resetForm(); setShowForm(true); }} />
+      {submitSuccess && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>HD/ED request submitted successfully.</Text>
+        </View>
+      )}
+      {requestsLoading ? (
+        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+      ) : hdedRequests.length === 0 ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons name="document-outline" size={20} color={COLORS.textMuted} />
+          <Text style={tStyles.emptyRowText}>No HD/ED requests yet</Text>
+        </View>
       ) : (
-        <>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <Text style={tStyles.sectionHeading}>My HD/ED Requests</Text>
-            <TouchableOpacity onPressIn={() => refetchRequests()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="refresh-outline" size={18} color={COLORS.primary} />
-            </TouchableOpacity>
-          </View>
-          {requestsLoading ? (
-            <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
-          ) : hdedRequests.length === 0 ? (
-            <View style={tStyles.emptyRow}>
-              <Ionicons name="document-outline" size={20} color={COLORS.textMuted} />
-              <Text style={tStyles.emptyRowText}>No HD/ED requests found</Text>
-            </View>
-          ) : (
-            <View style={tStyles.certList}>
-              {hdedRequests.map((r, i) => (
-                <View key={r.id} style={[tStyles.certRow, i < hdedRequests.length - 1 && tStyles.certRowBorder]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={tStyles.certSire} numberOfLines={1}>{r.dog?.name ?? "—"}</Text>
-                    <Text style={tStyles.certKP}>{r.dog?.KP ? `KP: ${r.dog.KP}` : r.dog?.foreign_reg_no ?? ""}</Text>
-                    <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                      {r.hd_grade ? (
-                        <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                          <Text style={{ fontSize: 11, fontWeight: "600", color: "#1D4ED8" }}>HD: {r.hd_grade}</Text>
-                        </View>
-                      ) : null}
-                      {r.ed_grade ? (
-                        <View style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                          <Text style={{ fontSize: 11, fontWeight: "600", color: "#15803D" }}>ED: {r.ed_grade}</Text>
-                        </View>
-                      ) : null}
+        <View style={tStyles.certList}>
+          {hdedRequests.map((r, i) => (
+            <View key={r.id} style={[tStyles.certRow, i < hdedRequests.length - 1 && tStyles.certRowBorder]}>
+              <View style={{ flex: 1 }}>
+                <Text style={tStyles.certSire} numberOfLines={1}>{r.dog?.name ?? "—"}</Text>
+                <Text style={tStyles.certKP}>{r.dog?.KP ? `KP: ${r.dog.KP}` : r.dog?.foreign_reg_no ?? ""}</Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                  {r.hd_grade ? (
+                    <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#1D4ED8" }}>HD: {r.hd_grade}</Text>
                     </View>
-                    {r.xray_date ? (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
-                        <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
-                        <Text style={tStyles.certDate}>X-Ray: {formatDate(r.xray_date)}</Text>
-                      </View>
-                    ) : null}
-                    {r.institute ? (
-                      <Text style={[tStyles.certDate, { marginTop: 3 }]}>{r.institute}</Text>
-                    ) : null}
-                    {r.certificate_no ? (
-                      <Text style={[tStyles.certDate, { marginTop: 2 }]}>Cert: {r.certificate_no}</Text>
-                    ) : null}
-                    {r.created_at ? (
-                      <Text style={[tStyles.certDate, { marginTop: 2, color: COLORS.textMuted }]}>
-                        Submitted: {formatDate(r.created_at)}
-                      </Text>
-                    ) : null}
-                  </View>
-                  {r.status ? (
-                    <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg }]}>
-                      <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
+                  ) : null}
+                  {r.ed_grade ? (
+                    <View style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#15803D" }}>ED: {r.ed_grade}</Text>
                     </View>
                   ) : null}
                 </View>
-              ))}
+                {r.xray_date ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
+                    <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
+                    <Text style={tStyles.certDate}>X-Ray: {formatDate(r.xray_date)}</Text>
+                  </View>
+                ) : null}
+                {r.institute ? (
+                  <Text style={[tStyles.certDate, { marginTop: 3 }]}>{r.institute}</Text>
+                ) : null}
+                {r.certificate_no ? (
+                  <Text style={[tStyles.certDate, { marginTop: 2 }]}>Cert: {r.certificate_no}</Text>
+                ) : null}
+                {r.created_at ? (
+                  <Text style={[tStyles.certDate, { marginTop: 2, color: COLORS.textMuted }]}>
+                    Submitted: {formatDate(r.created_at)}
+                  </Text>
+                ) : null}
+              </View>
+              {r.status ? (
+                <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg }]}>
+                  <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
+                </View>
+              ) : null}
             </View>
-          )}
-        </>
+          ))}
+        </View>
       )}
     </View>
   );
