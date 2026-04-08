@@ -15,6 +15,7 @@ import {
   Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,6 +73,7 @@ import {
   SingleDogRegistration,
   SDRRequestDetail,
   SDRProofFile,
+  SDRPickedFile,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -112,7 +114,7 @@ const TABS: {
   { id: "hd-ed", label: "HD/ED", icon: "medkit-outline" },
   {
     id: "single-dog-reg",
-    label: "Dog Registration",
+    label: "Single Dog Registrations",
     icon: "add-circle-outline",
   },
 ];
@@ -4654,11 +4656,10 @@ function HDEDTab() {
       staleTime: 60_000,
     });
 
-  const dogNumericId = selectedDog ? parseInt(selectedDog.id.replace(/^dog-/, ""), 10) : null;
-  const {
-    data: dogInfo,
-    isLoading: dogInfoLoading,
-  } = useQuery<HDEDDogInfo>({
+  const dogNumericId = selectedDog
+    ? parseInt(selectedDog.id.replace(/^dog-/, ""), 10)
+    : null;
+  const { data: dogInfo, isLoading: dogInfoLoading } = useQuery<HDEDDogInfo>({
     queryKey: ["hded-dog-info", user?.id, dogNumericId],
     queryFn: () => fetchHDEDDogInfo(user!.id, dogNumericId!),
     enabled: !!selectedDog && !!user && dogNumericId !== null,
@@ -4706,11 +4707,30 @@ function HDEDTab() {
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedRequest(null)} />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
           <Text style={styles.cardHeading}>HD/ED Request</Text>
           {r.status ? (
-            <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg }]}>
-              <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
+            <View
+              style={[
+                tStyles.statusPill,
+                { backgroundColor: statusColors(r.status).bg },
+              ]}
+            >
+              <Text
+                style={[
+                  tStyles.statusPillText,
+                  { color: statusColors(r.status).text },
+                ]}
+              >
+                {r.status}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -4718,31 +4738,93 @@ function HDEDTab() {
         <FormSection title="DOG" />
         {r.dog ? (
           <DogListItem
-            dog={{ id: r.dog.id, dog_name: r.dog.name?.trim() ?? "—", KP: r.dog.KP, foreign_reg_no: r.dog.foreign_reg_no, sex: r.dog.sex ?? "Unknown", color: null, hair: r.dog.hair ?? null, imageUrl: r.dog.imageURL ?? null, microchip: r.dog.microchip ?? null, dob: null, breed: "GSD", owner: null } as any}
-            onPress={() => navigation.push("DogProfile", { id: r.dog!.id, name: r.dog!.name })}
+            dog={
+              {
+                id: r.dog.id,
+                dog_name: r.dog.name?.trim() ?? "—",
+                KP: r.dog.KP,
+                foreign_reg_no: r.dog.foreign_reg_no,
+                sex: r.dog.sex ?? "Unknown",
+                color: null,
+                hair: r.dog.hair ?? null,
+                imageUrl: r.dog.imageURL ?? null,
+                microchip: r.dog.microchip ?? null,
+                dob: null,
+                breed: "GSD",
+                owner: null,
+              } as any
+            }
+            onPress={() =>
+              navigation.push("DogProfile", {
+                id: r.dog!.id,
+                name: r.dog!.name,
+              })
+            }
           />
         ) : (
-          <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>No dog information</Text>
+          <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>
+            No dog information
+          </Text>
         )}
 
         <View style={styles.divider} />
         <FormSection title="APPOINTMENT" />
         <View style={{ gap: 10 }}>
           {r.appointment_date ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={COLORS.textMuted}
+              />
               <View>
-                <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>DATE</Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{formatDate(r.appointment_date)}</Text>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: COLORS.textMuted,
+                    fontWeight: "600",
+                    letterSpacing: 0.4,
+                    marginBottom: 2,
+                  }}
+                >
+                  DATE
+                </Text>
+                <Text
+                  style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
+                >
+                  {formatDate(r.appointment_date)}
+                </Text>
               </View>
             </View>
           ) : null}
           {r.appointment_time ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={COLORS.textMuted}
+              />
               <View>
-                <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>TIME</Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.appointment_time.slice(0, 5)}</Text>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: COLORS.textMuted,
+                    fontWeight: "600",
+                    letterSpacing: 0.4,
+                    marginBottom: 2,
+                  }}
+                >
+                  TIME
+                </Text>
+                <Text
+                  style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
+                >
+                  {r.appointment_time.slice(0, 5)}
+                </Text>
               </View>
             </View>
           ) : null}
@@ -4758,45 +4840,156 @@ function HDEDTab() {
             <FormSection title="RESULTS" />
             <View style={{ gap: 10 }}>
               {r.detail.hd_result ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="medkit-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
                   <View>
-                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>HD RESULT</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.hd_result}</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      HD RESULT
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {r.detail.hd_result}
+                    </Text>
                   </View>
                 </View>
               ) : null}
               {r.detail.ed_result ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="medkit-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
                   <View>
-                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>ED RESULT</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.ed_result}</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      ED RESULT
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {r.detail.ed_result}
+                    </Text>
                   </View>
                 </View>
               ) : null}
               {r.detail.date_radiographed ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
                   <View>
-                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>DATE RADIOGRAPHED</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{formatDate(r.detail.date_radiographed)}</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      DATE RADIOGRAPHED
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {formatDate(r.detail.date_radiographed)}
+                    </Text>
                   </View>
                 </View>
               ) : null}
               {r.detail.radiographed_by ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Ionicons name="person-outline" size={16} color={COLORS.textMuted} />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
                   <View>
-                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>RADIOGRAPHED BY</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.radiographed_by}</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      RADIOGRAPHED BY
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {r.detail.radiographed_by}
+                    </Text>
                   </View>
                 </View>
               ) : null}
             </View>
           </>
         ) : null}
-
       </View>
     );
   }
@@ -4811,8 +5004,11 @@ function HDEDTab() {
           }}
         />
         <Text style={styles.cardHeading}>New HD/ED Request</Text>
-        <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
-          Select the dog you would like to submit an HD/ED evaluation request for.
+        <Text
+          style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}
+        >
+          Select the dog you would like to submit an HD/ED evaluation request
+          for.
         </Text>
 
         <FormSection title="DOG" />
@@ -4827,42 +5023,132 @@ function HDEDTab() {
         />
 
         {selectedDog && dogInfoLoading ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 10,
+            }}
+          >
             <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Checking eligibility…</Text>
+            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>
+              Checking eligibility…
+            </Text>
           </View>
         ) : null}
 
         {selectedDog && !dogInfoLoading && dogInfo ? (
           dogInfo.eligible ? (
-            <View style={{ marginTop: 12, borderRadius: 10, overflow: "hidden", borderWidth: 1, borderColor: "#BBF7D0" }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#DCFCE7" }}>
+            <View
+              style={{
+                marginTop: 12,
+                borderRadius: 10,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "#BBF7D0",
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: 12,
+                  backgroundColor: "#DCFCE7",
+                }}
+              >
                 <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
-                <Text style={{ fontSize: 13, color: "#166534", fontWeight: "600" }}>This dog is eligible — charges below</Text>
+                <Text
+                  style={{ fontSize: 13, color: "#166534", fontWeight: "600" }}
+                >
+                  This dog is eligible — charges below
+                </Text>
               </View>
               {dogInfo.charges ? (
-                <View style={{ backgroundColor: "#F0FDF4", padding: 12, gap: 8 }}>
+                <View
+                  style={{ backgroundColor: "#F0FDF4", padding: 12, gap: 8 }}
+                >
                   {[
                     { label: "HD/ED Evaluation", key: "HDED_charge" },
                     { label: "DNA Testing", key: "DNA_charge" },
                     { label: "GBW Fee", key: "GBW_charge" },
-                  ].filter(({ key }) => { const v = dogInfo.charges![key as keyof typeof dogInfo.charges]; return v != null && v !== ""; })
-                   .map(({ label, key }) => (
-                    <View key={key} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                      <Text style={{ fontSize: 13, color: COLORS.textMuted }}>{label}</Text>
-                      <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }}>
-                        PKR {dogInfo.charges![key as keyof typeof dogInfo.charges]}
-                      </Text>
-                    </View>
-                  ))}
-                  <View style={{ height: 1, backgroundColor: "#BBF7D0", marginTop: 4 }} />
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#166534" }}>Total</Text>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#166534" }}>
-                      PKR {(() => {
-                        const parse = (s: any) => (s != null && s !== "") ? (parseInt(String(s).replace(/,/g, ""), 10) || 0) : 0;
+                  ]
+                    .filter(({ key }) => {
+                      const v =
+                        dogInfo.charges![key as keyof typeof dogInfo.charges];
+                      return v != null && v !== "";
+                    })
+                    .map(({ label, key }) => (
+                      <View
+                        key={key}
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, color: COLORS.textMuted }}>
+                          {label}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "600",
+                            color: COLORS.text,
+                          }}
+                        >
+                          PKR{" "}
+                          {
+                            dogInfo.charges![
+                              key as keyof typeof dogInfo.charges
+                            ]
+                          }
+                        </Text>
+                      </View>
+                    ))}
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: "#BBF7D0",
+                      marginTop: 4,
+                    }}
+                  />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "700",
+                        color: "#166534",
+                      }}
+                    >
+                      Total
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "700",
+                        color: "#166534",
+                      }}
+                    >
+                      PKR{" "}
+                      {(() => {
+                        const parse = (s: any) =>
+                          s != null && s !== ""
+                            ? parseInt(String(s).replace(/,/g, ""), 10) || 0
+                            : 0;
                         const c = dogInfo.charges!;
-                        return (parse(c.HDED_charge) + parse(c.DNA_charge) + parse(c.GBW_charge)).toLocaleString();
+                        return (
+                          parse(c.HDED_charge) +
+                          parse(c.DNA_charge) +
+                          parse(c.GBW_charge)
+                        ).toLocaleString();
                       })()}
                     </Text>
                   </View>
@@ -4870,9 +5156,29 @@ function HDEDTab() {
               ) : null}
             </View>
           ) : (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, padding: 12, backgroundColor: "#FEE2E2", borderRadius: 8 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                padding: 12,
+                backgroundColor: "#FEE2E2",
+                borderRadius: 8,
+              }}
+            >
               <Ionicons name="alert-circle" size={16} color="#DC2626" />
-              <Text style={{ flex: 1, fontSize: 13, color: "#991B1B", fontWeight: "500" }}>{dogInfo.message ?? "This dog cannot be submitted for a new request."}</Text>
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  color: "#991B1B",
+                  fontWeight: "500",
+                }}
+              >
+                {dogInfo.message ??
+                  "This dog cannot be submitted for a new request."}
+              </Text>
             </View>
           )
         ) : null}
@@ -4881,7 +5187,9 @@ function HDEDTab() {
         <SubmitBtn
           label={submitting ? "Submitting…" : "Submit Request"}
           onPress={handleSubmit}
-          disabled={submitting || dogInfoLoading || (!!dogInfo && !dogInfo.eligible)}
+          disabled={
+            submitting || dogInfoLoading || (!!dogInfo && !dogInfo.eligible)
+          }
         />
       </View>
     );
@@ -5072,23 +5380,16 @@ function SingleDogRegTab() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<SingleDogRegistration | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<SingleDogRegistration | null>(null);
 
-  const [selectedSire, setSelectedSire] = useState<DogOption | null>(null);
-  const [selectedDam, setSelectedDam] = useState<DogOption | null>(null);
-
-  const [form, setForm] = useState({
-    dog_name: "",
-    sex: "",
-    color: "",
-    hair: "",
-    date_of_birth: "",
-    microchip: "",
-    foreign_reg_no: "",
-    remarks: "",
-  });
+  const [form, setForm] = useState({ dog_name: "", gender: "", dob: "", hair: "" });
   const set = (key: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [key]: v }));
+
+  const [photos, setPhotos] = useState<SDRPickedFile[]>([]);
+  const [videos, setVideos] = useState<SDRPickedFile[]>([]);
+  const [documents, setDocuments] = useState<SDRPickedFile[]>([]);
 
   const {
     data: regs = [],
@@ -5101,29 +5402,19 @@ function SingleDogRegTab() {
     staleTime: 30_000,
   });
 
-  const {
-    data: sdrDetail,
-    isLoading: sdrDetailLoading,
-  } = useQuery<SDRRequestDetail>({
-    queryKey: ["sdr-request-detail", selectedRequest?.id],
-    queryFn: () => fetchSDRRequestDetail(selectedRequest!.id, user!.id),
-    enabled: !!selectedRequest && !!user,
-    staleTime: 60_000,
-  });
+  const { data: sdrDetail, isLoading: sdrDetailLoading } =
+    useQuery<SDRRequestDetail>({
+      queryKey: ["sdr-request-detail", selectedRequest?.id],
+      queryFn: () => fetchSDRRequestDetail(selectedRequest!.id, user!.id),
+      enabled: !!selectedRequest && !!user,
+      staleTime: 60_000,
+    });
 
   const resetForm = () => {
-    setSelectedSire(null);
-    setSelectedDam(null);
-    setForm({
-      dog_name: "",
-      sex: "",
-      color: "",
-      hair: "",
-      date_of_birth: "",
-      microchip: "",
-      foreign_reg_no: "",
-      remarks: "",
-    });
+    setForm({ dog_name: "", gender: "", dob: "", hair: "" });
+    setPhotos([]);
+    setVideos([]);
+    setDocuments([]);
     setSubmitError("");
   };
 
@@ -5133,27 +5424,61 @@ function SingleDogRegTab() {
     return h;
   };
 
+  const pickPhotos = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      quality: 0.85,
+    });
+    if (!result.canceled) {
+      const picked: SDRPickedFile[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.fileName ?? `photo_${Date.now()}.jpg`,
+        mimeType: a.mimeType ?? "image/jpeg",
+      }));
+      setPhotos((prev) => [...prev, ...picked]);
+    }
+  };
+
+  const pickVideos = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["videos"],
+      allowsMultipleSelection: true,
+      videoMaxDuration: 300,
+    });
+    if (!result.canceled) {
+      const picked: SDRPickedFile[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.fileName ?? `video_${Date.now()}.mp4`,
+        mimeType: a.mimeType ?? "video/mp4",
+      }));
+      setVideos((prev) => [...prev, ...picked]);
+    }
+  };
+
+  const pickDocuments = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["application/pdf", "image/*"],
+      multiple: true,
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled) {
+      const picked: SDRPickedFile[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.name,
+        mimeType: a.mimeType ?? "application/octet-stream",
+      }));
+      setDocuments((prev) => [...prev, ...picked]);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!form.dog_name.trim()) {
-      setSubmitError("Dog name is required.");
-      return;
-    }
-    if (!form.sex) {
-      setSubmitError("Sex is required.");
-      return;
-    }
-    if (!form.color) {
-      setSubmitError("Color is required.");
-      return;
-    }
-    if (!form.hair) {
-      setSubmitError("Hair type is required.");
-      return;
-    }
-    if (!form.date_of_birth.trim()) {
-      setSubmitError("Date of birth is required.");
-      return;
-    }
+    if (!form.dog_name.trim()) { setSubmitError("Dog name is required."); return; }
+    if (!form.gender) { setSubmitError("Gender is required."); return; }
+    if (!form.dob.trim()) { setSubmitError("Date of birth is required."); return; }
+    if (!form.hair) { setSubmitError("Hair type is required."); return; }
+    if (photos.length === 0) { setSubmitError("At least one photo is required."); return; }
+    if (videos.length === 0) { setSubmitError("At least one video is required."); return; }
     setSubmitError("");
     setSubmitting(true);
     try {
@@ -5161,23 +5486,12 @@ function SingleDogRegTab() {
         {
           user_id: user!.id,
           dog_name: form.dog_name.trim(),
-          sex: form.sex,
-          color: form.color,
+          gender: form.gender,
+          dob: form.dob,
           hair: hairApiValue(form.hair),
-          date_of_birth: form.date_of_birth,
-          microchip: form.microchip.trim() || undefined,
-          foreign_reg_no: form.foreign_reg_no.trim() || undefined,
-          sire_id: selectedSire
-            ? parseInt(selectedSire.id.replace(/^dog-/, ""), 10)
-            : undefined,
-          sire_name: selectedSire?.name || undefined,
-          sire_kp: selectedSire?.KP || undefined,
-          dam_id: selectedDam
-            ? parseInt(selectedDam.id.replace(/^dog-/, ""), 10)
-            : undefined,
-          dam_name: selectedDam?.name || undefined,
-          dam_kp: selectedDam?.KP || undefined,
-          remarks: form.remarks.trim() || undefined,
+          photos,
+          videos,
+          documents: documents.length ? documents : undefined,
         },
         user!.token,
       );
@@ -5193,6 +5507,49 @@ function SingleDogRegTab() {
     }
   };
 
+  const FilePickerRow = ({
+    label,
+    required,
+    files,
+    onPick,
+    onRemove,
+  }: {
+    label: string;
+    required?: boolean;
+    files: SDRPickedFile[];
+    onPick: () => void;
+    onRemove: (i: number) => void;
+  }) => (
+    <View style={{ marginBottom: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.textMuted, flex: 1 }}>
+          {label}
+          {required ? <Text style={{ color: "#EF4444" }}> *</Text> : null}
+        </Text>
+        <TouchableOpacity
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primary + "15", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}
+          onPress={onPick}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="attach-outline" size={15} color={COLORS.primary} />
+          <Text style={{ fontSize: 12, fontWeight: "600", color: COLORS.primary }}>Add</Text>
+        </TouchableOpacity>
+      </View>
+      {files.map((f, i) => (
+        <View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F5F5F2", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 5 }}>
+          <Ionicons name="document-outline" size={14} color={COLORS.textMuted} style={{ marginRight: 7 }} />
+          <Text style={{ fontSize: 12, color: COLORS.text, flex: 1 }} numberOfLines={1}>{f.name}</Text>
+          <TouchableOpacity onPress={() => onRemove(i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={18} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
+      ))}
+      {files.length === 0 && (
+        <Text style={{ fontSize: 12, color: COLORS.textMuted, fontStyle: "italic" }}>No files selected</Text>
+      )}
+    </View>
+  );
+
   if (showForm) {
     return (
       <View style={styles.card}>
@@ -5202,7 +5559,7 @@ function SingleDogRegTab() {
             resetForm();
           }}
         />
-        <Text style={styles.cardHeading}>Single Dog Registration</Text>
+        <Text style={styles.cardHeading}>Single Dog Registrations</Text>
 
         <FormSection title="DOG INFORMATION" />
         <FormField
@@ -5213,18 +5570,11 @@ function SingleDogRegTab() {
           placeholder="Full registered name"
         />
         <OptionPillSelector
-          label="Sex"
+          label="Gender"
           required
-          value={form.sex}
+          value={form.gender}
           options={SEX_OPTIONS}
-          onChange={set("sex")}
-        />
-        <OptionPillSelector
-          label="Coat Color"
-          required
-          value={form.color}
-          options={COLOR_OPTIONS}
-          onChange={set("color")}
+          onChange={set("gender")}
         />
         <OptionPillSelector
           label="Hair Type"
@@ -5236,56 +5586,37 @@ function SingleDogRegTab() {
         <CalendarDatePicker
           label="Date of Birth"
           required
-          value={form.date_of_birth}
-          onChange={set("date_of_birth")}
+          value={form.dob}
+          onChange={set("dob")}
         />
 
         <View style={styles.divider} />
-        <FormSection title="IDENTIFICATION (OPTIONAL)" />
-        <FormField
-          label="Microchip Number"
-          value={form.microchip}
-          onChangeText={set("microchip")}
-          placeholder="15-digit microchip number"
-          keyboardType="numeric"
-        />
-        <FormField
-          label="Foreign Registration No."
-          value={form.foreign_reg_no}
-          onChangeText={set("foreign_reg_no")}
-          placeholder="e.g. SZ 123456"
+        <FormSection title="PHOTOS" />
+        <FilePickerRow
+          label="Dog Photos"
+          required
+          files={photos}
+          onPick={pickPhotos}
+          onRemove={(i) => setPhotos((p) => p.filter((_, idx) => idx !== i))}
         />
 
         <View style={styles.divider} />
-        <FormSection title="SIRE (OPTIONAL)" />
-        <DogDropdown
-          label="Sire"
-          mode="remote"
-          sexFilter="Male"
-          selected={selectedSire}
-          onSelect={setSelectedSire}
-          onClear={() => setSelectedSire(null)}
+        <FormSection title="VIDEOS" />
+        <FilePickerRow
+          label="Dog Videos"
+          required
+          files={videos}
+          onPick={pickVideos}
+          onRemove={(i) => setVideos((p) => p.filter((_, idx) => idx !== i))}
         />
 
         <View style={styles.divider} />
-        <FormSection title="DAM (OPTIONAL)" />
-        <DogDropdown
-          label="Dam"
-          mode="remote"
-          sexFilter="Female"
-          selected={selectedDam}
-          onSelect={setSelectedDam}
-          onClear={() => setSelectedDam(null)}
-        />
-
-        <View style={styles.divider} />
-        <FormSection title="ADDITIONAL NOTES" />
-        <FormField
-          label="Remarks"
-          value={form.remarks}
-          onChangeText={set("remarks")}
-          placeholder="Any additional information"
-          multiline
+        <FormSection title="DOCUMENTS (OPTIONAL)" />
+        <FilePickerRow
+          label="Supporting Documents"
+          files={documents}
+          onPick={pickDocuments}
+          onRemove={(i) => setDocuments((p) => p.filter((_, idx) => idx !== i))}
         />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
@@ -5300,51 +5631,155 @@ function SingleDogRegTab() {
 
   if (selectedRequest) {
     const status = sdrDetail?.status ?? selectedRequest.status;
-    const statusBg = status === "Request Approved and Posted" ? "#DCFCE7" : status?.toLowerCase().includes("reject") ? "#FEE2E2" : "#FEF9C3";
-    const statusColor = status === "Request Approved and Posted" ? "#166534" : status?.toLowerCase().includes("reject") ? "#991B1B" : "#854D0E";
+    const statusBg =
+      status === "Request Approved and Posted"
+        ? "#DCFCE7"
+        : status?.toLowerCase().includes("reject")
+          ? "#FEE2E2"
+          : "#FEF9C3";
+    const statusColor =
+      status === "Request Approved and Posted"
+        ? "#166534"
+        : status?.toLowerCase().includes("reject")
+          ? "#991B1B"
+          : "#854D0E";
 
-    const InfoRow = ({ label, value }: { label: string; value: string | null | undefined }) =>
+    const InfoRow = ({
+      label,
+      value,
+    }: {
+      label: string;
+      value: string | null | undefined;
+    }) =>
       value ? (
-        <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
-          <Text style={{ fontSize: 13, color: COLORS.textMuted, flexShrink: 0, marginRight: 12 }}>{label}</Text>
-          <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{value}</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            paddingVertical: 7,
+            borderBottomWidth: 1,
+            borderBottomColor: "#F0F0EE",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 13,
+              color: COLORS.textMuted,
+              flexShrink: 0,
+              marginRight: 12,
+            }}
+          >
+            {label}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "500",
+              color: COLORS.text,
+              flex: 1,
+              textAlign: "right",
+            }}
+          >
+            {value}
+          </Text>
         </View>
       ) : null;
 
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedRequest(null)} />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <Text style={[styles.cardHeading, { marginBottom: 0, flex: 1 }]}>{sdrDetail?.dog?.name ?? selectedRequest.dog_name}</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 4,
+          }}
+        >
+          <Text style={[styles.cardHeading, { marginBottom: 0, flex: 1 }]}>
+            {sdrDetail?.dog?.name ?? selectedRequest.dog_name}
+          </Text>
           {sdrDetail?.dog?.id ? (
             <TouchableOpacity
-              style={{ flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 8 }}
-              onPress={() => navigation.push("DogProfile", { id: sdrDetail.dog.id, name: sdrDetail.dog.name?.trim() ?? "" })}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                marginLeft: 8,
+              }}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: sdrDetail.dog.id,
+                  name: sdrDetail.dog.name?.trim() ?? "",
+                })
+              }
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 12, fontWeight: "600", color: COLORS.primary }}>Profile</Text>
-              <Ionicons name="arrow-forward-circle-outline" size={18} color={COLORS.primary} />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "600",
+                  color: COLORS.primary,
+                }}
+              >
+                Profile
+              </Text>
+              <Ionicons
+                name="arrow-forward-circle-outline"
+                size={18}
+                color={COLORS.primary}
+              />
             </TouchableOpacity>
           ) : null}
         </View>
         {status ? (
-          <View style={[tStyles.statusPill, { alignSelf: "flex-start", marginBottom: 14, backgroundColor: statusBg }]}>
-            <Text style={[tStyles.statusPillText, { color: statusColor }]}>{status}</Text>
+          <View
+            style={[
+              tStyles.statusPill,
+              {
+                alignSelf: "flex-start",
+                marginBottom: 14,
+                backgroundColor: statusBg,
+              },
+            ]}
+          >
+            <Text style={[tStyles.statusPillText, { color: statusColor }]}>
+              {status}
+            </Text>
           </View>
         ) : null}
 
         {sdrDetailLoading ? (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
             <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Loading details…</Text>
+            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>
+              Loading details…
+            </Text>
           </View>
         ) : null}
 
         {sdrDetail ? (
           <>
             <FormSection title="APPOINTMENT" />
-            <InfoRow label="Date" value={sdrDetail.appointment_date ? formatDate(sdrDetail.appointment_date) : null} />
-            <InfoRow label="Time" value={sdrDetail.appointment_time?.slice(0, 5) ?? null} />
+            <InfoRow
+              label="Date"
+              value={
+                sdrDetail.appointment_date
+                  ? formatDate(sdrDetail.appointment_date)
+                  : null
+              }
+            />
+            <InfoRow
+              label="Time"
+              value={sdrDetail.appointment_time?.slice(0, 5) ?? null}
+            />
 
             <FormSection title="DOG" />
             <InfoRow label="KP Number" value={sdrDetail.dog?.KP} />
@@ -5352,12 +5787,18 @@ function SingleDogRegTab() {
             <InfoRow label="Color" value={sdrDetail.dog?.color} />
             <InfoRow label="Hair" value={sdrDetail.dog?.hair} />
             <InfoRow label="Microchip" value={sdrDetail.dog?.microchip} />
-            <InfoRow label="Foreign Reg. No." value={sdrDetail.dog?.foreign_reg_no} />
+            <InfoRow
+              label="Foreign Reg. No."
+              value={sdrDetail.dog?.foreign_reg_no}
+            />
 
             <FormSection title="ASSESSMENT" />
             <InfoRow label="Height (cm)" value={sdrDetail.height} />
             <InfoRow label="Bite" value={sdrDetail.bite} />
-            <InfoRow label="Dentition Faults" value={sdrDetail.dentition_faults} />
+            <InfoRow
+              label="Dentition Faults"
+              value={sdrDetail.dentition_faults}
+            />
             {sdrDetail.dog?.sex?.toLowerCase() !== "female" ? (
               <InfoRow label="Neutered" value={sdrDetail.neutered} />
             ) : null}
@@ -5369,11 +5810,20 @@ function SingleDogRegTab() {
             {sdrDetail.pics?.length > 0 ? (
               <>
                 <FormSection title="PHOTOS" />
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    marginTop: 4,
+                  }}
+                >
                   {sdrDetail.pics.map((p: SDRProofFile) => (
                     <LazyImage
                       key={p.id}
-                      source={{ uri: `https://gsdcp.org/public/sdr_pic_proof/${p.name}` }}
+                      source={{
+                        uri: `https://gsdcp.org/public/sdr_pic_proof/${p.name}`,
+                      }}
                       style={{ width: 90, height: 90, borderRadius: 8 }}
                     />
                   ))}
@@ -5385,9 +5835,28 @@ function SingleDogRegTab() {
               <>
                 <FormSection title="DOCUMENTS" />
                 {sdrDetail.docs.map((d: SDRProofFile) => (
-                  <View key={d.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
-                    <Ionicons name="document-outline" size={16} color={COLORS.primary} />
-                    <Text style={{ fontSize: 13, color: COLORS.text, flex: 1 }} numberOfLines={1}>{d.name}</Text>
+                  <View
+                    key={d.id}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      paddingVertical: 6,
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#F0F0EE",
+                    }}
+                  >
+                    <Ionicons
+                      name="document-outline"
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <Text
+                      style={{ fontSize: 13, color: COLORS.text, flex: 1 }}
+                      numberOfLines={1}
+                    >
+                      {d.name}
+                    </Text>
                   </View>
                 ))}
               </>
@@ -5397,9 +5866,28 @@ function SingleDogRegTab() {
               <>
                 <FormSection title="VIDEOS" />
                 {sdrDetail.vids.map((v: SDRProofFile) => (
-                  <View key={v.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
-                    <Ionicons name="videocam-outline" size={16} color={COLORS.primary} />
-                    <Text style={{ fontSize: 13, color: COLORS.text, flex: 1 }} numberOfLines={1}>{v.name}</Text>
+                  <View
+                    key={v.id}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      paddingVertical: 6,
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#F0F0EE",
+                    }}
+                  >
+                    <Ionicons
+                      name="videocam-outline"
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <Text
+                      style={{ fontSize: 13, color: COLORS.text, flex: 1 }}
+                      numberOfLines={1}
+                    >
+                      {v.name}
+                    </Text>
                   </View>
                 ))}
               </>
@@ -5413,7 +5901,7 @@ function SingleDogRegTab() {
   return (
     <View style={styles.card}>
       <ListHeader
-        title="Dog Registrations"
+        title="Single Dog Registrations"
         onNew={() => {
           resetForm();
           setShowForm(true);
@@ -5433,7 +5921,7 @@ function SingleDogRegTab() {
         >
           <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
           <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>
-            Dog registration submitted successfully.
+            Single Dog registration Request submitted successfully.
           </Text>
         </View>
       )}
@@ -5464,10 +5952,24 @@ function SingleDogRegTab() {
                   {r.dog_name}
                 </Text>
                 {r.appointment_date ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
-                    <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 4,
+                    }}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={12}
+                      color={COLORS.textMuted}
+                    />
                     <Text style={tStyles.certDate}>
-                      {formatDate(r.appointment_date)}{r.appointment_time ? `  ·  ${r.appointment_time.slice(0, 5)}` : ""}
+                      {formatDate(r.appointment_date)}
+                      {r.appointment_time
+                        ? `  ·  ${r.appointment_time.slice(0, 5)}`
+                        : ""}
                     </Text>
                   </View>
                 ) : null}
@@ -5503,7 +6005,12 @@ function SingleDogRegTab() {
                   </Text>
                 </View>
               ) : null}
-              <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={{ marginLeft: 6 }} />
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={COLORS.textMuted}
+                style={{ marginLeft: 6 }}
+              />
             </TouchableOpacity>
           ))}
         </View>

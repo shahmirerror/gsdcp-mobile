@@ -1755,23 +1755,21 @@ export type SDRRequestDetail = {
   pics: SDRProofFile[];
 };
 
+export type SDRPickedFile = {
+  uri: string;
+  name: string;
+  mimeType: string;
+};
+
 export type SingleDogRegistrationPayload = {
   user_id: number;
-  kennel_id?: string | null;
   dog_name: string;
-  sex: string;
-  color: string;
+  gender: string;
+  dob: string;
   hair: string;
-  date_of_birth: string;
-  microchip?: string;
-  foreign_reg_no?: string;
-  sire_id?: number;
-  sire_name?: string;
-  sire_kp?: string;
-  dam_id?: number;
-  dam_name?: string;
-  dam_kp?: string;
-  remarks?: string;
+  photos: SDRPickedFile[];
+  videos: SDRPickedFile[];
+  documents?: SDRPickedFile[];
 };
 
 export async function fetchSingleDogRegistrations(
@@ -1833,17 +1831,42 @@ export async function submitSingleDogRegistration(
   payload: SingleDogRegistrationPayload,
   token?: string | null,
 ): Promise<void> {
-  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+  const fd = new FormData();
+  fd.append("user_id", String(payload.user_id));
+  fd.append("dog_name", payload.dog_name);
+  fd.append("gender", payload.gender);
+  fd.append("dob", payload.dob);
+  fd.append("hair", payload.hair);
+
+  const appendFiles = (key: string, files: SDRPickedFile[]) => {
+    files.forEach((f) => {
+      if (typeof Blob !== "undefined" && f.uri.startsWith("data:")) {
+        const byteStr = atob(f.uri.split(",")[1]);
+        const arr = new Uint8Array(byteStr.length);
+        for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+        fd.append(key, new Blob([arr], { type: f.mimeType }), f.name);
+      } else {
+        fd.append(key, { uri: f.uri, name: f.name, type: f.mimeType } as any);
+      }
+    });
+  };
+
+  appendFiles("photos[]", payload.photos);
+  appendFiles("videos[]", payload.videos);
+  if (payload.documents?.length) appendFiles("documents[]", payload.documents);
+
+  const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${BASE_URL}/new-single-dog-registration`, {
+
+  const res = await fetch(`${BASE_URL}/new-sdr-request`, {
     method: "POST",
     headers,
-    body: JSON.stringify(payload),
+    body: fd,
   });
   let json: any = {};
   try {
     const text = await res.text();
-    json = JSON.parse(text);
+    json = text ? JSON.parse(text) : {};
   } catch {
     if (res.ok) return;
     throw new Error("Invalid response from server.");
