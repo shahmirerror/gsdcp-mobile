@@ -2548,7 +2548,7 @@ function HDEDTab() {
 
   const { data: hdedRequests = [], isLoading: requestsLoading, refetch: refetchRequests } = useQuery<HDEDRequest[]>({
     queryKey: ["hded-requests", user?.id],
-    queryFn: () => fetchHDEDRequests(user!.token),
+    queryFn: () => fetchHDEDRequests(user!.id),
     enabled: !!user,
     staleTime: 30_000,
   });
@@ -2661,34 +2661,14 @@ function HDEDTab() {
               <View style={{ flex: 1 }}>
                 <Text style={tStyles.certSire} numberOfLines={1}>{r.dog?.name ?? "—"}</Text>
                 <Text style={tStyles.certKP}>{r.dog?.KP ? `KP: ${r.dog.KP}` : r.dog?.foreign_reg_no ?? ""}</Text>
-                <View style={{ flexDirection: "row", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                  {r.hd_grade ? (
-                    <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#1D4ED8" }}>HD: {r.hd_grade}</Text>
-                    </View>
-                  ) : null}
-                  {r.ed_grade ? (
-                    <View style={{ backgroundColor: "#F0FDF4", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                      <Text style={{ fontSize: 11, fontWeight: "600", color: "#15803D" }}>ED: {r.ed_grade}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                {r.xray_date ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 }}>
+                {r.appointment_date ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
                     <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
-                    <Text style={tStyles.certDate}>X-Ray: {formatDate(r.xray_date)}</Text>
+                    <Text style={tStyles.certDate}>
+                      {formatDate(r.appointment_date)}
+                      {r.appointment_time ? `  ·  ${r.appointment_time.slice(0, 5)}` : ""}
+                    </Text>
                   </View>
-                ) : null}
-                {r.institute ? (
-                  <Text style={[tStyles.certDate, { marginTop: 3 }]}>{r.institute}</Text>
-                ) : null}
-                {r.certificate_no ? (
-                  <Text style={[tStyles.certDate, { marginTop: 2 }]}>Cert: {r.certificate_no}</Text>
-                ) : null}
-                {r.created_at ? (
-                  <Text style={[tStyles.certDate, { marginTop: 2, color: COLORS.textMuted }]}>
-                    Submitted: {formatDate(r.created_at)}
-                  </Text>
                 ) : null}
               </View>
               {r.status ? (
