@@ -4832,9 +4832,38 @@ function HDEDTab() {
 
         {selectedDog && !dogInfoLoading && dogInfo ? (
           dogInfo.eligible ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, padding: 12, backgroundColor: "#DCFCE7", borderRadius: 8 }}>
-              <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
-              <Text style={{ fontSize: 13, color: "#166534", fontWeight: "500" }}>This dog is eligible for an HD/ED request.</Text>
+            <View style={{ marginTop: 12, borderRadius: 10, overflow: "hidden", borderWidth: 1, borderColor: "#BBF7D0" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#DCFCE7" }}>
+                <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                <Text style={{ fontSize: 13, color: "#166534", fontWeight: "600" }}>This dog is eligible — charges below</Text>
+              </View>
+              {dogInfo.charges ? (
+                <View style={{ backgroundColor: "#F0FDF4", padding: 12, gap: 8 }}>
+                  {[
+                    { label: "HD/ED Evaluation", key: "HDED_charge" },
+                    { label: "DNA Testing", key: "DNA_charge" },
+                    { label: "GBW Fee", key: "GBW_charge" },
+                  ].map(({ label, key }) => (
+                    <View key={key} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text style={{ fontSize: 13, color: COLORS.textMuted }}>{label}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }}>
+                        PKR {dogInfo.charges![key as keyof typeof dogInfo.charges]}
+                      </Text>
+                    </View>
+                  ))}
+                  <View style={{ height: 1, backgroundColor: "#BBF7D0", marginTop: 4 }} />
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#166534" }}>Total</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#166534" }}>
+                      PKR {(() => {
+                        const parse = (s: any) => parseInt(String(s ?? "0").replace(/,/g, ""), 10) || 0;
+                        const c = dogInfo.charges!;
+                        return (parse(c.HDED_charge) + parse(c.DNA_charge) + parse(c.GBW_charge)).toLocaleString();
+                      })()}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
           ) : (
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, padding: 12, backgroundColor: "#FEE2E2", borderRadius: 8 }}>

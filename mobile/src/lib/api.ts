@@ -1642,6 +1642,11 @@ export async function fetchHDEDRequestDetail(
 export type HDEDDogInfo = {
   eligible: boolean;
   message?: string | null;
+  charges?: {
+    DNA_charge: string;
+    HDED_charge: string;
+    GBW_charge: string;
+  } | null;
 };
 
 export async function fetchHDEDDogInfo(userId: number, dogId: number): Promise<HDEDDogInfo> {
@@ -1651,9 +1656,17 @@ export async function fetchHDEDDogInfo(userId: number, dogId: number): Promise<H
   );
   const json = await res.json();
   if (!json.success) {
-    return { eligible: false, message: json.error?.message ?? json.message ?? "This dog cannot be submitted." };
+    return { eligible: false, message: json.error?.message ?? json.message ?? "This dog cannot be submitted.", charges: null };
   }
-  return { eligible: true, message: json.data?.message ?? null };
+  return {
+    eligible: true,
+    message: json.data?.message ?? null,
+    charges: json.data ? {
+      DNA_charge: json.data.DNA_charge,
+      HDED_charge: json.data.HDED_charge,
+      GBW_charge: json.data.GBW_charge,
+    } : null,
+  };
 }
 
 export async function submitHDEDRegistration(
