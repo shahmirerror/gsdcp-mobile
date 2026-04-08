@@ -5314,7 +5314,19 @@ function SingleDogRegTab() {
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedRequest(null)} />
-        <Text style={styles.cardHeading}>{sdrDetail?.dog?.name ?? selectedRequest.dog_name}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={[styles.cardHeading, { marginBottom: 0, flex: 1 }]}>{sdrDetail?.dog?.name ?? selectedRequest.dog_name}</Text>
+          {sdrDetail?.dog?.id ? (
+            <TouchableOpacity
+              style={{ flexDirection: "row", alignItems: "center", gap: 4, marginLeft: 8 }}
+              onPress={() => navigation.push("DogProfile", { id: sdrDetail.dog.id, name: sdrDetail.dog.name?.trim() ?? "" })}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "600", color: COLORS.primary }}>Profile</Text>
+              <Ionicons name="arrow-forward-circle-outline" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
         {status ? (
           <View style={[tStyles.statusPill, { alignSelf: "flex-start", marginBottom: 14, backgroundColor: statusBg }]}>
             <Text style={[tStyles.statusPillText, { color: statusColor }]}>{status}</Text>
@@ -5353,17 +5365,6 @@ function SingleDogRegTab() {
               <InfoRow label="Testicles" value={sdrDetail.testicles} />
             ) : null}
             <InfoRow label="DNA Status" value={sdrDetail.DNA_status} />
-
-            {sdrDetail.dog?.id ? (
-              <TouchableOpacity
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, marginTop: 8, borderTopWidth: 1, borderTopColor: "#F0F0EE" }}
-                onPress={() => navigation.push("DogProfile", { id: sdrDetail.dog.id, name: sdrDetail.dog.name?.trim() ?? "" })}
-                activeOpacity={0.7}
-              >
-                <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.primary }}>View Dog Profile</Text>
-                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-              </TouchableOpacity>
-            ) : null}
 
             {sdrDetail.pics?.length > 0 ? (
               <>
