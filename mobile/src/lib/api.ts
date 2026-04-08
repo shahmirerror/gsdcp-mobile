@@ -1722,6 +1722,16 @@ export type SingleDogRegistration = {
   KP: string | null;
   dob: string | null;
   status: string | null;
+  color: string | null;
+  hair: string | null;
+  microchip: string | null;
+  foreign_reg_no: string | null;
+  sire_name: string | null;
+  sire_kp: string | null;
+  dam_name: string | null;
+  dam_kp: string | null;
+  remarks: string | null;
+  created_at: string | null;
 };
 
 export type SingleDogRegistrationPayload = {
@@ -1744,19 +1754,28 @@ export type SingleDogRegistrationPayload = {
 };
 
 export async function fetchSingleDogRegistrations(
-  userId: number, page = 1, perPage = 10
-): Promise<{ registrations: SingleDogRegistration[]; total: number }> {
-  const res = await fetch(`${BASE_URL}/single-dog-registrations`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ user_id: userId, page, per_page: perPage }),
-  });
+  userId: number,
+): Promise<SingleDogRegistration[]> {
+  const res = await fetch(
+    `${BASE_URL}/sdr-requests?user_id=${userId}`,
+    { headers: { Accept: "application/json" } },
+  );
   const json = await res.json();
-  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch single dog registrations");
-  return {
-    registrations: Array.isArray(json.data?.registrations) ? json.data.registrations : [],
-    total: json.data?.total ?? 0,
-  };
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch registrations");
+  return Array.isArray(json.data) ? json.data : (json.data?.requests ?? json.data?.registrations ?? []);
+}
+
+export async function fetchSDRRequestDetail(
+  id: string,
+  userId: number,
+): Promise<SingleDogRegistration> {
+  const res = await fetch(
+    `${BASE_URL}/sdr-requests/${id}?user_id=${userId}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch request");
+  return json.data?.request ?? json.data;
 }
 
 /* ── Forgot Password ─────────────────────────────────── */

@@ -67,6 +67,7 @@ import {
   fetchHDEDRequestDetail,
   HDEDRequest,
   fetchSingleDogRegistrations,
+  fetchSDRRequestDetail,
   submitSingleDogRegistration,
   SingleDogRegistration,
 } from "../lib/api";
@@ -5068,6 +5069,7 @@ function SingleDogRegTab() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<SingleDogRegistration | null>(null);
 
   const [selectedSire, setSelectedSire] = useState<DogOption | null>(null);
   const [selectedDam, setSelectedDam] = useState<DogOption | null>(null);
@@ -5085,46 +5087,26 @@ function SingleDogRegTab() {
   const set = (key: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [key]: v }));
 
-  const [allRegs, setAllRegs] = useState<SingleDogRegistration[]>([]);
-  const [regTotal, setRegTotal] = useState(0);
-  const [regPage, setRegPage] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const REG_PER_PAGE = 10;
-
   const {
-    data: page1,
+    data: regs = [],
     isLoading: regsLoading,
     refetch,
-  } = useQuery({
-    queryKey: ["single-dog-registrations", user?.id],
-    queryFn: () => fetchSingleDogRegistrations(user!.id, 1, REG_PER_PAGE),
+  } = useQuery<SingleDogRegistration[]>({
+    queryKey: ["sdr-requests", user?.id],
+    queryFn: () => fetchSingleDogRegistrations(user!.id),
     enabled: !!user,
     staleTime: 30_000,
   });
 
-  useEffect(() => {
-    if (page1) {
-      setAllRegs(page1.registrations);
-      setRegTotal(page1.total);
-      setRegPage(1);
-    }
-  }, [page1]);
-
-  const loadMore = async () => {
-    if (loadingMore || allRegs.length >= regTotal) return;
-    setLoadingMore(true);
-    try {
-      const res = await fetchSingleDogRegistrations(
-        user!.id,
-        regPage + 1,
-        REG_PER_PAGE,
-      );
-      setAllRegs((prev) => [...prev, ...res.registrations]);
-      setRegPage((p) => p + 1);
-    } finally {
-      setLoadingMore(false);
-    }
-  };
+  const {
+    data: sdrDetail,
+    isLoading: sdrDetailLoading,
+  } = useQuery<SingleDogRegistration>({
+    queryKey: ["sdr-request-detail", selectedRequest?.id],
+    queryFn: () => fetchSDRRequestDetail(selectedRequest!.id, user!.id),
+    enabled: !!selectedRequest && !!user,
+    staleTime: 60_000,
+  });
 
   const resetForm = () => {
     setSelectedSire(null);
@@ -5313,6 +5295,66 @@ function SingleDogRegTab() {
     );
   }
 
+  if (selectedRequest) {
+    const r = sdrDetail ?? selectedRequest;
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setSelectedRequest(null)} />
+        <Text style={styles.cardHeading}>{r.dog_name}</Text>
+        {r.status ? (
+          <View style={[tStyles.statusPill, { alignSelf: "flex-start", marginBottom: 12, backgroundColor: r.status === "Approved" ? "#DCFCE7" : r.status === "Rejected" ? "#FEE2E2" : "#FEF9C3" }]}>
+            <Text style={[tStyles.statusPillText, { color: r.status === "Approved" ? "#166534" : r.status === "Rejected" ? "#991B1B" : "#854D0E" }]}>{r.status}</Text>
+          </View>
+        ) : null}
+
+        <FormSection title="DOG INFORMATION" />
+        {[
+          { label: "KP Number", value: r.KP },
+          { label: "Sex", value: r.sex },
+          { label: "Color", value: r.color },
+          { label: "Hair", value: r.hair },
+          { label: "Date of Birth", value: r.dob ? formatDate(r.dob) : null },
+          { label: "Microchip", value: r.microchip },
+          { label: "Foreign Reg. No.", value: r.foreign_reg_no },
+        ].filter(f => f.value).map(f => (
+          <View key={f.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
+            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>{f.label}</Text>
+            <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{f.value}</Text>
+          </View>
+        ))}
+
+        {(r.sire_name || r.dam_name) ? (
+          <>
+            <FormSection title="PARENTAGE" />
+            {r.sire_name ? (
+              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
+                <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Sire</Text>
+                <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{r.sire_name}{r.sire_kp ? ` (${r.sire_kp})` : ""}</Text>
+              </View>
+            ) : null}
+            {r.dam_name ? (
+              <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#F0F0EE" }}>
+                <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Dam</Text>
+                <Text style={{ fontSize: 13, fontWeight: "500", color: COLORS.text, flex: 1, textAlign: "right" }}>{r.dam_name}{r.dam_kp ? ` (${r.dam_kp})` : ""}</Text>
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
+        {r.remarks ? (
+          <>
+            <FormSection title="REMARKS" />
+            <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 20 }}>{r.remarks}</Text>
+          </>
+        ) : null}
+
+        {sdrDetailLoading ? (
+          <ActivityIndicator style={{ marginTop: 12 }} size="small" color={COLORS.primary} />
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.card}>
       <ListHeader
@@ -5345,20 +5387,22 @@ function SingleDogRegTab() {
           style={{ marginVertical: 24 }}
           color={COLORS.primary}
         />
-      ) : allRegs.length === 0 ? (
+      ) : regs.length === 0 ? (
         <View style={tStyles.emptyRow}>
           <Ionicons name="paw-outline" size={20} color={COLORS.textMuted} />
           <Text style={tStyles.emptyRowText}>No dog registrations yet</Text>
         </View>
       ) : (
         <View style={tStyles.certList}>
-          {allRegs.map((r, i) => (
-            <View
+          {regs.map((r, i) => (
+            <TouchableOpacity
               key={r.id}
               style={[
                 tStyles.certRow,
-                i < allRegs.length - 1 && tStyles.certRowBorder,
+                i < regs.length - 1 && tStyles.certRowBorder,
               ]}
+              onPress={() => setSelectedRequest(r)}
+              activeOpacity={0.7}
             >
               <View style={{ flex: 1 }}>
                 <Text style={tStyles.certSire} numberOfLines={1}>
@@ -5453,24 +5497,9 @@ function SingleDogRegTab() {
                   </Text>
                 </View>
               ) : null}
-            </View>
-          ))}
-          {allRegs.length < regTotal && (
-            <TouchableOpacity
-              style={tStyles.loadMoreBtn}
-              onPress={loadMore}
-              disabled={loadingMore}
-              activeOpacity={0.7}
-            >
-              {loadingMore ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
-              ) : (
-                <Text style={tStyles.loadMoreText}>
-                  Load more ({regTotal - allRegs.length} remaining)
-                </Text>
-              )}
+              <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
-          )}
+          ))}
         </View>
       )}
     </View>
