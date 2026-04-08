@@ -1602,7 +1602,7 @@ export async function fetchHDEDRegistrations(
 /* ── HD/ED Requests (new) ─────────────────────────────── */
 export type HDEDRequest = {
   id: string;
-  dog: { id: string; name: string; KP: string | null; foreign_reg_no: string | null; microchip?: string | null } | null;
+  dog: { id: string; name: string; KP: string | null; foreign_reg_no: string | null; microchip?: string | null; hair?: string | null; imageURL?: string | null; sex?: string | null } | null;
   detail?: {
     date_radiographed: string | null;
     radiographed_by: string | null;

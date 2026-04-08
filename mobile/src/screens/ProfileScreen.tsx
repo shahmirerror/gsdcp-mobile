@@ -4740,21 +4740,10 @@ function HDEDTab() {
 
         <FormSection title="DOG" />
         {r.dog ? (
-          <>
-            <DogListItem
-              dog={{ id: r.dog.id, dog_name: r.dog.name?.trim() ?? "—", KP: r.dog.KP, foreign_reg_no: r.dog.foreign_reg_no, sex: "Unknown", color: null, imageUrl: null, dob: null, breed: "GSD", owner: null } as any}
-              onPress={() => navigation.push("DogProfile", { id: r.dog!.id, name: r.dog!.name })}
-            />
-            {r.dog.microchip ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8, paddingHorizontal: 4 }}>
-                <Ionicons name="barcode-outline" size={15} color={COLORS.textMuted} />
-                <View>
-                  <Text style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 1 }}>MICROCHIP</Text>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: "#0F172A" }}>{r.dog.microchip}</Text>
-                </View>
-              </View>
-            ) : null}
-          </>
+          <DogListItem
+            dog={{ id: r.dog.id, dog_name: r.dog.name?.trim() ?? "—", KP: r.dog.KP, foreign_reg_no: r.dog.foreign_reg_no, sex: r.dog.sex ?? "Unknown", color: null, hair: r.dog.hair ?? null, imageUrl: r.dog.imageURL ?? null, microchip: r.dog.microchip ?? null, dob: null, breed: "GSD", owner: null } as any}
+            onPress={() => navigation.push("DogProfile", { id: r.dog!.id, name: r.dog!.name })}
+          />
         ) : (
           <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>No dog information</Text>
         )}
