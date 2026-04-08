@@ -4725,201 +4725,116 @@ function HDEDTab() {
   };
 
   if (selectedRequest) {
-    const r = selectedRequest;
+    const r = hdedDetail ?? selectedRequest;
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedRequest(null)} />
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 16,
-          }}
-        >
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <Text style={styles.cardHeading}>HD/ED Request</Text>
           {r.status ? (
-            <View
-              style={[
-                tStyles.statusPill,
-                { backgroundColor: statusColors(r.status).bg },
-              ]}
-            >
-              <Text
-                style={[
-                  tStyles.statusPillText,
-                  { color: statusColors(r.status).text },
-                ]}
-              >
-                {r.status}
-              </Text>
+            <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg }]}>
+              <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <FormSection title="DOG" />
+        {r.dog ? (
+          <DogListItem
+            dog={{ id: r.dog.id, dog_name: r.dog.name?.trim() ?? "—", KP: r.dog.KP, foreign_reg_no: r.dog.foreign_reg_no, sex: "Unknown", color: null, imageUrl: null, dob: null, breed: "GSD", owner: null } as any}
+            onPress={() => navigation.push("DogProfile", { id: r.dog!.id, name: r.dog!.name })}
+          />
+        ) : (
+          <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>No dog information</Text>
+        )}
+
+        <View style={styles.divider} />
+        <FormSection title="APPOINTMENT" />
+        <View style={{ gap: 10 }}>
+          {r.appointment_date ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+              <View>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>DATE</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{formatDate(r.appointment_date)}</Text>
+              </View>
+            </View>
+          ) : null}
+          {r.appointment_time ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
+              <View>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>TIME</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.appointment_time.slice(0, 5)}</Text>
+              </View>
             </View>
           ) : null}
         </View>
 
         {hdedDetailLoading ? (
-          <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
-        ) : (
-          <>
-            <FormSection title="DOG" />
-            {r.dog ? (
-              <DogListItem
-                dog={
-                  {
-                    id: r.dog.id,
-                    dog_name: r.dog.name?.trim() ?? "—",
-                    KP: r.dog.KP,
-                    foreign_reg_no: r.dog.foreign_reg_no,
-                    sex: "Unknown",
-                    color: null,
-                    imageUrl: null,
-                    dob: null,
-                    breed: "GSD",
-                    owner: null,
-                  } as any
-                }
-                onPress={() =>
-                  navigation.push("DogProfile", {
-                    id: r.dog!.id,
-                    name: r.dog!.name,
-                  })
-                }
-              />
-            ) : (
-              <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>
-                No dog information
-              </Text>
-            )}
+          <ActivityIndicator style={{ marginTop: 20 }} color={COLORS.primary} />
+        ) : null}
 
+        {r.detail ? (
+          <>
             <View style={styles.divider} />
-            <FormSection title="APPOINTMENT" />
+            <FormSection title="RESULTS" />
             <View style={{ gap: 10 }}>
-              {r.appointment_date ? (
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={16}
-                    color={COLORS.textMuted}
-                  />
+              {r.detail.hd_result ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
                   <View>
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: COLORS.textMuted,
-                        fontWeight: "600",
-                        letterSpacing: 0.4,
-                        marginBottom: 2,
-                      }}
-                    >
-                      DATE
-                    </Text>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
-                    >
-                      {formatDate(r.appointment_date)}
-                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>HD RESULT</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.hd_result}</Text>
                   </View>
                 </View>
               ) : null}
-              {r.appointment_time ? (
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-                >
-                  <Ionicons
-                    name="time-outline"
-                    size={16}
-                    color={COLORS.textMuted}
-                  />
+              {r.detail.ed_result ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
                   <View>
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: COLORS.textMuted,
-                        fontWeight: "600",
-                        letterSpacing: 0.4,
-                        marginBottom: 2,
-                      }}
-                    >
-                      TIME
-                    </Text>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
-                    >
-                      {r.appointment_time.slice(0, 5)}
-                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>ED RESULT</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.ed_result}</Text>
+                  </View>
+                </View>
+              ) : null}
+              {r.detail.date_radiographed ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+                  <View>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>DATE RADIOGRAPHED</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{formatDate(r.detail.date_radiographed)}</Text>
+                  </View>
+                </View>
+              ) : null}
+              {r.detail.radiographed_by ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Ionicons name="person-outline" size={16} color={COLORS.textMuted} />
+                  <View>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>RADIOGRAPHED BY</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.radiographed_by}</Text>
                   </View>
                 </View>
               ) : null}
             </View>
-
-            {r.detail ? (
-              <>
-                <View style={styles.divider} />
-                <FormSection title="RESULTS" />
-                <View style={{ gap: 10 }}>
-                  {r.detail.hd_result ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
-                      <View>
-                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>HD RESULT</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.hd_result}</Text>
-                      </View>
-                    </View>
-                  ) : null}
-                  {r.detail.ed_result ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
-                      <View>
-                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>ED RESULT</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.ed_result}</Text>
-                      </View>
-                    </View>
-                  ) : null}
-                  {r.detail.date_radiographed ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
-                      <View>
-                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>DATE RADIOGRAPHED</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{formatDate(r.detail.date_radiographed)}</Text>
-                      </View>
-                    </View>
-                  ) : null}
-                  {r.detail.radiographed_by ? (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <Ionicons name="person-outline" size={16} color={COLORS.textMuted} />
-                      <View>
-                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>RADIOGRAPHED BY</Text>
-                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.radiographed_by}</Text>
-                      </View>
-                    </View>
-                  ) : null}
-                </View>
-              </>
-            ) : null}
-
-            {r.dog?.microchip ? (
-              <>
-                <View style={styles.divider} />
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Ionicons name="barcode-outline" size={16} color={COLORS.textMuted} />
-                  <View>
-                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>MICROCHIP</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.dog.microchip}</Text>
-                  </View>
-                </View>
-              </>
-            ) : null}
-
-            <View style={[styles.divider, { marginTop: 16 }]} />
-            <Text
-              style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "500" }}
-            >
-              Request ID: {r.id}
-            </Text>
           </>
-        )}
+        ) : null}
+
+        {r.dog?.microchip ? (
+          <>
+            <View style={styles.divider} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Ionicons name="barcode-outline" size={16} color={COLORS.textMuted} />
+              <View>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>MICROCHIP</Text>
+                <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.dog.microchip}</Text>
+              </View>
+            </View>
+          </>
+        ) : null}
+
+        <View style={[styles.divider, { marginTop: 16 }]} />
+        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "500" }}>Request ID: {r.id}</Text>
       </View>
     );
   }
