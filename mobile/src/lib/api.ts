@@ -1621,15 +1621,17 @@ export async function fetchHDEDRequests(
 
 export async function fetchHDEDRequestDetail(
   id: string,
-  token: string | null,
+  userId: number,
 ): Promise<HDEDRequest> {
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  const numericId = id.replace(/^hded-/, "");
-  const res = await fetch(`${BASE_URL}/hded-requests/${numericId}`, { headers });
+  const res = await fetch(`${BASE_URL}/hded-requests/${id}?user_id=${userId}`, {
+    headers: { Accept: "application/json" },
+  });
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED request");
-  return json.data;
+  const list: HDEDRequest[] = json.data?.requests ?? [];
+  const match = list.find((r) => r.id === id);
+  if (!match) throw new Error("Request not found");
+  return match;
 }
 
 export async function submitHDEDRegistration(

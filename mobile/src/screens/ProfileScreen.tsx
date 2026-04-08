@@ -62,6 +62,7 @@ import {
   fetchProfileShow,
   submitHDEDRegistration,
   fetchHDEDRequests,
+  fetchHDEDRequestDetail,
   HDEDRequest,
   fetchSingleDogRegistrations,
   submitSingleDogRegistration,
@@ -4577,7 +4578,7 @@ const hdedStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
     gap: 12,
@@ -4603,7 +4604,9 @@ function HDEDTab() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
   const [showForm, setShowForm] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<HDEDRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<HDEDRequest | null>(
+    null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -4647,6 +4650,14 @@ function HDEDTab() {
     enabled: !!user,
     staleTime: 30_000,
   });
+
+  const { data: hdedDetail, isLoading: hdedDetailLoading } =
+    useQuery<HDEDRequest>({
+      queryKey: ["hded-request-detail", selectedRequest?.id],
+      queryFn: () => fetchHDEDRequestDetail(selectedRequest!.id, user!.id),
+      enabled: !!selectedRequest && !!user,
+      staleTime: 60_000,
+    });
 
   const resetForm = () => {
     setSelectedDog(null);
@@ -4718,61 +4729,139 @@ function HDEDTab() {
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedRequest(null)} />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
           <Text style={styles.cardHeading}>HD/ED Request</Text>
           {r.status ? (
-            <View style={[tStyles.statusPill, { backgroundColor: statusColors(r.status).bg }]}>
-              <Text style={[tStyles.statusPillText, { color: statusColors(r.status).text }]}>{r.status}</Text>
+            <View
+              style={[
+                tStyles.statusPill,
+                { backgroundColor: statusColors(r.status).bg },
+              ]}
+            >
+              <Text
+                style={[
+                  tStyles.statusPillText,
+                  { color: statusColors(r.status).text },
+                ]}
+              >
+                {r.status}
+              </Text>
             </View>
           ) : null}
         </View>
 
-        <FormSection title="DOG" />
-        {r.dog ? (
-          <DogListItem
-            dog={{
-              id: r.dog.id,
-              dog_name: r.dog.name?.trim() ?? "—",
-              KP: r.dog.KP,
-              foreign_reg_no: r.dog.foreign_reg_no,
-              sex: "Unknown",
-              color: null,
-              imageUrl: null,
-              dob: null,
-              breed: "GSD",
-              owner: null,
-            } as any}
-            onPress={() => navigation.push("DogProfile", { id: r.dog!.id, name: r.dog!.name })}
-          />
+        {hdedDetailLoading ? (
+          <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
         ) : (
-          <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>No dog information</Text>
+          <>
+            <FormSection title="DOG" />
+            {r.dog ? (
+              <DogListItem
+                dog={
+                  {
+                    id: r.dog.id,
+                    dog_name: r.dog.name?.trim() ?? "—",
+                    KP: r.dog.KP,
+                    foreign_reg_no: r.dog.foreign_reg_no,
+                    sex: "Unknown",
+                    color: null,
+                    imageUrl: null,
+                    dob: null,
+                    breed: "GSD",
+                    owner: null,
+                  } as any
+                }
+                onPress={() =>
+                  navigation.push("DogProfile", {
+                    id: r.dog!.id,
+                    name: r.dog!.name,
+                  })
+                }
+              />
+            ) : (
+              <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>
+                No dog information
+              </Text>
+            )}
+
+            <View style={styles.divider} />
+            <FormSection title="APPOINTMENT" />
+            <View style={{ gap: 10 }}>
+              {r.appointment_date ? (
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      DATE
+                    </Text>
+                    <Text
+                      style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
+                    >
+                      {formatDate(r.appointment_date)}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              {r.appointment_time ? (
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+                >
+                  <Ionicons
+                    name="time-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      TIME
+                    </Text>
+                    <Text
+                      style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
+                    >
+                      {r.appointment_time.slice(0, 5)}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={[styles.divider, { marginTop: 16 }]} />
+            <Text
+              style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "500" }}
+            >
+              Request ID: {r.id}
+            </Text>
+          </>
         )}
-
-        <View style={styles.divider} />
-        <FormSection title="APPOINTMENT" />
-        <View style={{ gap: 10 }}>
-          {r.appointment_date ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
-              <View>
-                <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>DATE</Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{formatDate(r.appointment_date)}</Text>
-              </View>
-            </View>
-          ) : null}
-          {r.appointment_time ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <Ionicons name="time-outline" size={16} color={COLORS.textMuted} />
-              <View>
-                <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>TIME</Text>
-                <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.appointment_time.slice(0, 5)}</Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={[styles.divider, { marginTop: 16 }]} />
-        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "500" }}>Request ID: {r.id}</Text>
       </View>
     );
   }
