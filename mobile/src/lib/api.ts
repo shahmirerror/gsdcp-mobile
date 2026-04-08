@@ -1602,7 +1602,13 @@ export async function fetchHDEDRegistrations(
 /* ── HD/ED Requests (new) ─────────────────────────────── */
 export type HDEDRequest = {
   id: string;
-  dog: { id: string; name: string; KP: string | null; foreign_reg_no: string | null } | null;
+  dog: { id: string; name: string; KP: string | null; foreign_reg_no: string | null; microchip?: string | null } | null;
+  detail?: {
+    date_radiographed: string | null;
+    radiographed_by: string | null;
+    hd_result: string | null;
+    ed_result: string | null;
+  } | null;
   status: string | null;
   appointment_date: string | null;
   appointment_time: string | null;
@@ -1628,10 +1634,9 @@ export async function fetchHDEDRequestDetail(
   });
   const json = await res.json();
   if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED request");
-  const list: HDEDRequest[] = json.data?.requests ?? [];
-  const match = list.find((r) => r.id === id);
-  if (!match) throw new Error("Request not found");
-  return match;
+  const request = json.data?.request;
+  if (!request) throw new Error("Request not found");
+  return request;
 }
 
 export async function submitHDEDRegistration(

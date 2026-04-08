@@ -4854,6 +4854,64 @@ function HDEDTab() {
               ) : null}
             </View>
 
+            {r.detail ? (
+              <>
+                <View style={styles.divider} />
+                <FormSection title="RESULTS" />
+                <View style={{ gap: 10 }}>
+                  {r.detail.hd_result ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
+                      <View>
+                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>HD RESULT</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.hd_result}</Text>
+                      </View>
+                    </View>
+                  ) : null}
+                  {r.detail.ed_result ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Ionicons name="medkit-outline" size={16} color={COLORS.textMuted} />
+                      <View>
+                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>ED RESULT</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.ed_result}</Text>
+                      </View>
+                    </View>
+                  ) : null}
+                  {r.detail.date_radiographed ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
+                      <View>
+                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>DATE RADIOGRAPHED</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{formatDate(r.detail.date_radiographed)}</Text>
+                      </View>
+                    </View>
+                  ) : null}
+                  {r.detail.radiographed_by ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <Ionicons name="person-outline" size={16} color={COLORS.textMuted} />
+                      <View>
+                        <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>RADIOGRAPHED BY</Text>
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.detail.radiographed_by}</Text>
+                      </View>
+                    </View>
+                  ) : null}
+                </View>
+              </>
+            ) : null}
+
+            {r.dog?.microchip ? (
+              <>
+                <View style={styles.divider} />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Ionicons name="barcode-outline" size={16} color={COLORS.textMuted} />
+                  <View>
+                    <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600", letterSpacing: 0.4, marginBottom: 2 }}>MICROCHIP</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>{r.dog.microchip}</Text>
+                  </View>
+                </View>
+              </>
+            ) : null}
+
             <View style={[styles.divider, { marginTop: 16 }]} />
             <Text
               style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "500" }}
