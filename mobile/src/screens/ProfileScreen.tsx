@@ -2978,6 +2978,7 @@ export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("detail");
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoVersion, setPhotoVersion] = useState(() => Date.now());
 
   const { data: detail, isLoading, refetch, isRefetching } = useQuery<MemberDetail>({
     queryKey: ["member-detail", user?.member_id],
@@ -3026,6 +3027,7 @@ export default function ProfileScreen() {
       await uploadProfilePhoto(uri, { id: user.id, phone: user.phone, email: user.email }, user.token);
       const fresh = await fetchProfileShow(user.id);
       if (fresh?.photo) await updateUser({ photo: fresh.photo });
+      setPhotoVersion(Date.now());
     } catch (e: any) {
       Alert.alert("Upload failed", e.message ?? "Could not upload photo. Please try again.");
     } finally {
@@ -3045,7 +3047,7 @@ export default function ProfileScreen() {
     id:            user.member_id,
     member_name:   user.name,
     membership_no: user.membership_no ?? "",
-    imageUrl:      user.photo ? `https://gsdcp.org/storage/photos/${user.photo}` : null,
+    imageUrl:      user.photo ? `https://gsdcp.org/storage/photos/${user.photo}?v=${photoVersion}` : null,
     city:          user.city,
     country:       user.country,
   };

@@ -233,6 +233,7 @@ export type ShowJudge = {
 };
 
 export type Show = {
+  city: any;
   id: string;
   name: string;
   event_type: string;
