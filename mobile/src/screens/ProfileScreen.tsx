@@ -5067,6 +5067,7 @@ function OptionPillSelector({
 
 function SingleDogRegTab() {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -5342,12 +5343,27 @@ function SingleDogRegTab() {
             <InfoRow label="Foreign Reg. No." value={sdrDetail.dog?.foreign_reg_no} />
 
             <FormSection title="ASSESSMENT" />
-            <InfoRow label="Height" value={sdrDetail.height} />
+            <InfoRow label="Height (cm)" value={sdrDetail.height} />
             <InfoRow label="Bite" value={sdrDetail.bite} />
             <InfoRow label="Dentition Faults" value={sdrDetail.dentition_faults} />
-            <InfoRow label="Neutered" value={sdrDetail.neutered} />
-            <InfoRow label="Testicles" value={sdrDetail.testicles} />
+            {sdrDetail.dog?.sex?.toLowerCase() !== "female" ? (
+              <InfoRow label="Neutered" value={sdrDetail.neutered} />
+            ) : null}
+            {sdrDetail.dog?.sex?.toLowerCase() !== "female" ? (
+              <InfoRow label="Testicles" value={sdrDetail.testicles} />
+            ) : null}
             <InfoRow label="DNA Status" value={sdrDetail.DNA_status} />
+
+            {sdrDetail.dog?.id ? (
+              <TouchableOpacity
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, marginTop: 8, borderTopWidth: 1, borderTopColor: "#F0F0EE" }}
+                onPress={() => navigation.push("DogProfile", { id: sdrDetail.dog.id, name: sdrDetail.dog.name?.trim() ?? "" })}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.primary }}>View Dog Profile</Text>
+                <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+              </TouchableOpacity>
+            ) : null}
 
             {sdrDetail.pics?.length > 0 ? (
               <>
@@ -5356,7 +5372,7 @@ function SingleDogRegTab() {
                   {sdrDetail.pics.map((p: SDRProofFile) => (
                     <LazyImage
                       key={p.id}
-                      uri={`https://gsdcp.org/public/sdr_pic_proof/${p.name}`}
+                      source={{ uri: `https://gsdcp.org/public/sdr_pic_proof/${p.name}` }}
                       style={{ width: 90, height: 90, borderRadius: 8 }}
                     />
                   ))}
