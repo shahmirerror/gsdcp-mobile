@@ -5307,7 +5307,7 @@ function HDEDTab() {
 
 /* ── Tab: Single Dog Registration ───────────────────── */
 const SEX_OPTIONS = ["Male", "Female"];
-const HAIR_OPTIONS = ["Short (S)", "Long (L)"];
+const HAIR_OPTIONS = ["Stock Hair", "Long Stock Hair"];
 const COLOR_OPTIONS = [
   "Black & Tan",
   "Sable",
@@ -5419,8 +5419,8 @@ function SingleDogRegTab() {
   };
 
   const hairApiValue = (h: string) => {
-    if (h.startsWith("Short")) return "S";
-    if (h.startsWith("Long")) return "L";
+    if (h === "Stock Hair") return "S";
+    if (h === "Long Stock Hair") return "L";
     return h;
   };
 
