@@ -60,7 +60,7 @@ import {
   fetchCities,
   City,
   fetchProfileShow,
-  submitHDEDRegistration,
+  submitNewHDEDRequest,
   fetchHDEDRequests,
   fetchHDEDRequestDetail,
   HDEDRequest,
@@ -4611,16 +4611,6 @@ function HDEDTab() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [selectedDog, setSelectedDog] = useState<DogOption | null>(null);
-  const [form, setForm] = useState({
-    hd_grade: "",
-    ed_grade: "",
-    xray_date: "",
-    certificate_no: "",
-    institute: "",
-    remarks: "",
-  });
-  const set = (key: keyof typeof form) => (v: string) =>
-    setForm((f) => ({ ...f, [key]: v }));
 
   const { data: memberDetail } = useQuery<MemberDetail>({
     queryKey: ["member-detail", user ? `member-${user.id}` : null],
@@ -4661,14 +4651,6 @@ function HDEDTab() {
 
   const resetForm = () => {
     setSelectedDog(null);
-    setForm({
-      hd_grade: "",
-      ed_grade: "",
-      xray_date: "",
-      certificate_no: "",
-      institute: "",
-      remarks: "",
-    });
     setSubmitError("");
   };
 
@@ -4677,33 +4659,12 @@ function HDEDTab() {
       setSubmitError("Please select a dog.");
       return;
     }
-    if (!form.hd_grade) {
-      setSubmitError("HD grade is required.");
-      return;
-    }
-    if (!form.ed_grade) {
-      setSubmitError("ED grade is required.");
-      return;
-    }
-    if (!form.xray_date.trim()) {
-      setSubmitError("X-Ray date is required.");
-      return;
-    }
     setSubmitError("");
     setSubmitting(true);
     try {
-      await submitHDEDRegistration(
-        {
-          user_id: user!.id,
-          dog_id: parseInt(selectedDog.id.replace(/^dog-/, ""), 10),
-          hd_grade: form.hd_grade,
-          ed_grade: form.ed_grade,
-          xray_date: form.xray_date,
-          certificate_no: form.certificate_no.trim() || undefined,
-          institute: form.institute.trim() || undefined,
-          remarks: form.remarks.trim() || undefined,
-        },
-        user!.token,
+      await submitNewHDEDRequest(
+        user!.id,
+        parseInt(selectedDog.id.replace(/^dog-/, ""), 10),
       );
       resetForm();
       setShowForm(false);
@@ -4833,7 +4794,10 @@ function HDEDTab() {
             resetForm();
           }}
         />
-        <Text style={styles.cardHeading}>New HD/ED Registration</Text>
+        <Text style={styles.cardHeading}>New HD/ED Request</Text>
+        <Text style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}>
+          Select the dog you would like to submit an HD/ED evaluation request for.
+        </Text>
 
         <FormSection title="DOG" />
         <DogDropdown
@@ -4846,57 +4810,9 @@ function HDEDTab() {
           onClear={() => setSelectedDog(null)}
         />
 
-        <View style={styles.divider} />
-        <FormSection title="HIP DYSPLASIA (HD)" />
-        <GradeSelector
-          label="HD Grade"
-          required
-          value={form.hd_grade}
-          options={HD_GRADES}
-          onChange={set("hd_grade")}
-        />
-
-        <View style={styles.divider} />
-        <FormSection title="ELBOW DYSPLASIA (ED)" />
-        <GradeSelector
-          label="ED Grade"
-          required
-          value={form.ed_grade}
-          options={ED_GRADES}
-          onChange={set("ed_grade")}
-        />
-
-        <View style={styles.divider} />
-        <FormSection title="X-RAY DETAILS" />
-        <CalendarDatePicker
-          label="X-Ray Date"
-          required
-          value={form.xray_date}
-          onChange={set("xray_date")}
-        />
-        <FormField
-          label="Certificate Number"
-          value={form.certificate_no}
-          onChangeText={set("certificate_no")}
-          placeholder="e.g. HD-2024-001"
-        />
-        <FormField
-          label="Institute / Clinic"
-          value={form.institute}
-          onChangeText={set("institute")}
-          placeholder="Name of veterinary institute"
-        />
-        <FormField
-          label="Remarks"
-          value={form.remarks}
-          onChangeText={set("remarks")}
-          placeholder="Optional remarks"
-          multiline
-        />
-
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn
-          label={submitting ? "Submitting…" : "Submit HD/ED Registration"}
+          label={submitting ? "Submitting…" : "Submit Request"}
           onPress={handleSubmit}
           disabled={submitting}
         />

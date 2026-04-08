@@ -1664,6 +1664,26 @@ export async function submitHDEDRegistration(
   }
 }
 
+export async function submitNewHDEDRequest(userId: number, dogId: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/new-hded-request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ user_id: userId, dog_id: dogId }),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    if (res.ok) return;
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
+  }
+}
+
 /* ── Single Dog Registration ─────────────────────────── */
 export type SingleDogRegistration = {
   id: string;
