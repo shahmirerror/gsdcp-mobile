@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -6,6 +7,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import type { TheClubStackParamList } from "../../navigation/AppNavigator";
+
+const logo = require("../../../assets/logo-square.png");
 
 type Nav = NativeStackNavigationProp<TheClubStackParamList, "TheClubHome">;
 
@@ -78,13 +81,15 @@ export default function TheClubScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 32 }}
     >
-      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 28 }]}>
-        <View style={styles.heroCenter}>
-          <View style={styles.heroIconWrap}>
-            <Ionicons name="shield-checkmark" size={34} color="#fff" />
+      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <View style={[styles.logoBanner, { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 }]}>
+            <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
-          <Text style={styles.heroTitle}>The Club</Text>
-          <Text style={styles.heroSub}>German Shepherd Dog Club of Pakistan</Text>
+          <View style={styles.headerContent}>
+            <Text style={styles.heroTitle}>The Club</Text>
+            <Text style={styles.heroSub}>German Shepherd Dog Club of Pakistan</Text>
+          </View>
         </View>
       </LinearGradient>
 
@@ -117,15 +122,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: { paddingHorizontal: 20, paddingBottom: 36 },
-  heroCenter: { alignItems: "center" },
-  heroIconWrap: {
-    width: 72, height: 72, borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center", alignItems: "center", marginBottom: 14,
+  header: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  headerRow: { flexDirection: "row", alignItems: "stretch", gap: 14 },
+  logoBanner: {
+    width: 60,
+    borderTopLeftRadius: 0, borderTopRightRadius: 0,
+    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    justifyContent: "center", alignItems: "center",
+    paddingBottom: 12,
   },
-  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff", textAlign: "center" },
-  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 6 },
+  logoImg: { width: 42, height: 42 },
+  headerContent: { flex: 1, justifyContent: "center" },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 6 },
   listWrap: {
     marginHorizontal: 16,
     marginTop: -1,

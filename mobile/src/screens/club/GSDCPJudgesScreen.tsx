@@ -20,6 +20,8 @@ import { fetchJudges, JudgeItem } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 import LazyImage from "../../components/LazyImage";
 
+const logo = require("../../../assets/logo-square.png");
+
 function credentialColor(credentials: string): { bg: string; text: string } {
   if (credentials.toLowerCase().includes("fci")) return { bg: "rgba(59,130,246,0.1)", text: "#2563EB" };
   if (credentials.toLowerCase().includes("sv")) return { bg: "rgba(199,164,92,0.12)", text: COLORS.accent };
@@ -75,21 +77,23 @@ export default function GSDCPJudgesScreen() {
         <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
       }
     >
-      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          data-testid="button-back"
-        >
-          <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.85)" />
-          <Text style={styles.backText}>The Club</Text>
-        </TouchableOpacity>
-        <View style={styles.heroCenter}>
-          <View style={styles.heroIconWrap}>
-            <Ionicons name="ribbon" size={34} color="#fff" />
+      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <View style={[styles.logoBanner, { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 }]}>
+            <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
-          <Text style={styles.heroTitle}>GSDCP Judges</Text>
-          <Text style={styles.heroSub}>Certified local breed judges</Text>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+              data-testid="button-back"
+            >
+              <Ionicons name="chevron-back" size={16} color="rgba(255,255,255,0.75)" />
+              <Text style={styles.backText}>The Club</Text>
+            </TouchableOpacity>
+            <Text style={styles.heroTitle}>GSDCP Judges</Text>
+            <Text style={styles.heroSub}>Certified local breed judges</Text>
+          </View>
         </View>
       </LinearGradient>
 
@@ -120,17 +124,22 @@ export default function GSDCPJudgesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 32 },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 20 },
-  backText: { fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
-  heroCenter: { alignItems: "center" },
-  heroIconWrap: {
-    width: 72, height: 72, borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center", alignItems: "center", marginBottom: 14,
+  header: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  headerRow: { flexDirection: "row", alignItems: "stretch", gap: 14 },
+  logoBanner: {
+    width: 60,
+    borderTopLeftRadius: 0, borderTopRightRadius: 0,
+    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    justifyContent: "center", alignItems: "center",
+    paddingBottom: 12,
   },
-  heroTitle: { fontSize: 24, fontWeight: "800", color: "#fff", textAlign: "center" },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center", marginTop: 6 },
+  logoImg: { width: 42, height: 42 },
+  headerContent: { flex: 1, justifyContent: "center" },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+  backText: { fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600" },
+  heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   infoCard: {
     marginHorizontal: 16, marginTop: 20,
     flexDirection: "row", gap: 10,

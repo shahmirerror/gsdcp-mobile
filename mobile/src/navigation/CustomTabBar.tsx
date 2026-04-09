@@ -227,7 +227,7 @@ export default function CustomTabBar({
           size={24}
           color={isFocused ? COLORS.primary : COLORS.textMuted}
         />
-        {isFocused && <Text style={styles.tabLabelActive}>{cfg.label}</Text>}
+        <Text style={styles.tabLabelActive}>{cfg.label}</Text>
       </TouchableOpacity>
     );
   };

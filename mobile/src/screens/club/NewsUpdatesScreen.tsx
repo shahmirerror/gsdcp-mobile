@@ -2,6 +2,7 @@ import {
   ScrollView,
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
@@ -16,6 +17,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchNews, stripHtml, NewsItem } from "../../lib/api";
 import type { TheClubStackParamList } from "../../navigation/AppNavigator";
+
+const logo = require("../../../assets/logo-square.png");
 
 type Nav = NativeStackNavigationProp<TheClubStackParamList>;
 
@@ -42,21 +45,23 @@ export default function NewsUpdatesScreen() {
         />
       }
     >
-      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          data-testid="button-back"
-        >
-          <Ionicons name="chevron-back" size={20} color="rgba(255,255,255,0.85)" />
-          <Text style={styles.backText}>The Club</Text>
-        </TouchableOpacity>
-        <View style={styles.heroCenter}>
-          <View style={styles.heroIconWrap}>
-            <Ionicons name="newspaper" size={34} color="#fff" />
+      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.headerRow}>
+          <View style={[styles.logoBanner, { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 }]}>
+            <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
-          <Text style={styles.heroTitle}>News & Updates</Text>
-          <Text style={styles.heroSub}>Latest announcements from GSDCP</Text>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+              data-testid="button-back"
+            >
+              <Ionicons name="chevron-back" size={16} color="rgba(255,255,255,0.75)" />
+              <Text style={styles.backText}>The Club</Text>
+            </TouchableOpacity>
+            <Text style={styles.heroTitle}>News & Updates</Text>
+            <Text style={styles.heroSub}>Latest announcements from GSDCP</Text>
+          </View>
         </View>
       </LinearGradient>
 
@@ -99,17 +104,22 @@ export default function NewsUpdatesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 32 },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 20 },
-  backText: { fontSize: 15, color: "rgba(255,255,255,0.85)", fontWeight: "600" },
-  heroCenter: { alignItems: "center" },
-  heroIconWrap: {
-    width: 72, height: 72, borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center", alignItems: "center", marginBottom: 14,
+  header: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  headerRow: { flexDirection: "row", alignItems: "stretch", gap: 14 },
+  logoBanner: {
+    width: 60,
+    borderTopLeftRadius: 0, borderTopRightRadius: 0,
+    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    justifyContent: "center", alignItems: "center",
+    paddingBottom: 12,
   },
-  heroTitle: { fontSize: 24, fontWeight: "800", color: "#fff", textAlign: "center" },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", textAlign: "center", marginTop: 6 },
+  logoImg: { width: 42, height: 42 },
+  headerContent: { flex: 1, justifyContent: "center" },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
+  backText: { fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600" },
+  heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   cardsWrap: { paddingHorizontal: 16, marginTop: 20, gap: 12 },
   card: {
     backgroundColor: "#fff",
