@@ -18,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
-import { fetchKennelDetail, KennelDetail, KennelMating, KennelBreeder } from "../lib/api";
+import { fetchKennelDetail, KennelDetail, KennelMating, KennelBreeder, Breeder } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelProfile">;
@@ -398,7 +398,27 @@ export default function KennelProfileScreen() {
                           i < breeders.length - 1 && styles.ownerRowBorder,
                         ]}
                         onPress={() =>
-                          navigation.navigate("BreederProfile", { id: breeder.breeder_id! })
+                          navigation.navigate("BreederProfile", {
+                            id: breeder.breeder_id!,
+                            breederData: {
+                              id: kennel!.id,
+                              memberId: breeder.breeder_id!,
+                              name: breeder.name,
+                              kennelName: kennel!.kennelName,
+                              location: kennel!.location,
+                              city: kennel!.city,
+                              country: kennel!.country,
+                              phone: breeder.phone,
+                              email: breeder.email,
+                              membership_no: breeder.membership_no,
+                              imageUrl: breeder.imageUrl || "",
+                              kennelImage: kennel!.imageUrl || "",
+                              activeSince: kennel!.activeSince,
+                              totalLitters: 0,
+                              description: kennel!.description,
+                              breederType: null,
+                            } as Breeder,
+                          })
                         }
                         activeOpacity={0.7}
                       >

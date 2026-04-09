@@ -522,15 +522,17 @@ export default function BreederProfileScreen() {
         </View>
 
         <Text style={styles.breederName}>{breeder.name}</Text>
-        <TouchableOpacity
-          style={styles.kennelLink}
-          onPress={() => navigation.navigate("KennelProfile", { id: breeder.id, name: breeder.kennelName })}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="home-outline" size={13} color={COLORS.primary} />
-          <Text style={styles.kennelLinkText}>{breeder.kennelName}</Text>
-          <Ionicons name="chevron-forward" size={13} color={COLORS.primary} />
-        </TouchableOpacity>
+        {breeder.kennelName ? (
+          <TouchableOpacity
+            style={styles.kennelLink}
+            onPress={() => navigation.navigate("KennelProfile", { id: breeder.id, name: breeder.kennelName })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="home-outline" size={13} color={COLORS.primary} />
+            <Text style={styles.kennelLinkText}>{breeder.kennelName}</Text>
+            <Ionicons name="chevron-forward" size={13} color={COLORS.primary} />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <View style={styles.tabBar}>
@@ -557,17 +559,19 @@ export default function BreederProfileScreen() {
               <Text style={styles.cardHeading}>Details</Text>
               <View style={styles.detailsGrid}>
                 <DetailItem icon="person" label="Name" value={breeder.name} />
-                <TouchableOpacity
-                  onPress={() => navigation.navigate("KennelProfile", { id: breeder.id, name: breeder.kennelName })}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.linkableDetailItem}>
-                    <View style={{ flex: 1 }}>
-                      <DetailItem icon="home" label="Kennel" value={breeder.kennelName} />
+                {breeder.kennelName ? (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate("KennelProfile", { id: breeder.id, name: breeder.kennelName })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.linkableDetailItem}>
+                      <View style={{ flex: 1 }}>
+                        <DetailItem icon="home" label="Kennel" value={breeder.kennelName} />
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={COLORS.primary} style={{ marginLeft: 8 }} />
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={COLORS.primary} style={{ marginLeft: 8 }} />
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                ) : null}
                 {breeder.membership_no ? (
                   <DetailItem icon="card" label="Membership No." value={breeder.membership_no} />
                 ) : null}
