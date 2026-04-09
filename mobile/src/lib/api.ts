@@ -781,7 +781,7 @@ export type RecentMating = {
   mating_date: string;
   city: string | null;
   litter_on_ground?: boolean;
-  line_breeding?: string | null;
+  line_breeding?: LineBreedingEntry[] | null;
 };
 
 export async function fetchRecentMatings(): Promise<RecentMating[]> {

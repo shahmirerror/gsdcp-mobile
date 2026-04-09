@@ -110,10 +110,15 @@ function MatingRow({ mating, onPress }: {
               <Text style={styles.litterBadgeText}>Litter on Ground</Text>
             </View>
           )}
-          {mating.line_breeding ? (
+          {mating.line_breeding && mating.line_breeding.length > 0 ? (
             <View style={styles.badge}>
               <Ionicons name="git-merge-outline" size={10} color={COLORS.textMuted} />
-              <Text style={styles.badgeText}>{mating.line_breeding}</Text>
+              <Text style={styles.badgeText}>
+                {mating.line_breeding
+                  .map((e) => e.line_breeding_pattern)
+                  .filter(Boolean)
+                  .join(", ") || "Line Bred"}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -329,10 +334,15 @@ export default function RecentMatingsScreen() {
                         <Text style={styles.previewLitterText}>Litter on Ground</Text>
                       </View>
                     )}
-                    {previewMating.line_breeding ? (
+                    {previewMating.line_breeding && previewMating.line_breeding.length > 0 ? (
                       <View style={styles.previewCityRow}>
                         <Ionicons name="git-merge-outline" size={12} color={COLORS.textMuted} />
-                        <Text style={styles.previewCity}>Line Breeding: {previewMating.line_breeding}</Text>
+                        <Text style={styles.previewCity}>
+                          {"Line Bred: "}
+                          {previewMating.line_breeding
+                            .map((e) => e.line_breeding_pattern ? `${e.dog_name} (${e.line_breeding_pattern})` : e.dog_name)
+                            .join(", ")}
+                        </Text>
                       </View>
                     ) : null}
                   </View>
