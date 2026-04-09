@@ -1804,6 +1804,7 @@ export async function fetchSDRRequestDetail(
 
 /* ── Forgot Password ─────────────────────────────────── */
 export async function forgotPassword(payload: {
+  login_type: "membership" | "email" | "username";
   membership_no?: string;
   email?: string;
   username?: string;

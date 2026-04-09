@@ -98,9 +98,11 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const payload =
-        method === "membership" ? { membership_no: value }
-        : method === "email"    ? { email: value.trim().toLowerCase() }
-        :                         { username: value.trim() };
+        method === "membership"
+          ? { login_type: "membership" as const, membership_no: value }
+          : method === "email"
+          ? { login_type: "email" as const, email: value.trim().toLowerCase() }
+          : { login_type: "username" as const, username: value.trim() };
 
       const result = await forgotPassword(payload);
       setSuccess(result.message);
