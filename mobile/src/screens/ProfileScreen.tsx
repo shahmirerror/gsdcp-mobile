@@ -1330,7 +1330,29 @@ function DogsTab({
   const [search, setSearch]               = useState("");
   const [genderF, setGenderF]             = useState("All");
   const [hairF,   setHairF]               = useState("All");
+  const [tempGender, setTempGender]       = useState("All");
+  const [tempHair,   setTempHair]         = useState("All");
+  const [showFilters, setShowFilters]     = useState(false);
   const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
+
+  const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
+
+  const openFilters = () => {
+    setTempGender(genderF);
+    setTempHair(hairF);
+    setShowFilters(true);
+  };
+
+  const applyFilters = () => {
+    setGenderF(tempGender);
+    setHairF(tempHair);
+    setShowFilters(false);
+  };
+
+  const resetFilters = () => {
+    setTempGender("All");
+    setTempHair("All");
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1361,7 +1383,7 @@ function DogsTab({
 
   return (
     <View>
-      {/* Search bar */}
+      {/* Search bar + filter button */}
       <View style={dStyles.searchRow}>
         <View style={dStyles.searchBox}>
           <Ionicons name="search" size={16} color={COLORS.textMuted} />
@@ -1380,32 +1402,48 @@ function DogsTab({
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          style={[dStyles.filterButton, activeFilterCount > 0 && dStyles.filterButtonActive]}
+          onPress={openFilters}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="options-outline"
+            size={20}
+            color={activeFilterCount > 0 ? "#fff" : COLORS.textSecondary}
+          />
+          {activeFilterCount > 0 && (
+            <View style={dStyles.filterBadge}>
+              <Text style={dStyles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Filter chips */}
-      <View style={dStyles.chipRow}>
-        {DOG_GENDER_OPTS.map((opt) => (
-          <TouchableOpacity
-            key={opt}
-            style={[dStyles.chip, genderF === opt && dStyles.chipActive]}
-            onPress={() => setGenderF(opt)}
-            activeOpacity={0.7}
-          >
-            <Text style={[dStyles.chipText, genderF === opt && dStyles.chipTextActive]}>{opt}</Text>
+      {/* Active filter chips */}
+      {activeFilterCount > 0 && (
+        <View style={dStyles.activeFiltersRow}>
+          {genderF !== "All" && (
+            <View style={dStyles.activeChip}>
+              <Text style={dStyles.activeChipText}>{genderF}</Text>
+              <TouchableOpacity onPress={() => setGenderF("All")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close" size={13} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {hairF !== "All" && (
+            <View style={dStyles.activeChip}>
+              <Text style={dStyles.activeChipText}>{hairF}</Text>
+              <TouchableOpacity onPress={() => setHairF("All")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close" size={13} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity onPress={() => { setGenderF("All"); setHairF("All"); }}>
+            <Text style={dStyles.clearAllText}>Clear all</Text>
           </TouchableOpacity>
-        ))}
-        <View style={dStyles.chipDivider} />
-        {DOG_HAIR_OPTS.map((opt) => (
-          <TouchableOpacity
-            key={opt}
-            style={[dStyles.chip, hairF === opt && dStyles.chipActive]}
-            onPress={() => setHairF(opt)}
-            activeOpacity={0.7}
-          >
-            <Text style={[dStyles.chipText, hairF === opt && dStyles.chipTextActive]}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+        </View>
+      )}
 
       {/* Count */}
       <Text style={dStyles.countText}>
@@ -1428,6 +1466,57 @@ function DogsTab({
           />
         ))
       )}
+
+      {/* Filter modal */}
+      <BottomSheetModal
+        visible={showFilters}
+        onClose={() => setShowFilters(false)}
+      >
+        <View style={dStyles.filterModalContent}>
+          <View style={dStyles.filterModalHeader}>
+            <Text style={dStyles.filterModalTitle}>Filters</Text>
+            <TouchableOpacity onPress={resetFilters}>
+              <Text style={dStyles.resetText}>Reset</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={dStyles.filterSectionTitle}>Gender</Text>
+          <View style={dStyles.filterOptionsRow}>
+            {DOG_GENDER_OPTS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[dStyles.filterOption, tempGender === opt && dStyles.filterOptionActive]}
+                onPress={() => setTempGender(opt)}
+                activeOpacity={0.7}
+              >
+                <Text style={[dStyles.filterOptionText, tempGender === opt && dStyles.filterOptionTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={dStyles.filterSectionTitle}>Hair Type</Text>
+          <View style={dStyles.filterOptionsRow}>
+            {DOG_HAIR_OPTS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[dStyles.filterOption, tempHair === opt && dStyles.filterOptionActive]}
+                onPress={() => setTempHair(opt)}
+                activeOpacity={0.7}
+              >
+                <Text style={[dStyles.filterOptionText, tempHair === opt && dStyles.filterOptionTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity style={dStyles.applyButton} onPress={applyFilters} activeOpacity={0.8}>
+            <Text style={dStyles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheetModal>
 
       {/* Preview popup */}
       <BottomSheetModal
@@ -1512,11 +1601,15 @@ function DogsTab({
 
 const dStyles = StyleSheet.create({
   searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
     paddingBottom: SPACING.xs,
+    gap: SPACING.sm,
   },
   searchBox: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.surface,
@@ -1532,46 +1625,96 @@ const dStyles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.text,
   },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: SPACING.lg,
-    gap: 6,
-    marginBottom: SPACING.xs,
-    alignItems: "center",
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: BORDER_RADIUS.full,
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  chipActive: {
+  filterButtonActive: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  chipText: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: "600",
-    color: COLORS.text,
+  filterBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.accent,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  chipTextActive: {
-    color: "#fff",
+  filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  activeFiltersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    gap: 6,
+    marginBottom: 4,
+    flexWrap: "wrap",
   },
-  chipDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 2,
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
   },
+  activeChipText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.primary },
+  clearAllText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.textMuted, marginLeft: 2 },
   countText: {
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xs,
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
   },
+  filterModalContent: { paddingHorizontal: 24 },
+  filterModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  filterModalTitle: { fontSize: 20, fontWeight: "700", color: COLORS.text },
+  resetText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.textMuted },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  filterOptionsRow: { flexDirection: "row", gap: 8, flexWrap: "wrap", marginBottom: 24 },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterOptionActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterOptionText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
+  filterOptionTextActive: { color: "#fff" },
+  applyButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  applyButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   modalContent: { paddingHorizontal: 24, paddingBottom: 8 },
   previewHeader: {
     flexDirection: "row",
