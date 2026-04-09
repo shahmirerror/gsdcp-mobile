@@ -815,7 +815,7 @@ export type Kennel = {
   imageUrl: string;
   activeSince: string;
   description: string | null;
-  owners?: KennelOwner[];
+  breeders?: KennelBreeder[];
 };
 
 export async function fetchKennels(): Promise<Kennel[]> {
@@ -841,7 +841,7 @@ export type KennelMating = {
 };
 
 export type KennelBreeder = {
-  id?: string | null;
+  breeder_id?: string | null;
   name: string;
   phone: string | null;
   email: string | null;

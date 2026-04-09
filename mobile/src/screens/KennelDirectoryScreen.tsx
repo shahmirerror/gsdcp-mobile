@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchKennels, Kennel, KennelOwner } from "../lib/api";
+import { fetchKennels, Kennel, KennelBreeder } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
@@ -30,7 +30,7 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function OwnerRow({ owner, styles }: { owner: KennelOwner; styles: any }) {
+function OwnerRow({ owner, styles }: { owner: KennelBreeder; styles: any }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!owner.imageUrl && !owner.imageUrl.includes("user-not-found") && !imgErr;
   const initials = (owner.name || "?")
@@ -375,11 +375,11 @@ export default function KennelDirectoryScreen() {
                     </View>
                   ))}
                 </View>
-                {previewKennel.owners && previewKennel.owners.length > 0 ? (
+                {previewKennel.breeders && previewKennel.breeders.length > 0 ? (
                   <>
                     <View style={styles.previewDivider} />
-                    <Text style={styles.ownersHeading}>Owners</Text>
-                    {previewKennel.owners.map((owner: KennelOwner, idx: number) => (
+                    <Text style={styles.ownersHeading}>{previewKennel.breeders.length === 1 ? "Breeder" : "Breeders"}</Text>
+                    {previewKennel.breeders.map((owner: KennelBreeder, idx: number) => (
                       <OwnerRow key={idx} owner={owner} styles={styles} />
                     ))}
                   </>

@@ -358,7 +358,7 @@ export default function KennelProfileScreen() {
                 </Text>
                 <View style={styles.detailsGrid}>
                   {breeders.map((breeder, i) => {
-                    const canLink = !!breeder.id;
+                    const canLink = !!breeder.breeder_id;
                     const hasImg = !!(breeder.imageUrl && !breeder.imageUrl.includes("user-not-found"));
                     const inner = (
                       <>
@@ -398,7 +398,7 @@ export default function KennelProfileScreen() {
                           i < breeders.length - 1 && styles.ownerRowBorder,
                         ]}
                         onPress={() =>
-                          navigation.navigate("BreederProfile", { id: breeder.id! })
+                          navigation.navigate("BreederProfile", { id: breeder.breeder_id! })
                         }
                         activeOpacity={0.7}
                       >
