@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createElement } from "react";
+import { useState, useEffect, useRef, useMemo, createElement } from "react";
 import {
   View,
   Text,
@@ -1316,6 +1316,9 @@ const kStyles = StyleSheet.create({
 });
 
 /* ── Tab: Dogs ──────────────────────────────────────── */
+const DOG_GENDER_OPTS = ["All", "Male", "Female"] as const;
+const DOG_HAIR_OPTS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
+
 function DogsTab({
   dogs,
   onDogPress,
@@ -1323,6 +1326,20 @@ function DogsTab({
   dogs: MemberOwnedDog[];
   onDogPress: (d: MemberOwnedDog) => void;
 }) {
+  const [search, setSearch]         = useState("");
+  const [genderF, setGenderF]       = useState("All");
+  const [hairF,   setHairF]         = useState("All");
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return dogs.filter((d) => {
+      if (q && !d.dog_name.toLowerCase().includes(q) && !d.KP?.toLowerCase().includes(q)) return false;
+      if (genderF !== "All" && d.sex?.toLowerCase() !== genderF.toLowerCase()) return false;
+      if (hairF   !== "All" && d.hair !== hairF) return false;
+      return true;
+    });
+  }, [dogs, search, genderF, hairF]);
+
   if (dogs.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -1336,18 +1353,143 @@ function DogsTab({
       </View>
     );
   }
+
   return (
     <View>
-      {dogs.map((dog) => (
-        <DogListItem
-          key={dog.id}
-          dog={toListDog(dog)}
-          onPress={() => onDogPress(dog)}
-        />
-      ))}
+      {/* Search bar */}
+      <View style={dStyles.searchRow}>
+        <View style={dStyles.searchBox}>
+          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <TextInput
+            style={dStyles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by name or KP…"
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Gender chips */}
+      <View style={dStyles.chipRow}>
+        {DOG_GENDER_OPTS.map((opt) => (
+          <TouchableOpacity
+            key={opt}
+            style={[dStyles.chip, genderF === opt && dStyles.chipActive]}
+            onPress={() => setGenderF(opt)}
+            activeOpacity={0.7}
+          >
+            <Text style={[dStyles.chipText, genderF === opt && dStyles.chipTextActive]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+        <View style={dStyles.chipDivider} />
+        {DOG_HAIR_OPTS.map((opt) => (
+          <TouchableOpacity
+            key={opt}
+            style={[dStyles.chip, hairF === opt && dStyles.chipActive]}
+            onPress={() => setHairF(opt)}
+            activeOpacity={0.7}
+          >
+            <Text style={[dStyles.chipText, hairF === opt && dStyles.chipTextActive]}>{opt}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Count */}
+      <Text style={dStyles.countText}>
+        {filtered.length} of {dogs.length} {dogs.length === 1 ? "dog" : "dogs"}
+      </Text>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <View style={[styles.emptyState, { paddingTop: 32 }]}>
+          <Ionicons name="search-outline" size={36} color={COLORS.textMuted} />
+          <Text style={styles.emptyTitle}>No matches</Text>
+          <Text style={styles.emptyDesc}>Try a different search or filter.</Text>
+        </View>
+      ) : (
+        filtered.map((dog) => (
+          <DogListItem
+            key={dog.id}
+            dog={toListDog(dog)}
+            onPress={() => onDogPress(dog)}
+          />
+        ))
+      )}
     </View>
   );
 }
+
+const dStyles = StyleSheet.create({
+  searchRow: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xs,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: SPACING.lg,
+    gap: 6,
+    marginBottom: SPACING.xs,
+    alignItems: "center",
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  chipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  chipText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  chipTextActive: {
+    color: "#fff",
+  },
+  chipDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 2,
+  },
+  countText: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+  },
+});
 
 /* ── Reusable: list header with "+ New" button ────────── */
 function ListHeader({ title, onNew }: { title: string; onNew: () => void }) {
