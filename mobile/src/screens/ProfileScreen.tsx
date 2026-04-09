@@ -80,6 +80,7 @@ import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import { Switch } from "react-native";
 import LazyImage from "../components/LazyImage";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
@@ -1326,9 +1327,10 @@ function DogsTab({
   dogs: MemberOwnedDog[];
   onDogPress: (d: MemberOwnedDog) => void;
 }) {
-  const [search, setSearch]         = useState("");
-  const [genderF, setGenderF]       = useState("All");
-  const [hairF,   setHairF]         = useState("All");
+  const [search, setSearch]               = useState("");
+  const [genderF, setGenderF]             = useState("All");
+  const [hairF,   setHairF]               = useState("All");
+  const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1354,6 +1356,9 @@ function DogsTab({
     );
   }
 
+  const initials = (name: string) =>
+    name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+
   return (
     <View>
       {/* Search bar */}
@@ -1377,7 +1382,7 @@ function DogsTab({
         </View>
       </View>
 
-      {/* Gender chips */}
+      {/* Filter chips */}
       <View style={dStyles.chipRow}>
         {DOG_GENDER_OPTS.map((opt) => (
           <TouchableOpacity
@@ -1419,10 +1424,88 @@ function DogsTab({
           <DogListItem
             key={dog.id}
             dog={toListDog(dog)}
-            onPress={() => onDogPress(dog)}
+            onPress={() => setPreviewDog(dog)}
           />
         ))
       )}
+
+      {/* Preview popup */}
+      <BottomSheetModal
+        visible={!!previewDog}
+        onClose={() => setPreviewDog(null)}
+      >
+        {previewDog && (
+          <View style={dStyles.modalContent}>
+            {/* Header: avatar + name */}
+            <View style={dStyles.previewHeader}>
+              {previewDog.imageUrl ? (
+                <LazyImage
+                  source={{ uri: previewDog.imageUrl }}
+                  style={dStyles.previewImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={dStyles.previewAvatar}>
+                  <Text style={dStyles.previewAvatarText}>{initials(previewDog.dog_name)}</Text>
+                </View>
+              )}
+              <View style={dStyles.previewHeadInfo}>
+                <Text style={dStyles.previewName} numberOfLines={2}>{previewDog.dog_name}</Text>
+                <Text style={dStyles.previewKP}>
+                  {previewDog.KP && previewDog.KP !== "0"
+                    ? `KP ${previewDog.KP}`
+                    : previewDog.foreign_reg_no || "—"}
+                </Text>
+                {previewDog.titles && previewDog.titles.length > 0 && (
+                  <View style={dStyles.titlesRow}>
+                    {previewDog.titles.slice(0, 3).map((t) => (
+                      <View key={t} style={dStyles.titleBadge}>
+                        <Text style={dStyles.titleBadgeText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={dStyles.divider} />
+
+            {/* Info grid */}
+            <View style={dStyles.infoGrid}>
+              {[
+                { label: "Sex",           value: previewDog.sex },
+                { label: "Color",         value: previewDog.color },
+                { label: "Hair",          value: previewDog.hair },
+                { label: "Date of Birth", value: formatDate(previewDog.dob) },
+                { label: "Sire",          value: previewDog.sire },
+                { label: "Dam",           value: previewDog.dam },
+                { label: "Breeder",       value: previewDog.breeder },
+              ]
+                .filter((r) => r.value)
+                .map((r) => (
+                  <View key={r.label} style={dStyles.infoRow}>
+                    <Text style={dStyles.infoLabel}>{r.label}</Text>
+                    <Text style={dStyles.infoValue} numberOfLines={2}>{r.value}</Text>
+                  </View>
+                ))}
+            </View>
+
+            {/* View Full Profile button */}
+            <TouchableOpacity
+              style={dStyles.profileBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                const dog = previewDog;
+                setPreviewDog(null);
+                onDogPress(dog);
+              }}
+            >
+              <Ionicons name="paw" size={16} color="#fff" />
+              <Text style={dStyles.profileBtnText}>View Full Profile</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </BottomSheetModal>
     </View>
   );
 }
@@ -1489,6 +1572,85 @@ const dStyles = StyleSheet.create({
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
   },
+  modalContent: { paddingHorizontal: 24, paddingBottom: 8 },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 14,
+  },
+  previewImage: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+  },
+  previewAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  previewAvatarText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 22,
+  },
+  previewHeadInfo: { flex: 1, justifyContent: "center" },
+  previewName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
+  },
+  previewKP: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  titlesRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  titleBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  titleBadgeText: { fontSize: FONT_SIZES.xs, color: "#fff", fontWeight: "600" },
+  divider: { height: 1, backgroundColor: COLORS.border, marginBottom: 14 },
+  infoGrid: { marginBottom: 20, gap: 10 },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  infoLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+    width: 100,
+    flexShrink: 0,
+  },
+  infoValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  profileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+  },
+  profileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });
 
 /* ── Reusable: list header with "+ New" button ────────── */
