@@ -6338,6 +6338,7 @@ export default function ProfileScreen() {
       const fresh = await fetchProfileShow(user.id);
       if (fresh?.photo) await updateUser({ photo: fresh.photo });
       setPhotoVersion(Date.now());
+      refetch();
     } catch (e: any) {
       Alert.alert(
         "Upload failed",
