@@ -706,13 +706,6 @@ export default function DogProfileScreen() {
                   ]
                     .filter(Boolean)
                     .join(" - ");
-                  const sideLabel = [
-                    sirePositions.length > 0 ? "Sire side" : "",
-                    damPositions.length > 0 ? "Dam side" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" - ");
-
                   if (
                     (entry.type === "litter_pair" ||
                       entry.type === "litter_group") &&
@@ -744,7 +737,7 @@ export default function DogProfileScreen() {
                               {entry.kennel ? ` from ${entry.kennel}` : ""}
                             </Text>
                             <Text style={styles.lineBreedMeta}>
-                              {genLabel} ({sideLabel})
+                              {genLabel}
                             </Text>
                           </View>
                           <Ionicons
@@ -806,7 +799,7 @@ export default function DogProfileScreen() {
                           {entry.dog_name}
                         </Text>
                         <Text style={styles.lineBreedMeta}>
-                          {genLabel} ({sideLabel})
+                          {genLabel}
                         </Text>
                       </View>
                       <Ionicons

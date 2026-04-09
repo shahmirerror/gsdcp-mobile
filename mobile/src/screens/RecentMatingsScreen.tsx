@@ -629,12 +629,6 @@ export default function RecentMatingsScreen() {
                           const genLabel = [sirePos.join(","), damPos.join(",")]
                             .filter(Boolean)
                             .join(" - ");
-                          const sideLabel = [
-                            sirePos.length > 0 ? "Sire side" : "",
-                            damPos.length > 0 ? "Dam side" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" - ");
 
                           if (
                             (entry.type === "litter_pair" || entry.type === "litter_group") &&
@@ -661,10 +655,7 @@ export default function RecentMatingsScreen() {
                                       Litter {entry.litter_letter}
                                       {entry.kennel ? ` from ${entry.kennel}` : ""}
                                     </Text>
-                                    <Text style={styles.lbMeta}>
-                                      {genLabel}
-                                      {sideLabel ? ` (${sideLabel})` : ""}
-                                    </Text>
+                                    <Text style={styles.lbMeta}>{genLabel}</Text>
                                   </View>
                                   <Ionicons
                                     name={isExpanded ? "chevron-down" : "chevron-forward"}
@@ -710,10 +701,7 @@ export default function RecentMatingsScreen() {
                             >
                               <View style={styles.lbInfo}>
                                 <Text style={styles.lbName} numberOfLines={1}>{entry.dog_name}</Text>
-                                <Text style={styles.lbMeta}>
-                                  {genLabel}
-                                  {sideLabel ? ` (${sideLabel})` : ""}
-                                </Text>
+                                <Text style={styles.lbMeta}>{genLabel}</Text>
                               </View>
                               {entry.id && <Ionicons name="chevron-forward" size={18} color="#94A3B8" />}
                             </TouchableOpacity>
