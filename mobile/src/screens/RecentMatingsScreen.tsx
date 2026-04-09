@@ -110,6 +110,12 @@ function MatingRow({ mating, onPress }: {
               <Text style={styles.litterBadgeText}>Litter on Ground</Text>
             </View>
           )}
+          {mating.line_breeding ? (
+            <View style={styles.badge}>
+              <Ionicons name="git-merge-outline" size={10} color={COLORS.textMuted} />
+              <Text style={styles.badgeText}>{mating.line_breeding}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -323,6 +329,12 @@ export default function RecentMatingsScreen() {
                         <Text style={styles.previewLitterText}>Litter on Ground</Text>
                       </View>
                     )}
+                    {previewMating.line_breeding ? (
+                      <View style={styles.previewCityRow}>
+                        <Ionicons name="git-merge-outline" size={12} color={COLORS.textMuted} />
+                        <Text style={styles.previewCity}>Line Breeding: {previewMating.line_breeding}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
 
