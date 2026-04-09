@@ -176,6 +176,7 @@ export default function RecentMatingsScreen() {
   const [litterFilter, setLitterFilter] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
+  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
   const [tempLitter, setTempLitter] = useState(false);
   const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
 
@@ -621,36 +622,101 @@ export default function RecentMatingsScreen() {
                         {previewMating.line_breeding.map((entry, idx) => {
                           const sirePos: string[] = [];
                           const damPos: string[] = [];
-                          entry.positions_by_side?.father?.forEach((p, i) => {
-                            sirePos.push(p);
-                          });
-                          entry.positions_by_side?.mother?.forEach((p, i) => {
-                            damPos.push(p);
+                          entry.positions.forEach((p, i) => {
+                            if (entry.sides[i] === "father") sirePos.push(p);
+                            else damPos.push(p);
                           });
                           const genLabel = [sirePos.join(","), damPos.join(",")]
                             .filter(Boolean)
                             .join(" - ");
                           const sideLabel = [
-                            sirePos.length > 0 ? "Sire" : "",
-                            damPos.length > 0 ? "Dam" : "",
+                            sirePos.length > 0 ? "Sire side" : "",
+                            damPos.length > 0 ? "Dam side" : "",
                           ]
                             .filter(Boolean)
                             .join(" - ");
-                          const displayName =
-                            entry.type === "litter_pair" ||
-                            entry.type === "litter_group"
-                              ? `Litter ${entry.litter_letter}${entry.kennel ? ` from ${entry.kennel}` : ""}`
-                              : entry.dog_name;
+
+                          if (
+                            (entry.type === "litter_pair" || entry.type === "litter_group") &&
+                            entry.dogs && entry.dogs.length > 0
+                          ) {
+                            const isExpanded = expandedLitters.has(idx);
+                            const toggleExpand = () => {
+                              setExpandedLitters((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(idx)) next.delete(idx);
+                                else next.add(idx);
+                                return next;
+                              });
+                            };
+                            return (
+                              <View key={`litter-${idx}`}>
+                                <TouchableOpacity
+                                  style={styles.lbRow}
+                                  activeOpacity={0.7}
+                                  onPress={toggleExpand}
+                                >
+                                  <View style={styles.lbInfo}>
+                                    <Text style={styles.lbName} numberOfLines={1}>
+                                      Litter {entry.litter_letter}
+                                      {entry.kennel ? ` from ${entry.kennel}` : ""}
+                                    </Text>
+                                    <Text style={styles.lbMeta}>
+                                      {genLabel}
+                                      {sideLabel ? ` (${sideLabel})` : ""}
+                                    </Text>
+                                  </View>
+                                  <Ionicons
+                                    name={isExpanded ? "chevron-down" : "chevron-forward"}
+                                    size={18}
+                                    color="#94A3B8"
+                                  />
+                                </TouchableOpacity>
+                                {isExpanded && (
+                                  <View style={styles.lbDropdown}>
+                                    {entry.dogs.map((d) => (
+                                      <TouchableOpacity
+                                        key={d.id}
+                                        style={styles.lbDogRow}
+                                        activeOpacity={0.7}
+                                        onPress={() => {
+                                          setPreviewMating(null);
+                                          setExpandedLitters(new Set());
+                                          navigation.push("DogProfile", { id: d.id });
+                                        }}
+                                      >
+                                        <Ionicons name="paw" size={14} color={COLORS.primary} />
+                                        <Text style={styles.lbDogName} numberOfLines={1}>{d.dog_name}</Text>
+                                        <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                                      </TouchableOpacity>
+                                    ))}
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          }
+
                           return (
-                            <View key={idx} style={styles.lbRow}>
-                              <Text style={styles.lbName} numberOfLines={1}>
-                                {displayName}
-                              </Text>
-                              <Text style={styles.lbMeta}>
-                                {genLabel}
-                                {sideLabel ? ` (${sideLabel} side)` : ""}
-                              </Text>
-                            </View>
+                            <TouchableOpacity
+                              key={`${entry.id}-${idx}`}
+                              style={styles.lbRow}
+                              activeOpacity={0.7}
+                              onPress={() => {
+                                if (entry.id) {
+                                  setPreviewMating(null);
+                                  navigation.push("DogProfile", { id: entry.id });
+                                }
+                              }}
+                            >
+                              <View style={styles.lbInfo}>
+                                <Text style={styles.lbName} numberOfLines={1}>{entry.dog_name}</Text>
+                                <Text style={styles.lbMeta}>
+                                  {genLabel}
+                                  {sideLabel ? ` (${sideLabel})` : ""}
+                                </Text>
+                              </View>
+                              {entry.id && <Ionicons name="chevron-forward" size={18} color="#94A3B8" />}
+                            </TouchableOpacity>
                           );
                         })}
                       </View>
@@ -1256,16 +1322,13 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
 
-  lbSection: { paddingVertical: 12, paddingHorizontal: 4, gap: 8 },
-  lbSectionTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: COLORS.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  lbRow: { gap: 2 },
-  lbName: { fontSize: 13, fontWeight: "600", color: COLORS.text },
-  lbMeta: { fontSize: 12, color: COLORS.textSecondary },
+  lbSection: { paddingVertical: 8, paddingHorizontal: 4 },
+  lbSectionTitle: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+  lbRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(15,92,59,0.05)" },
+  lbInfo: { flex: 1, marginRight: 8 },
+  lbName: { fontSize: 13, fontWeight: "600", color: COLORS.primary, marginBottom: 2 },
+  lbMeta: { fontSize: 12, color: "#94A3B8" },
+  lbDropdown: { marginLeft: 16, borderLeftWidth: 2, borderLeftColor: "rgba(15,92,58,0.12)", paddingLeft: 12, marginBottom: 4 },
+  lbDogRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, gap: 8 },
+  lbDogName: { flex: 1, fontSize: 13, fontWeight: "600", color: COLORS.primary },
 });
