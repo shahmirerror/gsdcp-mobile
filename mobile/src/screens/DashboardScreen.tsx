@@ -79,6 +79,7 @@ export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
+  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
 
   const {
     data: dashboard,
@@ -427,7 +428,7 @@ export default function DashboardScreen() {
       {/* Mating preview modal */}
       <BottomSheetModal
         visible={!!previewMating}
-        onClose={() => setPreviewMating(null)}
+        onClose={() => { setPreviewMating(null); setExpandedLitters(new Set()); }}
       >
         {previewMating &&
           (() => {
@@ -615,6 +616,93 @@ export default function DashboardScreen() {
                   />
                 </TouchableOpacity>
 
+                {previewMating.line_breeding && previewMating.line_breeding.length > 0 && (
+                  <>
+                    <View style={styles.previewRowDivider} />
+                    <View style={styles.lbSection}>
+                      <Text style={styles.lbSectionTitle}>Line Breeding</Text>
+                      {previewMating.line_breeding.map((entry, idx) => {
+                        const sirePos: string[] = [];
+                        const damPos: string[] = [];
+                        entry.positions.forEach((p, i) => {
+                          if (entry.sides[i] === "father") sirePos.push(p);
+                          else damPos.push(p);
+                        });
+                        const genLabel = [sirePos.join(","), damPos.join(",")]
+                          .filter(Boolean).join(" - ");
+
+                        if (
+                          (entry.type === "litter_pair" || entry.type === "litter_group") &&
+                          entry.dogs && entry.dogs.length > 0
+                        ) {
+                          const isExpanded = expandedLitters.has(idx);
+                          const toggleExpand = () => {
+                            setExpandedLitters((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(idx)) next.delete(idx); else next.add(idx);
+                              return next;
+                            });
+                          };
+                          return (
+                            <View key={`litter-${idx}`}>
+                              <TouchableOpacity style={styles.lbRow} activeOpacity={0.7} onPress={toggleExpand}>
+                                <View style={styles.lbInfo}>
+                                  <Text style={styles.lbName} numberOfLines={1}>
+                                    Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}
+                                  </Text>
+                                  <Text style={styles.lbMeta}>{genLabel}</Text>
+                                </View>
+                                <Ionicons name={isExpanded ? "chevron-down" : "chevron-forward"} size={18} color="#94A3B8" />
+                              </TouchableOpacity>
+                              {isExpanded && (
+                                <View style={styles.lbDropdown}>
+                                  {entry.dogs.map((d) => (
+                                    <TouchableOpacity
+                                      key={d.id}
+                                      style={styles.lbDogRow}
+                                      activeOpacity={0.7}
+                                      onPress={() => {
+                                        setPreviewMating(null);
+                                        setExpandedLitters(new Set());
+                                        navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: d.id } });
+                                      }}
+                                    >
+                                      <Ionicons name="paw" size={14} color={COLORS.primary} />
+                                      <Text style={styles.lbDogName} numberOfLines={1}>{d.dog_name}</Text>
+                                      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          );
+                        }
+
+                        return (
+                          <TouchableOpacity
+                            key={`${entry.id}-${idx}`}
+                            style={styles.lbRow}
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              if (entry.id) {
+                                setPreviewMating(null);
+                                setExpandedLitters(new Set());
+                                navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: entry.id } });
+                              }
+                            }}
+                          >
+                            <View style={styles.lbInfo}>
+                              <Text style={styles.lbName} numberOfLines={1}>{entry.dog_name}</Text>
+                              <Text style={styles.lbMeta}>{genLabel}</Text>
+                            </View>
+                            {entry.id && <Ionicons name="chevron-forward" size={18} color="#94A3B8" />}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+
                 <View style={[styles.previewDivider, { marginTop: 16 }]} />
 
                 <TouchableOpacity
@@ -622,6 +710,7 @@ export default function DashboardScreen() {
                   activeOpacity={0.8}
                   onPress={() => {
                     setPreviewMating(null);
+                    setExpandedLitters(new Set());
                     navigation.navigate("KennelDirectoryTab", {
                       screen: "KennelProfile",
                       params: {
@@ -1120,4 +1209,37 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   viewProfileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+
+  lbSection: { paddingVertical: 8, paddingHorizontal: 4 },
+  lbSectionTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  lbRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    gap: 8,
+  },
+  lbInfo: { flex: 1 },
+  lbName: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
+  lbMeta: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  lbDropdown: {
+    paddingLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: `${COLORS.primary}30`,
+    marginLeft: 4,
+    marginBottom: 4,
+  },
+  lbDogRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 8,
+  },
+  lbDogName: { flex: 1, fontSize: FONT_SIZES.sm, color: COLORS.text },
 });
