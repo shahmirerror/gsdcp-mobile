@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -17,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
-import { fetchKennelDetail, KennelDetail, KennelMating } from "../lib/api";
+import { fetchKennelDetail, KennelDetail, KennelMating, KennelBreeder, Breeder } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelProfile">;
@@ -143,7 +144,7 @@ export default function KennelProfileScreen() {
 
   const kennel = data?.kennels;
   const matings = data?.matings || [];
-  const owners = data?.kennelOwners || [];
+  const breeders = data?.kennels?.breeders || [];
 
   if (isLoading) {
     return (
@@ -181,14 +182,14 @@ export default function KennelProfileScreen() {
     .slice(0, 2)
     .toUpperCase();
 
-  const primaryOwner = owners[0];
+  const primaryBreeder = breeders[0];
   const showPhone =
     kennel.phone && kennel.phone !== "+00-000-000-0000"
       ? kennel.phone
-      : primaryOwner?.phone && primaryOwner.phone !== "+00-000-000-0000"
-        ? primaryOwner.phone
+      : primaryBreeder?.phone && primaryBreeder.phone !== "+00-000-000-0000"
+        ? primaryBreeder.phone
         : null;
-  const showEmail = kennel.email || primaryOwner?.email || null;
+  const showEmail = kennel.email || primaryBreeder?.email || null;
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
@@ -258,7 +259,7 @@ export default function KennelProfileScreen() {
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPress={() => setActiveTab(tab.key)}
+            onPressIn={() => setActiveTab(tab.key)}
             activeOpacity={0.7}
           >
             <Text
@@ -350,38 +351,91 @@ export default function KennelProfileScreen() {
               </View>
             )}
 
-            {owners.length > 0 && (
+            {breeders.length > 0 && (
               <View style={styles.card}>
                 <Text style={styles.cardHeading}>
-                  {owners.length === 1 ? "Owner" : "Owners"}
+                  {breeders.length === 1 ? "Breeder" : "Breeders"}
                 </Text>
                 <View style={styles.detailsGrid}>
-                  {owners.map((owner, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.ownerRow,
-                        i < owners.length - 1 && styles.ownerRowBorder,
-                      ]}
-                    >
-                      <View style={styles.ownerAvatar}>
-                        <Text style={styles.ownerInitial}>
-                          {owner.name[0]?.toUpperCase()}
-                        </Text>
+                  {breeders.map((breeder, i) => {
+                    const canLink = !!breeder.breeder_id;
+                    const hasImg = !!(breeder.imageUrl && !breeder.imageUrl.includes("user-not-found"));
+                    const inner = (
+                      <>
+                        <View style={styles.ownerAvatar}>
+                          {hasImg ? (
+                            <Image
+                              source={{ uri: breeder.imageUrl! }}
+                              style={styles.ownerAvatarImg}
+                            />
+                          ) : (
+                            <Text style={styles.ownerInitial}>
+                              {breeder.name[0]?.toUpperCase()}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={styles.ownerInfo}>
+                          <Text style={styles.ownerName}>{breeder.name}</Text>
+                          {breeder.membership_no ? (
+                            <Text style={styles.ownerMeta}>
+                              Membership: {breeder.membership_no}
+                            </Text>
+                          ) : null}
+                          {breeder.phone ? (
+                            <Text style={styles.ownerMeta}>{breeder.phone}</Text>
+                          ) : null}
+                        </View>
+                        {canLink && (
+                          <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+                        )}
+                      </>
+                    );
+                    return canLink ? (
+                      <TouchableOpacity
+                        key={i}
+                        style={[
+                          styles.ownerRow,
+                          i < breeders.length - 1 && styles.ownerRowBorder,
+                        ]}
+                        onPress={() =>
+                          navigation.navigate("BreederProfile", {
+                            id: breeder.breeder_id!,
+                            breederData: {
+                              id: kennel!.id,
+                              memberId: breeder.breeder_id!,
+                              name: breeder.name,
+                              kennelName: kennel!.kennelName,
+                              location: kennel!.location,
+                              city: kennel!.city,
+                              country: kennel!.country,
+                              phone: breeder.phone,
+                              email: breeder.email,
+                              membership_no: breeder.membership_no,
+                              imageUrl: breeder.imageUrl || "",
+                              kennelImage: kennel!.imageUrl || "",
+                              activeSince: kennel!.activeSince,
+                              totalLitters: 0,
+                              description: kennel!.description,
+                              breederType: null,
+                            } as Breeder,
+                          })
+                        }
+                        activeOpacity={0.7}
+                      >
+                        {inner}
+                      </TouchableOpacity>
+                    ) : (
+                      <View
+                        key={i}
+                        style={[
+                          styles.ownerRow,
+                          i < breeders.length - 1 && styles.ownerRowBorder,
+                        ]}
+                      >
+                        {inner}
                       </View>
-                      <View style={styles.ownerInfo}>
-                        <Text style={styles.ownerName}>{owner.name}</Text>
-                        {owner.membership_no ? (
-                          <Text style={styles.ownerMeta}>
-                            Membership: {owner.membership_no}
-                          </Text>
-                        ) : null}
-                        {owner.phone ? (
-                          <Text style={styles.ownerMeta}>{owner.phone}</Text>
-                        ) : null}
-                      </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               </View>
             )}
@@ -660,6 +714,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
+  },
+  ownerAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   ownerInitial: {
     fontSize: 16,

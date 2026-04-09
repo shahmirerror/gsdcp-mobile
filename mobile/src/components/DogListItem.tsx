@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
   },
   titles: {
     alignItems: "flex-end",

@@ -31,7 +31,7 @@ mobile/                      # Main app directory
       DogProfileScreen.tsx   # Dog details, pedigree tree, show results
       BreederDirectoryScreen.tsx  # Placeholder with header
       ShowsScreen.tsx        # Placeholder with header
-      ProfileScreen.tsx      # User profile/settings with stud cert, litter inspection, litter registration tabs
+      ProfileScreen.tsx      # User profile/settings with stud cert, litter inspection, litter registration, HD/ED, and single dog registration tabs
       VirtualBreedingScreen.tsx   # Virtual breeding simulation: select sire+dam, get coat color & trait predictions
     components/
       DogListItem.tsx        # Dog card for FlatList

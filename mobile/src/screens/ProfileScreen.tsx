@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createElement } from "react";
+import { useState, useEffect, useRef, useMemo, createElement } from "react";
 import {
   View,
   Text,
@@ -15,85 +15,194 @@ import {
   Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import {
-  fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, Dog,
-  fetchStudCertificates, fetchStudCertificateDetail, submitStudCertificate,
-  StudCertificate, StudCertificateDetail,
-  fetchLitterInspections, fetchLitterInspectionDetail, submitLitterInspection,
-  checkLitterCertificate, CertificateCheck,
-  LitterInspection, LitterInspectionDetail,
-  fetchLitterRegistrations, fetchLitterRegistrationDetail, submitLitterRegistration,
-  checkLitterInspection, LitterInspectionCheck,
-  LitterRegistration, LitterRegistrationDetail, LitterRegStats, LitterPuppy,
-  searchDogs, DogSearchResult,
-  verifySire, verifyDam, SireVerification,
-  updateProfile, uploadProfilePhoto, fetchCities, City, fetchProfileShow,
+  fetchMemberDetail,
+  Member,
+  MemberDetail,
+  MemberOwnedDog,
+  MemberKennel,
+  Dog,
+  fetchStudCertificates,
+  fetchStudCertificateDetail,
+  submitStudCertificate,
+  StudCertificate,
+  StudCertificateDetail,
+  fetchLitterInspections,
+  fetchLitterInspectionDetail,
+  submitLitterInspection,
+  checkLitterCertificate,
+  CertificateCheck,
+  LitterInspection,
+  LitterInspectionDetail,
+  fetchLitterRegistrations,
+  fetchLitterRegistrationDetail,
+  submitLitterRegistration,
+  checkLitterInspection,
+  LitterInspectionCheck,
+  LitterRegistration,
+  LitterRegistrationDetail,
+  LitterRegStats,
+  LitterPuppy,
+  searchDogs,
+  DogSearchResult,
+  verifySire,
+  verifyDam,
+  SireVerification,
+  updateProfile,
+  uploadProfilePhoto,
+  updateKennel,
+  fetchCities,
+  City,
+  fetchProfileShow,
+  submitNewHDEDRequest,
+  fetchHDEDDogInfo,
+  HDEDDogInfo,
+  fetchHDEDRequests,
+  fetchHDEDRequestDetail,
+  HDEDRequest,
+  fetchSingleDogRegistrations,
+  fetchSDRRequestDetail,
+  submitSingleDogRegistration,
+  SingleDogRegistration,
+  SDRRequestDetail,
+  SDRProofFile,
+  SDRPickedFile,
+  fetchMyDogs,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import { Switch } from "react-native";
 import LazyImage from "../components/LazyImage";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 const heroBg = require("../../assets/hero-bg.jpg");
 
-type TabId = "detail" | "kennel" | "dogs" | "stud" | "litter-inspection" | "litter-registration";
+type TabId =
+  | "detail"
+  | "kennel"
+  | "dogs"
+  | "stud"
+  | "litter-inspection"
+  | "litter-registration"
+  | "hd-ed"
+  | "single-dog-reg";
 
-const TABS: { id: TabId; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: "detail",               label: "Detail",             icon: "person-outline"       },
-  { id: "kennel",               label: "Kennel",             icon: "home-outline"         },
-  { id: "dogs",                 label: "Dogs",               icon: "paw-outline"          },
-  { id: "stud",                 label: "Stud Certificates",  icon: "ribbon-outline"       },
-  { id: "litter-inspection",    label: "Litter Inspections", icon: "search-outline"       },
-  { id: "litter-registration",  label: "Litter Registrations", icon: "document-text-outline" },
+const TABS: {
+  id: TabId;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: "detail", label: "Detail", icon: "person-outline" },
+  { id: "kennel", label: "Kennel", icon: "home-outline" },
+  { id: "dogs", label: "Dogs", icon: "paw-outline" },
+  { id: "stud", label: "Stud Certificates", icon: "ribbon-outline" },
+  {
+    id: "litter-inspection",
+    label: "Litter Inspections",
+    icon: "search-outline",
+  },
+  {
+    id: "litter-registration",
+    label: "Litter Registrations",
+    icon: "document-text-outline",
+  },
+  { id: "hd-ed", label: "HD/ED", icon: "medkit-outline" },
+  {
+    id: "single-dog-reg",
+    label: "Single Dog Registrations",
+    icon: "add-circle-outline",
+  },
 ];
 
 /* ── helpers ──────────────────────────────────────────── */
 function getInitials(name: string): string {
   const t = name.trim();
   if (!t) return "?";
-  return t.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  return t
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 function isValidImage(url: string | null | undefined): boolean {
   if (!url) return false;
-  if (url.includes("user-not-found") || url.includes("dog_not_found")) return false;
+  if (url.includes("user-not-found") || url.includes("dog_not_found"))
+    return false;
   if (url.startsWith("https::")) return false;
   return url.startsWith("http");
 }
 
-function getMembershipType(no: string): { label: string; color: string; bg: string } {
-  if (no.startsWith("T-")) return { label: "Temporary Member", color: "#92400E", bg: "#FEF3C7" };
-  if (no.startsWith("P-")) return { label: "Permanent Member", color: "#fff",    bg: COLORS.primary };
-  if (no.startsWith("D-")) return { label: "Associate Member", color: "#fff",    bg: COLORS.primary };
+function getMembershipType(no: string): {
+  label: string;
+  color: string;
+  bg: string;
+} {
+  if (no.startsWith("T-"))
+    return { label: "Temporary Member", color: "#92400E", bg: "#FEF3C7" };
+  if (no.startsWith("P-"))
+    return { label: "Permanent Member", color: "#fff", bg: COLORS.primary };
+  if (no.startsWith("D-"))
+    return { label: "Associate Member", color: "#fff", bg: COLORS.primary };
   return { label: "Member", color: COLORS.textMuted, bg: COLORS.border };
 }
 
 function toListDog(d: MemberOwnedDog): Dog {
   return {
-    id: d.id, dog_name: d.dog_name, KP: d.KP || null, breed: d.breed,
-    sex: d.sex, dob: d.dob, color: d.color || null, imageUrl: d.imageUrl,
-    owner: d.owner || null, breeder: d.breeder || null,
-    sire: d.sire || null, sire_id: null, dam: d.dam || null, dam_id: null,
-    titles: d.titles, microchip: d.microchip,
-    foreign_reg_no: d.foreign_reg_no || null, hair: d.hair || null,
-    hd: null, ed: null, working_title: null, dna_status: null,
-    breed_survey_period: null, show_rating: null,
+    id: d.id,
+    dog_name: d.dog_name,
+    KP: d.KP || null,
+    breed: d.breed,
+    sex: d.sex,
+    dob: d.dob,
+    color: d.color || null,
+    imageUrl: d.imageUrl,
+    owner: d.owner || null,
+    breeder: d.breeder || null,
+    sire: d.sire || null,
+    sire_id: null,
+    dam: d.dam || null,
+    dam_id: null,
+    titles: d.titles,
+    microchip: d.microchip,
+    foreign_reg_no: d.foreign_reg_no || null,
+    hair: d.hair || null,
+    hd: null,
+    ed: null,
+    working_title: null,
+    dna_status: null,
+    breed_survey_period: null,
+    show_rating: null,
   };
 }
 
 /* ── FormField ──────────────────────────────────────────── */
 function FormField({
-  label, value, onChangeText, placeholder, multiline, keyboardType, required,
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  multiline,
+  keyboardType,
+  required,
 }: {
-  label: string; value: string; onChangeText: (v: string) => void;
-  placeholder?: string; multiline?: boolean; keyboardType?: any; required?: boolean;
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  keyboardType?: any;
+  required?: boolean;
 }) {
   return (
     <View style={fStyles.field}>
@@ -118,9 +227,15 @@ function FormField({
 }
 
 function DateField({
-  label, value, onChange, required,
+  label,
+  value,
+  onChange,
+  required,
 }: {
-  label: string; value: string; onChange: (v: string) => void; required?: boolean;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
 }) {
   const today = new Date().toISOString().split("T")[0];
   return (
@@ -129,29 +244,40 @@ function DateField({
         {label}
         {required ? <Text style={fStyles.required}> *</Text> : null}
       </Text>
-      {Platform.OS === "web"
-        ? createElement("input", {
-            type: "date",
-            value: value,
-            max: today,
-            onChange: (e: any) => onChange(e.target.value),
-            style: {
-              width: "100%", height: 42, borderWidth: 1, borderStyle: "solid",
-              borderColor: "#CBD5E1", borderRadius: 10, paddingLeft: 12, paddingRight: 12,
-              fontSize: 13, color: "#1E293B", backgroundColor: "#fff",
-              fontFamily: "inherit", boxSizing: "border-box", outline: "none",
-            },
-          })
-        : <TextInput
-            style={fStyles.input}
-            value={value}
-            onChangeText={onChange}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#94A3B8"
-            autoCorrect={false}
-            keyboardType="numbers-and-punctuation"
-          />
-      }
+      {Platform.OS === "web" ? (
+        createElement("input", {
+          type: "date",
+          value: value,
+          max: today,
+          onChange: (e: any) => onChange(e.target.value),
+          style: {
+            width: "100%",
+            height: 42,
+            borderWidth: 1,
+            borderStyle: "solid",
+            borderColor: "#CBD5E1",
+            borderRadius: 10,
+            paddingLeft: 12,
+            paddingRight: 12,
+            fontSize: 13,
+            color: "#1E293B",
+            backgroundColor: "#fff",
+            fontFamily: "inherit",
+            boxSizing: "border-box",
+            outline: "none",
+          },
+        })
+      ) : (
+        <TextInput
+          style={fStyles.input}
+          value={value}
+          onChangeText={onChange}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor="#94A3B8"
+          autoCorrect={false}
+          keyboardType="numbers-and-punctuation"
+        />
+      )}
     </View>
   );
 }
@@ -160,7 +286,15 @@ function FormSection({ title }: { title: string }) {
   return <Text style={fStyles.section}>{title}</Text>;
 }
 
-function SubmitBtn({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+function SubmitBtn({
+  label,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
     <TouchableOpacity
       style={[fStyles.submitBtn, disabled && { opacity: 0.4 }]}
@@ -174,8 +308,16 @@ function SubmitBtn({ label, onPress, disabled }: { label: string; onPress: () =>
 }
 
 /* ── DetailItem ─────────────────────────────────────── */
-function DetailItem({ icon, label, value, valueColor }: {
-  icon: keyof typeof Ionicons.glyphMap; label: string; value: string; valueColor?: string;
+function DetailItem({
+  icon,
+  label,
+  value,
+  valueColor,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  valueColor?: string;
 }) {
   return (
     <View style={styles.detailItem}>
@@ -184,43 +326,87 @@ function DetailItem({ icon, label, value, valueColor }: {
       </View>
       <View style={styles.detailTextWrap}>
         <Text style={styles.detailLabel}>{label}</Text>
-        <Text style={[styles.detailValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
+        <Text
+          style={[
+            styles.detailValue,
+            valueColor ? { color: valueColor } : null,
+          ]}
+        >
+          {value}
+        </Text>
       </View>
     </View>
   );
 }
 
 /* ── Tab: Detail ────────────────────────────────────── */
-function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
-  detail: MemberDetail | undefined; fallbackMember?: Member;
-  email: string | null; phone: string | null;
+function DetailTab({
+  detail,
+  fallbackMember,
+  email,
+  phone,
+  refetchDetail,
+}: {
+  detail: MemberDetail | undefined;
+  fallbackMember?: Member;
+  email: string | null;
+  phone: string | null;
   refetchDetail: () => void;
 }) {
   const { user, updateUser } = useAuth();
   const member = detail?.member ?? fallbackMember;
   if (!member) return null;
-  const statusLabel = member.membership_no.startsWith("P-") || member.membership_no.startsWith("D-") ? "Active" : "Temporary";
+  const statusLabel =
+    member.membership_no.startsWith("P-") ||
+    member.membership_no.startsWith("D-")
+      ? "Active"
+      : "Temporary";
   const statusColor = statusLabel === "Active" ? COLORS.primary : "#F59E0B";
   const detailMember = detail?.member as any;
 
   // Local display state — updated immediately after save so UI refreshes without waiting for refetch
-  const [displayPhone,    setDisplayPhone]    = useState(phone ?? "");
-  const [displayEmail,    setDisplayEmail]    = useState(email ?? "");
-  const [displayAddress,  setDisplayAddress]  = useState(detailMember?.address ?? "");
-  const [displayCity,     setDisplayCity]     = useState(member.city ?? "");
+  const [displayPhone, setDisplayPhone] = useState(phone ?? "");
+  const [displayEmail, setDisplayEmail] = useState(email ?? "");
+  const [displayAddress, setDisplayAddress] = useState(
+    detailMember?.address ?? "",
+  );
+  const [displayCity, setDisplayCity] = useState(member.city ?? "");
   // Check/visibility state — updated immediately after save so re-opening edit shows correct toggles
-  const [checkPhone,   setCheckPhone]   = useState<string>(detailMember?.check_phone   ?? "Show");
-  const [checkEmail,   setCheckEmail]   = useState<string>(detailMember?.check_email   ?? "Show");
-  const [checkAddress, setCheckAddress] = useState<string>(detailMember?.check_address ?? "Show");
+  const [checkPhone, setCheckPhone] = useState<string>(
+    detailMember?.check_phone ?? "Show",
+  );
+  const [checkEmail, setCheckEmail] = useState<string>(
+    detailMember?.check_email ?? "Show",
+  );
+  const [checkAddress, setCheckAddress] = useState<string>(
+    detailMember?.check_address ?? "Show",
+  );
 
   // Keep display state in sync when detail/props refresh from server
-  useEffect(() => { setDisplayPhone(phone ?? ""); },                [phone]);
-  useEffect(() => { setDisplayEmail(email ?? ""); },                [email]);
-  useEffect(() => { setDisplayAddress(detailMember?.address ?? ""); }, [detailMember?.address]);
-  useEffect(() => { setDisplayCity(member.city ?? ""); },            [member.city]);
-  useEffect(() => { if (detailMember?.check_phone   != null) setCheckPhone(detailMember.check_phone);   }, [detailMember?.check_phone]);
-  useEffect(() => { if (detailMember?.check_email   != null) setCheckEmail(detailMember.check_email);   }, [detailMember?.check_email]);
-  useEffect(() => { if (detailMember?.check_address != null) setCheckAddress(detailMember.check_address); }, [detailMember?.check_address]);
+  useEffect(() => {
+    setDisplayPhone(phone ?? "");
+  }, [phone]);
+  useEffect(() => {
+    setDisplayEmail(email ?? "");
+  }, [email]);
+  useEffect(() => {
+    setDisplayAddress(detailMember?.address ?? "");
+  }, [detailMember?.address]);
+  useEffect(() => {
+    setDisplayCity(member.city ?? "");
+  }, [member.city]);
+  useEffect(() => {
+    if (detailMember?.check_phone != null)
+      setCheckPhone(detailMember.check_phone);
+  }, [detailMember?.check_phone]);
+  useEffect(() => {
+    if (detailMember?.check_email != null)
+      setCheckEmail(detailMember.check_email);
+  }, [detailMember?.check_email]);
+  useEffect(() => {
+    if (detailMember?.check_address != null)
+      setCheckAddress(detailMember.check_address);
+  }, [detailMember?.check_address]);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -237,36 +423,36 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     staleTime: 10 * 60 * 1000,
   });
 
-  const filteredCities = cities.filter(c =>
-    c.city.toLowerCase().includes(citySearch.toLowerCase())
+  const filteredCities = cities.filter((c) =>
+    c.city.toLowerCase().includes(citySearch.toLowerCase()),
   );
 
   const [form, setForm] = useState({
-    phone:       phone ?? "",
-    email:       email ?? "",
-    address:     detailMember?.address ?? "",
-    password:    "",
-    showPhone:   true,
-    showEmail:   true,
+    phone: phone ?? "",
+    email: email ?? "",
+    address: detailMember?.address ?? "",
+    password: "",
+    showPhone: true,
+    showEmail: true,
     showAddress: true,
   });
 
   function openEdit() {
     setForm({
-      phone:       displayPhone,
-      email:       displayEmail,
-      address:     displayAddress,
-      password:    "",
-      showPhone:   checkPhone   !== "Hide",
-      showEmail:   checkEmail   !== "Hide",
+      phone: displayPhone,
+      email: displayEmail,
+      address: displayAddress,
+      password: "",
+      showPhone: checkPhone !== "Hide",
+      showEmail: checkEmail !== "Hide",
       showAddress: checkAddress !== "Hide",
     });
     // Prefer city_id directly from auth context; fall back to name-matching the cities list
     const directId = user?.city_id ?? null;
-    const matched  = cities.find(c =>
+    const matched = cities.find((c) =>
       directId
         ? c.id === directId
-        : c.city.toLowerCase() === displayCity.toLowerCase()
+        : c.city.toLowerCase() === displayCity.toLowerCase(),
     );
     setCityId(matched?.id ?? directId);
     setCityLabel(matched?.city ?? displayCity);
@@ -281,13 +467,13 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
     setSaveError("");
     setSaving(true);
     const payload: any = {
-      user_id:       user.id,
-      check_phone:   form.showPhone   ? "Show" : "Hide",
-      check_email:   form.showEmail   ? "Show" : "Hide",
+      user_id: user.id,
+      check_phone: form.showPhone ? "Show" : "Hide",
+      check_email: form.showEmail ? "Show" : "Hide",
       check_address: form.showAddress ? "Show" : "Hide",
-      phone:         form.phone.trim(),
-      email:         form.email.trim(),
-      address:       form.address.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim(),
+      address: form.address.trim(),
     };
     if (cityId != null) payload.city_id = cityId;
     if (form.password.trim()) payload.password = form.password.trim();
@@ -300,35 +486,35 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       setDisplayEmail(form.email.trim());
       setDisplayAddress(form.address.trim());
       setDisplayCity(cityLabel);
-      setCheckPhone(form.showPhone   ? "Show" : "Hide");
-      setCheckEmail(form.showEmail   ? "Show" : "Hide");
+      setCheckPhone(form.showPhone ? "Show" : "Hide");
+      setCheckEmail(form.showEmail ? "Show" : "Hide");
       setCheckAddress(form.showAddress ? "Show" : "Hide");
       const fresh = await fetchProfileShow(user.id);
       console.log("[ProfileSave] profile/show fresh:", JSON.stringify(fresh));
       if (fresh) {
         await updateUser({
-          first_name:      fresh.first_name,
-          last_name:       fresh.last_name,
-          name:            [fresh.first_name, fresh.last_name].filter(Boolean).join(" "),
-          email:           fresh.email,
-          phone:           fresh.phone,
-          photo:           fresh.photo,
+          first_name: fresh.first_name,
+          last_name: fresh.last_name,
+          name: [fresh.first_name, fresh.last_name].filter(Boolean).join(" "),
+          email: fresh.email,
+          phone: fresh.phone,
+          photo: fresh.photo,
           // Don't overwrite city with null if backend doesn't return it — keep form value
-          city:            fresh.city ?? cityLabel ?? user.city,
-          city_id:         fresh.city_id ?? cityId ?? user.city_id,
-          country:         fresh.country,
-          membership_no:   fresh.membership_no,
+          city: fresh.city ?? cityLabel ?? user.city,
+          city_id: fresh.city_id ?? cityId ?? user.city_id,
+          country: fresh.country,
+          membership_no: fresh.membership_no,
           membership_type: fresh.membership_type,
-          role:            fresh.role,
-          role_id:         fresh.role_id,
-          myDogs:          fresh.myDogs,
-          myKennel:        fresh.myKennel,
+          role: fresh.role,
+          role_id: fresh.role_id,
+          myDogs: fresh.myDogs,
+          myKennel: fresh.myKennel,
         });
       } else {
         await updateUser({
-          phone:   form.phone.trim() || user.phone,
-          email:   form.email.trim() || user.email,
-          city:    cityLabel || user.city,
+          phone: form.phone.trim() || user.phone,
+          email: form.email.trim() || user.email,
+          city: cityLabel || user.city,
           city_id: cityId ?? user.city_id,
         });
       }
@@ -348,7 +534,12 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       <View style={styles.cardHeadingRow}>
         <Text style={styles.cardHeading}>Membership Details</Text>
         {!editing && (
-          <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} onPress={openEdit} data-testid="btn-edit-details">
+          <TouchableOpacity
+            style={styles.cardEditBtn}
+            activeOpacity={0.7}
+            onPress={openEdit}
+            data-testid="btn-edit-details"
+          >
             <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
             <Text style={styles.cardEditBtnText}>Edit</Text>
           </TouchableOpacity>
@@ -358,19 +549,40 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
       {saveSuccess && (
         <View style={eStyles.successBanner}>
           <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
-          <Text style={eStyles.successBannerText}>Profile updated successfully.</Text>
+          <Text style={eStyles.successBannerText}>
+            Profile updated successfully.
+          </Text>
         </View>
       )}
 
       {!editing ? (
         <View style={styles.detailsGrid}>
-          <DetailItem icon="card"             label="Membership Number" value={member.membership_no} />
-          <DetailItem icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
-          {displayCity    ? <DetailItem icon="location" label="City"    value={displayCity} />       : null}
-          {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} />  : null}
-          {displayAddress ? <DetailItem icon="home"     label="Address" value={displayAddress} />    : null}
-          {displayEmail   ? <DetailItem icon="mail"     label="Email"   value={displayEmail} />      : null}
-          {displayPhone   ? <DetailItem icon="call"     label="Phone"   value={displayPhone} />      : null}
+          <DetailItem
+            icon="card"
+            label="Membership Number"
+            value={member.membership_no}
+          />
+          <DetailItem
+            icon="checkmark-circle"
+            label="Status"
+            value={statusLabel}
+            valueColor={statusColor}
+          />
+          {displayCity ? (
+            <DetailItem icon="location" label="City" value={displayCity} />
+          ) : null}
+          {member.country ? (
+            <DetailItem icon="flag" label="Country" value={member.country!} />
+          ) : null}
+          {displayAddress ? (
+            <DetailItem icon="home" label="Address" value={displayAddress} />
+          ) : null}
+          {displayEmail ? (
+            <DetailItem icon="mail" label="Email" value={displayEmail} />
+          ) : null}
+          {displayPhone ? (
+            <DetailItem icon="call" label="Phone" value={displayPhone} />
+          ) : null}
         </View>
       ) : (
         <View style={eStyles.editForm}>
@@ -382,7 +594,9 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
                 <Text style={eStyles.visibilityLabel}>Visible to others</Text>
                 <Switch
                   value={form.showPhone}
-                  onValueChange={v => setForm(f => ({ ...f, showPhone: v }))}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, showPhone: v }))
+                  }
                   trackColor={{ false: "#E5E7EB", true: `${COLORS.primary}60` }}
                   thumbColor={form.showPhone ? COLORS.primary : "#9CA3AF"}
                 />
@@ -391,7 +605,7 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
             <TextInput
               style={eStyles.input}
               value={form.phone}
-              onChangeText={v => setForm(f => ({ ...f, phone: v }))}
+              onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))}
               placeholder="Phone number"
               keyboardType="phone-pad"
               placeholderTextColor={COLORS.textMuted}
@@ -406,7 +620,9 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
                 <Text style={eStyles.visibilityLabel}>Visible to others</Text>
                 <Switch
                   value={form.showEmail}
-                  onValueChange={v => setForm(f => ({ ...f, showEmail: v }))}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, showEmail: v }))
+                  }
                   trackColor={{ false: "#E5E7EB", true: `${COLORS.primary}60` }}
                   thumbColor={form.showEmail ? COLORS.primary : "#9CA3AF"}
                 />
@@ -415,7 +631,7 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
             <TextInput
               style={eStyles.input}
               value={form.email}
-              onChangeText={v => setForm(f => ({ ...f, email: v }))}
+              onChangeText={(v) => setForm((f) => ({ ...f, email: v }))}
               placeholder="Email address"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -431,7 +647,9 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
                 <Text style={eStyles.visibilityLabel}>Visible to others</Text>
                 <Switch
                   value={form.showAddress}
-                  onValueChange={v => setForm(f => ({ ...f, showAddress: v }))}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, showAddress: v }))
+                  }
                   trackColor={{ false: "#E5E7EB", true: `${COLORS.primary}60` }}
                   thumbColor={form.showAddress ? COLORS.primary : "#9CA3AF"}
                 />
@@ -440,7 +658,7 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
             <TextInput
               style={[eStyles.input, eStyles.inputMultiline]}
               value={form.address}
-              onChangeText={v => setForm(f => ({ ...f, address: v }))}
+              onChangeText={(v) => setForm((f) => ({ ...f, address: v }))}
               placeholder="Street address"
               multiline
               numberOfLines={2}
@@ -454,27 +672,54 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
             <TouchableOpacity
               style={eStyles.cityPickerBtn}
               activeOpacity={0.8}
-              onPress={() => { setCitySearch(""); setCityPickerOpen(true); }}
+              onPress={() => {
+                setCitySearch("");
+                setCityPickerOpen(true);
+              }}
             >
-              <Text style={cityLabel ? eStyles.cityPickerValue : eStyles.cityPickerPlaceholder} numberOfLines={1}>
+              <Text
+                style={
+                  cityLabel
+                    ? eStyles.cityPickerValue
+                    : eStyles.cityPickerPlaceholder
+                }
+                numberOfLines={1}
+              >
                 {cityLabel || "Select city…"}
               </Text>
-              <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color={COLORS.textMuted}
+              />
             </TouchableOpacity>
           </View>
 
           {/* City Picker Modal */}
-          <Modal visible={cityPickerOpen} animationType="slide" transparent onRequestClose={() => setCityPickerOpen(false)}>
+          <Modal
+            visible={cityPickerOpen}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setCityPickerOpen(false)}
+          >
             <View style={eStyles.modalOverlay}>
               <View style={eStyles.modalSheet}>
                 <View style={eStyles.modalHeader}>
                   <Text style={eStyles.modalTitle}>Select City</Text>
-                  <TouchableOpacity onPress={() => setCityPickerOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => setCityPickerOpen(false)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
                     <Ionicons name="close" size={22} color={COLORS.text} />
                   </TouchableOpacity>
                 </View>
                 <View style={eStyles.modalSearchWrap}>
-                  <Ionicons name="search-outline" size={16} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+                  <Ionicons
+                    name="search-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                    style={{ marginRight: 6 }}
+                  />
                   <TextInput
                     style={eStyles.modalSearchInput}
                     value={citySearch}
@@ -484,26 +729,58 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
                     autoFocus
                   />
                   {citySearch.length > 0 && (
-                    <TouchableOpacity onPress={() => setCitySearch("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                      <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+                    <TouchableOpacity
+                      onPress={() => setCitySearch("")}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={16}
+                        color={COLORS.textMuted}
+                      />
                     </TouchableOpacity>
                   )}
                 </View>
-                <ScrollView style={eStyles.modalList} keyboardShouldPersistTaps="handled">
-                  {filteredCities.map(c => (
+                <ScrollView
+                  style={eStyles.modalList}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {filteredCities.map((c) => (
                     <TouchableOpacity
                       key={c.id}
-                      style={[eStyles.modalCityRow, cityId === c.id && eStyles.modalCityRowActive]}
+                      style={[
+                        eStyles.modalCityRow,
+                        cityId === c.id && eStyles.modalCityRowActive,
+                      ]}
                       activeOpacity={0.7}
-                      onPress={() => { setCityId(c.id); setCityLabel(c.city); setCityPickerOpen(false); }}
+                      onPress={() => {
+                        setCityId(c.id);
+                        setCityLabel(c.city);
+                        setCityPickerOpen(false);
+                      }}
                     >
-                      <Text style={[eStyles.modalCityName, cityId === c.id && eStyles.modalCityNameActive]}>{c.city}</Text>
-                      {cityId === c.id && <Ionicons name="checkmark" size={16} color={COLORS.primary} />}
+                      <Text
+                        style={[
+                          eStyles.modalCityName,
+                          cityId === c.id && eStyles.modalCityNameActive,
+                        ]}
+                      >
+                        {c.city}
+                      </Text>
+                      {cityId === c.id && (
+                        <Ionicons
+                          name="checkmark"
+                          size={16}
+                          color={COLORS.primary}
+                        />
+                      )}
                     </TouchableOpacity>
                   ))}
                   {filteredCities.length === 0 && (
                     <View style={{ padding: 24, alignItems: "center" }}>
-                      <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>No cities found</Text>
+                      <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>
+                        No cities found
+                      </Text>
                     </View>
                   )}
                 </ScrollView>
@@ -517,7 +794,7 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
             <TextInput
               style={eStyles.input}
               value={form.password}
-              onChangeText={v => setForm(f => ({ ...f, password: v }))}
+              onChangeText={(v) => setForm((f) => ({ ...f, password: v }))}
               placeholder="Leave blank to keep current password"
               secureTextEntry
               placeholderTextColor={COLORS.textMuted}
@@ -532,14 +809,25 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
           ) : null}
 
           <View style={eStyles.btnRow}>
-            <TouchableOpacity style={eStyles.cancelBtn} onPress={() => setEditing(false)} activeOpacity={0.8} disabled={saving}>
+            <TouchableOpacity
+              style={eStyles.cancelBtn}
+              onPress={() => setEditing(false)}
+              activeOpacity={0.8}
+              disabled={saving}
+            >
               <Text style={eStyles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={eStyles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
-              {saving
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={eStyles.saveBtnText}>Save Changes</Text>
-              }
+            <TouchableOpacity
+              style={eStyles.saveBtn}
+              onPress={handleSave}
+              activeOpacity={0.85}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={eStyles.saveBtnText}>Save Changes</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -551,8 +839,18 @@ function DetailTab({ detail, fallbackMember, email, phone, refetchDetail }: {
 const eStyles = StyleSheet.create({
   editForm: { gap: 16, marginTop: 8 },
   fieldGroup: { gap: 6 },
-  fieldLabelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  fieldLabel: { fontSize: 12, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5 },
+  fieldLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   visibilityRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   visibilityLabel: { fontSize: 11, color: COLORS.textMuted },
   input: {
@@ -584,40 +882,81 @@ const eStyles = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnText: { fontSize: 14, fontWeight: "700", color: "#fff" },
-  errorBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FEF2F2", borderRadius: 8, padding: 10 },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 8,
+    padding: 10,
+  },
   errorBannerText: { fontSize: 13, color: "#DC2626", flex: 1 },
-  successBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F0FDF4", borderRadius: 8, padding: 10, marginBottom: 12 },
+  successBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F0FDF4",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
   successBannerText: { fontSize: 13, color: "#16A34A", flex: 1 },
   cityPickerBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     backgroundColor: "#FAFAFA",
   },
   cityPickerValue: { fontSize: 14, color: COLORS.text, flex: 1 },
   cityPickerPlaceholder: { fontSize: 14, color: COLORS.textMuted, flex: 1 },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
   modalSheet: {
-    backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    maxHeight: "75%", paddingBottom: 24,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "75%",
+    paddingBottom: 24,
   },
   modalHeader: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 1, borderBottomColor: "#F1F5F9",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
   modalTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
   modalSearchWrap: {
-    flexDirection: "row", alignItems: "center",
-    margin: 12, paddingHorizontal: 12, paddingVertical: 9,
-    backgroundColor: "#F8FAFC", borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
+    margin: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   modalSearchInput: { flex: 1, fontSize: 14, color: COLORS.text, padding: 0 },
   modalList: { flexGrow: 0 },
   modalCityRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingVertical: 13,
-    borderBottomWidth: 1, borderBottomColor: "#F8FAFC",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F8FAFC",
   },
   modalCityRowActive: { backgroundColor: `${COLORS.primary}08` },
   modalCityName: { fontSize: 14, color: COLORS.text },
@@ -625,23 +964,246 @@ const eStyles = StyleSheet.create({
 });
 
 /* ── Tab: Kennel ────────────────────────────────────── */
-function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undefined; navigation: any }) {
+function KennelTab({
+  kennel,
+  navigation,
+  refetch,
+  memberId,
+}: {
+  kennel: MemberKennel | null | undefined;
+  navigation: any;
+  refetch: () => Promise<any>;
+  memberId: string;
+}) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    phone: "", email: "", address: "", facebook: "",
+    instagram: "", linkedin: "", website: "", description: "",
+  });
+  const [editImageUri,  setEditImageUri]  = useState<string | null>(null);
+  const [editImageMime, setEditImageMime] = useState<string | null>(null);
+  const [saving,    setSaving]    = useState(false);
+  const [saveError, setSaveError] = useState("");
+
   if (!kennel) {
     return (
       <View style={styles.emptyState}>
-        <View style={styles.emptyIconWrap}><Ionicons name="home-outline" size={32} color={COLORS.primary} /></View>
+        <View style={styles.emptyIconWrap}>
+          <Ionicons name="home-outline" size={32} color={COLORS.primary} />
+        </View>
         <Text style={styles.emptyTitle}>No Kennel Registered</Text>
-        <Text style={styles.emptyDesc}>You have not registered a kennel with GSDCP yet.</Text>
+        <Text style={styles.emptyDesc}>
+          You have not registered a kennel with GSDCP yet.
+        </Text>
       </View>
     );
   }
-  const hasImage = kennel.imageUrl && !kennel.imageUrl.includes("user-not-found") && !kennel.imageUrl.startsWith("https::");
-  const initials = kennel.kennelName.trim().split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
+  const hasImage =
+    kennel.imageUrl &&
+    !kennel.imageUrl.includes("user-not-found") &&
+    !kennel.imageUrl.startsWith("https::");
+  const initials = kennel.kennelName
+    .trim().split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const phone = kennel.phone && kennel.phone !== "+00-000-000-0000" ? kennel.phone : null;
-  const activeSince = kennel.active_since ? new Date(kennel.active_since).getFullYear().toString() : null;
+  const activeSince = kennel.active_since
+    ? new Date(kennel.active_since).getFullYear().toString() : null;
+
+  const openEdit = () => {
+    setEditForm({
+      phone:       kennel.phone ?? "",
+      email:       kennel.email ?? "",
+      address:     kennel.location ?? "",
+      facebook:    kennel.facebook ?? "",
+      instagram:   kennel.instagram ?? "",
+      linkedin:    kennel.linkedin ?? "",
+      website:     kennel.website ?? "",
+      description: kennel.description ?? "",
+    });
+    setEditImageUri(null);
+    setEditImageMime(null);
+    setSaveError("");
+    setShowEdit(true);
+  };
+
+  const handlePickImage = async () => {
+    const pickerOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8, exif: false,
+    };
+    const pick = async (uri: string, mimeType?: string | null) => {
+      setEditImageUri(uri);
+      setEditImageMime(mimeType ?? null);
+    };
+    if (Platform.OS === "web") {
+      const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+      if (!result.canceled && result.assets[0])
+        await pick(result.assets[0].uri, result.assets[0].mimeType);
+      return;
+    }
+    Alert.alert("Change Kennel Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
+          const result = await ImagePicker.launchCameraAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaveError("");
+    setSaving(true);
+    try {
+      await updateKennel(kennel.kennel_id, editForm, editImageUri, editImageMime, user.token);
+
+      queryClient.setQueryData<MemberDetail>(["member-detail", memberId], (old) => {
+        if (!old?.kennel) return old;
+        return {
+          ...old,
+          kennel: {
+            ...old.kennel,
+            phone:       editForm.phone       || null,
+            email:       editForm.email       || null,
+            location:    editForm.address     || null,
+            facebook:    editForm.facebook    || null,
+            instagram:   editForm.instagram   || null,
+            linkedin:    editForm.linkedin    || null,
+            website:     editForm.website     || null,
+            description: editForm.description || null,
+          },
+        };
+      });
+
+      setShowEdit(false);
+      setEditImageUri(null);
+      setEditImageMime(null);
+      Alert.alert("Success", "Kennel profile updated.");
+
+      refetch();
+    } catch (e: any) {
+      setSaveError(e?.message ?? "Could not save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const displayImage = editImageUri ?? (hasImage ? kennel.imageUrl! : null);
 
   return (
     <View style={styles.card}>
+      {/* ── Edit Modal ── */}
+      <Modal visible={showEdit} animationType="slide" transparent onRequestClose={() => setShowEdit(false)}>
+        <View style={kStyles.modalOverlay}>
+          <View style={kStyles.modalSheet}>
+            {/* Header */}
+            <View style={kStyles.modalHeader}>
+              <Text style={kStyles.modalTitle}>Edit Kennel</Text>
+              <TouchableOpacity onPress={() => setShowEdit(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={kStyles.modalBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Image picker */}
+              <TouchableOpacity style={kStyles.imagePicker} activeOpacity={0.8} onPress={handlePickImage}>
+                {displayImage ? (
+                  <Image source={{ uri: displayImage }} style={kStyles.imagePreview} resizeMode="cover" />
+                ) : (
+                  <View style={kStyles.imagePlaceholder}>
+                    <Text style={kStyles.imagePlaceholderInitials}>{initials}</Text>
+                  </View>
+                )}
+                <View style={kStyles.imageCameraBadge}>
+                  <Ionicons name="camera" size={13} color="#fff" />
+                </View>
+              </TouchableOpacity>
+
+              {/* Error banner */}
+              {!!saveError && (
+                <View style={eStyles.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+                  <Text style={{ fontSize: 13, color: "#DC2626", flex: 1 }}>{saveError}</Text>
+                </View>
+              )}
+
+              {/* Fields */}
+              {([
+                { key: "phone",       label: "Phone",       kbd: "phone-pad",     icon: "call-outline" },
+                { key: "email",       label: "Email",       kbd: "email-address", icon: "mail-outline" },
+                { key: "address",     label: "Address",     kbd: "default",       icon: "location-outline" },
+                { key: "website",     label: "Website",     kbd: "url",           icon: "globe-outline" },
+                { key: "facebook",    label: "Facebook",    kbd: "url",           icon: "logo-facebook" },
+                { key: "instagram",   label: "Instagram",   kbd: "url",           icon: "logo-instagram" },
+                { key: "linkedin",    label: "LinkedIn",    kbd: "url",           icon: "logo-linkedin" },
+              ] as const).map(({ key, label, kbd, icon }) => (
+                <View key={key} style={eStyles.fieldGroup}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                    <Ionicons name={icon} size={13} color={COLORS.textMuted} />
+                    <Text style={eStyles.fieldLabel}>{label}</Text>
+                  </View>
+                  <TextInput
+                    style={eStyles.input}
+                    value={editForm[key]}
+                    onChangeText={(v) => setEditForm((f) => ({ ...f, [key]: v }))}
+                    placeholder={label}
+                    keyboardType={kbd as any}
+                    autoCapitalize="none"
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                </View>
+              ))}
+
+              {/* Description — multiline */}
+              <View style={eStyles.fieldGroup}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                  <Ionicons name="document-text-outline" size={13} color={COLORS.textMuted} />
+                  <Text style={eStyles.fieldLabel}>Description</Text>
+                </View>
+                <TextInput
+                  style={[eStyles.input, eStyles.inputMultiline]}
+                  value={editForm.description}
+                  onChangeText={(v) => setEditForm((f) => ({ ...f, description: v }))}
+                  placeholder="About your kennel..."
+                  multiline
+                  numberOfLines={4}
+                  placeholderTextColor={COLORS.textMuted}
+                />
+              </View>
+
+              {/* Buttons */}
+              <View style={eStyles.btnRow}>
+                <TouchableOpacity style={eStyles.cancelBtn} onPress={() => setShowEdit(false)} activeOpacity={0.7}>
+                  <Text style={eStyles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={eStyles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
+                  {saving
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={eStyles.saveBtnText}>Save Changes</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Card content ── */}
       <View style={styles.kennelHeader}>
         {hasImage ? (
           <LazyImage source={{ uri: kennel.imageUrl! }} style={styles.kennelAvatar} />
@@ -653,23 +1215,30 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
         <View style={{ flex: 1, marginLeft: 14 }}>
           <Text style={styles.kennelName}>{kennel.kennelName}</Text>
           {kennel.suffix ? <Text style={styles.kennelSuffix}>"{kennel.suffix}"</Text> : null}
-          {kennel.city   ? <Text style={styles.kennelCity}>{kennel.city}{kennel.country ? `, ${kennel.country}` : ""}</Text> : null}
+          {kennel.city ? (
+            <Text style={styles.kennelCity}>{kennel.city}{kennel.country ? `, ${kennel.country}` : ""}</Text>
+          ) : null}
         </View>
       </View>
       <View style={styles.divider} />
       <View style={styles.cardHeadingRow}>
         <Text style={styles.cardHeading}>Kennel Details</Text>
-        <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} data-testid="btn-edit-kennel-card">
+        <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} onPress={openEdit} data-testid="btn-edit-kennel-card">
           <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
           <Text style={styles.cardEditBtnText}>Edit</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.detailsGrid}>
-        {kennel.prefix   ? <DetailItem icon="text-outline"     label="Prefix"       value={kennel.prefix}   /> : null}
-        {phone           ? <DetailItem icon="call-outline"     label="Phone"        value={phone}           /> : null}
-        {kennel.email    ? <DetailItem icon="mail-outline"     label="Email"        value={kennel.email}    /> : null}
+        {kennel.prefix   ? <DetailItem icon="text-outline"     label="Prefix"       value={kennel.prefix} /> : null}
+        {phone           ? <DetailItem icon="call-outline"     label="Phone"        value={phone} /> : null}
+        {kennel.email    ? <DetailItem icon="mail-outline"     label="Email"        value={kennel.email} /> : null}
         {kennel.location ? <DetailItem icon="location-outline" label="Location"     value={kennel.location} /> : null}
-        {activeSince     ? <DetailItem icon="calendar-outline" label="Active Since" value={activeSince}     /> : null}
+        {activeSince     ? <DetailItem icon="calendar-outline" label="Active Since" value={activeSince} /> : null}
+        {kennel.website  ? <DetailItem icon="globe-outline"    label="Website"      value={kennel.website} /> : null}
+        {kennel.facebook ? <DetailItem icon="logo-facebook"    label="Facebook"     value={kennel.facebook} /> : null}
+        {kennel.instagram? <DetailItem icon="logo-instagram"   label="Instagram"    value={kennel.instagram} /> : null}
+        {kennel.linkedin ? <DetailItem icon="logo-linkedin"    label="LinkedIn"     value={kennel.linkedin} /> : null}
+        {kennel.description ? <DetailItem icon="document-text-outline" label="About" value={kennel.description} /> : null}
       </View>
       <TouchableOpacity
         style={styles.kennelViewBtn} activeOpacity={0.8}
@@ -683,32 +1252,583 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
   );
 }
 
+const kStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "92%",
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  modalTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  modalBody: { padding: 20, gap: 16 },
+  imagePicker: {
+    alignSelf: "center",
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    overflow: "visible",
+    marginBottom: 4,
+  },
+  imagePreview: {
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+  },
+  imagePlaceholder: {
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    backgroundColor: "rgba(15,92,59,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+  },
+  imagePlaceholderInitials: { fontSize: 28, fontWeight: "800", color: COLORS.primary },
+  imageCameraBadge: {
+    position: "absolute",
+    bottom: -4,
+    right: -4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+});
+
 /* ── Tab: Dogs ──────────────────────────────────────── */
-function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d: MemberOwnedDog) => void }) {
-  if (dogs.length === 0) {
+const DOG_GENDER_OPTS = ["All", "Male", "Female"] as const;
+const DOG_HAIR_OPTS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
+
+function DogsTab({
+  userId,
+  onDogPress,
+}: {
+  userId: string;
+  onDogPress: (d: MemberOwnedDog) => void;
+}) {
+  const [search, setSearch]               = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [genderF, setGenderF]             = useState("All");
+  const [hairF,   setHairF]               = useState("All");
+  const [tempGender, setTempGender]       = useState("All");
+  const [tempHair,   setTempHair]         = useState("All");
+  const [showFilters, setShowFilters]     = useState(false);
+  const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data: dogs = [], isLoading: dogsLoading } = useQuery({
+    queryKey: ["my-dogs", userId, debouncedSearch],
+    queryFn: () => fetchMyDogs(userId, debouncedSearch),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+
+  const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
+
+  const openFilters = () => {
+    setTempGender(genderF);
+    setTempHair(hairF);
+    setShowFilters(true);
+  };
+
+  const applyFilters = () => {
+    setGenderF(tempGender);
+    setHairF(tempHair);
+    setShowFilters(false);
+  };
+
+  const resetFilters = () => {
+    setTempGender("All");
+    setTempHair("All");
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return dogs.filter((d) => {
+      if (q && !d.dog_name.toLowerCase().includes(q) && !d.KP?.toLowerCase().includes(q)) return false;
+      if (genderF !== "All" && d.sex?.toLowerCase() !== genderF.toLowerCase()) return false;
+      if (hairF   !== "All" && d.hair !== hairF) return false;
+      return true;
+    });
+  }, [dogs, search, genderF, hairF]);
+
+  if (dogsLoading) {
     return (
-      <View style={styles.emptyState}>
-        <View style={styles.emptyIconWrap}><Ionicons name="paw-outline" size={32} color={COLORS.primary} /></View>
-        <Text style={styles.emptyTitle}>No Dogs Registered</Text>
-        <Text style={styles.emptyDesc}>You have no dogs registered under your account yet.</Text>
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator size="small" color={COLORS.primary} />
       </View>
     );
   }
+
+  if (dogs.length === 0) {
+    return (
+      <View style={styles.emptyState}>
+        <View style={styles.emptyIconWrap}>
+          <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
+        </View>
+        <Text style={styles.emptyTitle}>No Dogs Registered</Text>
+        <Text style={styles.emptyDesc}>
+          You have no dogs registered under your account yet.
+        </Text>
+      </View>
+    );
+  }
+
+  const initials = (name: string) =>
+    name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+
   return (
     <View>
-      {dogs.map((dog) => (
-        <DogListItem key={dog.id} dog={toListDog(dog)} onPress={() => onDogPress(dog)} />
-      ))}
+      {/* Search bar + filter button */}
+      <View style={dStyles.searchRow}>
+        <View style={dStyles.searchBox}>
+          <Ionicons name="search" size={16} color={COLORS.textMuted} />
+          <TextInput
+            style={dStyles.searchInput}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by name or KP…"
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[dStyles.filterButton, activeFilterCount > 0 && dStyles.filterButtonActive]}
+          onPress={openFilters}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="options-outline"
+            size={20}
+            color={activeFilterCount > 0 ? "#fff" : COLORS.textSecondary}
+          />
+          {activeFilterCount > 0 && (
+            <View style={dStyles.filterBadge}>
+              <Text style={dStyles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Active filter chips */}
+      {activeFilterCount > 0 && (
+        <View style={dStyles.activeFiltersRow}>
+          {genderF !== "All" && (
+            <View style={dStyles.activeChip}>
+              <Text style={dStyles.activeChipText}>{genderF}</Text>
+              <TouchableOpacity onPress={() => setGenderF("All")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close" size={13} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {hairF !== "All" && (
+            <View style={dStyles.activeChip}>
+              <Text style={dStyles.activeChipText}>{hairF}</Text>
+              <TouchableOpacity onPress={() => setHairF("All")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close" size={13} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity onPress={() => { setGenderF("All"); setHairF("All"); }}>
+            <Text style={dStyles.clearAllText}>Clear all</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Count */}
+      <Text style={dStyles.countText}>
+        {filtered.length} of {dogs.length} {dogs.length === 1 ? "dog" : "dogs"}
+      </Text>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <View style={[styles.emptyState, { paddingTop: 32 }]}>
+          <Ionicons name="search-outline" size={36} color={COLORS.textMuted} />
+          <Text style={styles.emptyTitle}>No matches</Text>
+          <Text style={styles.emptyDesc}>Try a different search or filter.</Text>
+        </View>
+      ) : (
+        filtered.map((dog) => (
+          <DogListItem
+            key={dog.id}
+            dog={toListDog(dog)}
+            onPress={() => setPreviewDog(dog)}
+          />
+        ))
+      )}
+
+      {/* Filter modal */}
+      <BottomSheetModal
+        visible={showFilters}
+        onClose={() => setShowFilters(false)}
+      >
+        <View style={dStyles.filterModalContent}>
+          <View style={dStyles.filterModalHeader}>
+            <Text style={dStyles.filterModalTitle}>Filters</Text>
+            <TouchableOpacity onPress={resetFilters}>
+              <Text style={dStyles.resetText}>Reset</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={dStyles.filterSectionTitle}>Gender</Text>
+          <View style={dStyles.filterOptionsRow}>
+            {DOG_GENDER_OPTS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[dStyles.filterOption, tempGender === opt && dStyles.filterOptionActive]}
+                onPress={() => setTempGender(opt)}
+                activeOpacity={0.7}
+              >
+                <Text style={[dStyles.filterOptionText, tempGender === opt && dStyles.filterOptionTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={dStyles.filterSectionTitle}>Hair Type</Text>
+          <View style={dStyles.filterOptionsRow}>
+            {DOG_HAIR_OPTS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[dStyles.filterOption, tempHair === opt && dStyles.filterOptionActive]}
+                onPress={() => setTempHair(opt)}
+                activeOpacity={0.7}
+              >
+                <Text style={[dStyles.filterOptionText, tempHair === opt && dStyles.filterOptionTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity style={dStyles.applyButton} onPress={applyFilters} activeOpacity={0.8}>
+            <Text style={dStyles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheetModal>
+
+      {/* Preview popup */}
+      <BottomSheetModal
+        visible={!!previewDog}
+        onClose={() => setPreviewDog(null)}
+      >
+        {previewDog && (
+          <View style={dStyles.modalContent}>
+            {/* Header: avatar + name */}
+            <View style={dStyles.previewHeader}>
+              {previewDog.imageUrl ? (
+                <LazyImage
+                  source={{ uri: previewDog.imageUrl }}
+                  style={dStyles.previewImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={dStyles.previewAvatar}>
+                  <Text style={dStyles.previewAvatarText}>{initials(previewDog.dog_name)}</Text>
+                </View>
+              )}
+              <View style={dStyles.previewHeadInfo}>
+                <Text style={dStyles.previewName} numberOfLines={2}>{previewDog.dog_name}</Text>
+                <Text style={dStyles.previewKP}>
+                  {previewDog.KP && previewDog.KP !== "0"
+                    ? `KP ${previewDog.KP}`
+                    : previewDog.foreign_reg_no || "—"}
+                </Text>
+                {previewDog.titles && previewDog.titles.length > 0 && (
+                  <View style={dStyles.titlesRow}>
+                    {previewDog.titles.slice(0, 3).map((t) => (
+                      <View key={t} style={dStyles.titleBadge}>
+                        <Text style={dStyles.titleBadgeText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={dStyles.divider} />
+
+            {/* Info grid */}
+            <View style={dStyles.infoGrid}>
+              {[
+                { label: "Sex",           value: previewDog.sex },
+                { label: "Color",         value: previewDog.color },
+                { label: "Hair",          value: previewDog.hair },
+                { label: "Date of Birth", value: formatDate(previewDog.dob) },
+                { label: "Sire",          value: previewDog.sire },
+                { label: "Dam",           value: previewDog.dam },
+                { label: "Breeder",       value: previewDog.breeder },
+              ]
+                .filter((r) => r.value)
+                .map((r) => (
+                  <View key={r.label} style={dStyles.infoRow}>
+                    <Text style={dStyles.infoLabel}>{r.label}</Text>
+                    <Text style={dStyles.infoValue} numberOfLines={2}>{r.value}</Text>
+                  </View>
+                ))}
+            </View>
+
+            {/* View Full Profile button */}
+            <TouchableOpacity
+              style={dStyles.profileBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                const dog = previewDog;
+                setPreviewDog(null);
+                onDogPress(dog);
+              }}
+            >
+              <Ionicons name="paw" size={16} color="#fff" />
+              <Text style={dStyles.profileBtnText}>View Full Profile</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </BottomSheetModal>
     </View>
   );
 }
+
+const dStyles = StyleSheet.create({
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xs,
+    gap: SPACING.sm,
+  },
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterBadgeText: { fontSize: 9, fontWeight: "700", color: "#fff" },
+  activeFiltersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.lg,
+    gap: 6,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,92,58,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.15)",
+  },
+  activeChipText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.primary },
+  clearAllText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.textMuted, marginLeft: 2 },
+  countText: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xs,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+  },
+  filterModalContent: { paddingHorizontal: 24 },
+  filterModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  filterModalTitle: { fontSize: 20, fontWeight: "700", color: COLORS.text },
+  resetText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.textMuted },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  filterOptionsRow: { flexDirection: "row", gap: 8, flexWrap: "wrap", marginBottom: 24 },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterOptionActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterOptionText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
+  filterOptionTextActive: { color: "#fff" },
+  applyButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  applyButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  modalContent: { paddingHorizontal: 24, paddingBottom: 8 },
+  previewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 14,
+  },
+  previewImage: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+  },
+  previewAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  previewAvatarText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 22,
+  },
+  previewHeadInfo: { flex: 1, justifyContent: "center" },
+  previewName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
+  },
+  previewKP: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  titlesRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  titleBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  titleBadgeText: { fontSize: FONT_SIZES.xs, color: "#fff", fontWeight: "600" },
+  divider: { height: 1, backgroundColor: COLORS.border, marginBottom: 14 },
+  infoGrid: { marginBottom: 20, gap: 10 },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  infoLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+    width: 100,
+    flexShrink: 0,
+  },
+  infoValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  profileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+  },
+  profileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+});
 
 /* ── Reusable: list header with "+ New" button ────────── */
 function ListHeader({ title, onNew }: { title: string; onNew: () => void }) {
   return (
     <View style={tStyles.listHeader}>
       <Text style={tStyles.listTitle}>{title}</Text>
-      <TouchableOpacity style={tStyles.newBtn} onPress={onNew} activeOpacity={0.8} data-testid="btn-new-record">
+      <TouchableOpacity
+        style={tStyles.newBtn}
+        onPress={onNew}
+        activeOpacity={0.8}
+        data-testid="btn-new-record"
+      >
         <Ionicons name="add" size={15} color="#fff" />
         <Text style={tStyles.newBtnText}>New</Text>
       </TouchableOpacity>
@@ -716,11 +1836,21 @@ function ListHeader({ title, onNew }: { title: string; onNew: () => void }) {
   );
 }
 
-function TableRow({ cols }: { cols: { label: string; value: string; flex?: number }[] }) {
+function TableRow({
+  cols,
+}: {
+  cols: { label: string; value: string; flex?: number }[];
+}) {
   return (
     <View style={tStyles.tableRow}>
       {cols.map((c, i) => (
-        <Text key={i} style={[tStyles.tableCell, { flex: c.flex ?? 1 }]} numberOfLines={1}>{c.value}</Text>
+        <Text
+          key={i}
+          style={[tStyles.tableCell, { flex: c.flex ?? 1 }]}
+          numberOfLines={1}
+        >
+          {c.value}
+        </Text>
       ))}
     </View>
   );
@@ -730,13 +1860,21 @@ function TableHead({ cols }: { cols: { label: string; flex?: number }[] }) {
   return (
     <View style={[tStyles.tableRow, tStyles.tableHeadRow]}>
       {cols.map((c, i) => (
-        <Text key={i} style={[tStyles.tableHeadCell, { flex: c.flex ?? 1 }]}>{c.label}</Text>
+        <Text key={i} style={[tStyles.tableHeadCell, { flex: c.flex ?? 1 }]}>
+          {c.label}
+        </Text>
       ))}
     </View>
   );
 }
 
-function EmptyTable({ icon, message }: { icon: keyof typeof Ionicons.glyphMap; message: string }) {
+function EmptyTable({
+  icon,
+  message,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  message: string;
+}) {
   return (
     <View style={tStyles.emptyRow}>
       <Ionicons name={icon} size={20} color={COLORS.textMuted} />
@@ -747,7 +1885,12 @@ function EmptyTable({ icon, message }: { icon: keyof typeof Ionicons.glyphMap; m
 
 function FormBackBtn({ onPress }: { onPress: () => void }) {
   return (
-    <TouchableOpacity style={tStyles.backBtn} onPress={onPress} activeOpacity={0.7} data-testid="btn-back-to-list">
+    <TouchableOpacity
+      style={tStyles.backBtn}
+      onPress={onPress}
+      activeOpacity={0.7}
+      data-testid="btn-back-to-list"
+    >
       <Ionicons name="arrow-back" size={15} color={COLORS.primary} />
       <Text style={tStyles.backBtnText}>Back to list</Text>
     </TouchableOpacity>
@@ -755,7 +1898,15 @@ function FormBackBtn({ onPress }: { onPress: () => void }) {
 }
 
 /* ── Map a cert/reg sire/dam to the Dog shape DogListItem expects ── */
-type DogCardShape = { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null; date_of_birth?: string | null };
+type DogCardShape = {
+  id: string;
+  name: string;
+  KP: string;
+  foreign_reg_no: string | null;
+  color: string | null;
+  imageUrl: string | null;
+  date_of_birth?: string | null;
+};
 function certDogToDog(d: DogCardShape, sex: string): Dog {
   return {
     id: d.id,
@@ -767,17 +1918,34 @@ function certDogToDog(d: DogCardShape, sex: string): Dog {
     sex,
     dob: d.date_of_birth ?? null,
     breed: "GSD",
-    owner: null, breeder: null,
-    sire: null, sire_id: null,
-    dam: null,  dam_id: null,
-    titles: [], microchip: null, hair: null,
-    hd: null, ed: null, working_title: null,
-    dna_status: null, breed_survey_period: null, show_rating: null,
+    owner: null,
+    breeder: null,
+    sire: null,
+    sire_id: null,
+    dam: null,
+    dam_id: null,
+    titles: [],
+    microchip: null,
+    hair: null,
+    hd: null,
+    ed: null,
+    working_title: null,
+    dna_status: null,
+    breed_survey_period: null,
+    show_rating: null,
   };
 }
 
 /* ── Dog search dropdown (used in stud cert form) ──── */
-type DogOption = { id: string; name: string; KP: string | null; foreign_reg_no?: string | null; owner?: string; sex?: string; color?: string };
+type DogOption = {
+  id: string;
+  name: string;
+  KP: string | null;
+  foreign_reg_no?: string | null;
+  owner?: string;
+  sex?: string;
+  color?: string;
+};
 
 function kpLabel(kp?: string | null, foreign?: string | null): string {
   const k = (kp ?? "").trim();
@@ -786,17 +1954,37 @@ function kpLabel(kp?: string | null, foreign?: string | null): string {
   return f || "—";
 }
 
-const CAL_MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const CAL_DOW    = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+const CAL_MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const CAL_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-function CalendarDatePicker({ label, required, value, onChange, maxDate }: {
-  label: string; required?: boolean;
-  value: string;       // DD-MM-YYYY display / storage
+function CalendarDatePicker({
+  label,
+  required,
+  value,
+  onChange,
+  maxDate,
+}: {
+  label: string;
+  required?: boolean;
+  value: string; // DD-MM-YYYY display / storage
   onChange: (v: string) => void;
-  maxDate?: Date;      // no date after this may be selected (defaults to today)
+  maxDate?: Date; // no date after this may be selected (defaults to today)
 }) {
   const today = new Date();
-  const max   = maxDate ?? today;
+  const max = maxDate ?? today;
   // Normalise max to start-of-day for clean comparisons
   const maxDay = new Date(max.getFullYear(), max.getMonth(), max.getDate());
 
@@ -806,96 +1994,250 @@ function CalendarDatePicker({ label, required, value, onChange, maxDate }: {
     return d && m && y ? new Date(y, m - 1, d) : null;
   };
   const selected = parseValue(value);
-  const [show,      setShow]      = useState(false);
-  const [viewYear,  setViewYear]  = useState(today.getFullYear());
+  const [show, setShow] = useState(false);
+  const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
 
   const openPicker = () => {
-    if (selected) { setViewYear(selected.getFullYear()); setViewMonth(selected.getMonth()); }
-    else { setViewYear(maxDay.getFullYear()); setViewMonth(maxDay.getMonth()); }
+    if (selected) {
+      setViewYear(selected.getFullYear());
+      setViewMonth(selected.getMonth());
+    } else {
+      setViewYear(maxDay.getFullYear());
+      setViewMonth(maxDay.getMonth());
+    }
     setShow(true);
   };
 
   // Block navigating forward past the max month
-  const atMaxMonth = viewYear > maxDay.getFullYear() ||
+  const atMaxMonth =
+    viewYear > maxDay.getFullYear() ||
     (viewYear === maxDay.getFullYear() && viewMonth >= maxDay.getMonth());
 
-  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
+  const prevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else setViewMonth((m) => m - 1);
+  };
   const nextMonth = () => {
     if (atMaxMonth) return;
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1);
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else setViewMonth((m) => m + 1);
   };
 
   const isFuture = (day: number) => new Date(viewYear, viewMonth, day) > maxDay;
 
   const selectDay = (day: number) => {
     if (isFuture(day)) return;
-    onChange(`${String(day).padStart(2,"0")}-${String(viewMonth+1).padStart(2,"0")}-${viewYear}`);
+    onChange(
+      `${String(day).padStart(2, "0")}-${String(viewMonth + 1).padStart(2, "0")}-${viewYear}`,
+    );
     setShow(false);
   };
 
-  const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let i = 1; i <= daysInMonth; i++) cells.push(i);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const isSel = (d: number) => selected && selected.getDate() === d && selected.getMonth() === viewMonth && selected.getFullYear() === viewYear;
-  const isTod = (d: number) => today.getDate() === d && today.getMonth() === viewMonth && today.getFullYear() === viewYear;
+  const isSel = (d: number) =>
+    selected &&
+    selected.getDate() === d &&
+    selected.getMonth() === viewMonth &&
+    selected.getFullYear() === viewYear;
+  const isTod = (d: number) =>
+    today.getDate() === d &&
+    today.getMonth() === viewMonth &&
+    today.getFullYear() === viewYear;
 
   return (
     <View style={{ marginBottom: 14 }}>
-      <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>
-        {label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
+      <Text
+        style={{
+          fontSize: 13,
+          fontWeight: "600",
+          color: "#334155",
+          marginBottom: 5,
+        }}
+      >
+        {label}
+        {required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
       </Text>
-      <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, backgroundColor: "#fff", overflow: "hidden" }}>
-        <TouchableOpacity onPress={openPicker} activeOpacity={0.8} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
-          <Ionicons name="calendar-outline" size={16} color={value ? COLORS.primary : COLORS.textMuted} />
-          <Text style={{ fontSize: 13, color: value ? COLORS.text : COLORS.textMuted }}>{value || "Select date"}</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          borderWidth: 1,
+          borderColor: COLORS.border,
+          borderRadius: 10,
+          backgroundColor: "#fff",
+          overflow: "hidden",
+        }}
+      >
+        <TouchableOpacity
+          onPress={openPicker}
+          activeOpacity={0.8}
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+          }}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={16}
+            color={value ? COLORS.primary : COLORS.textMuted}
+          />
+          <Text
+            style={{
+              fontSize: 13,
+              color: value ? COLORS.text : COLORS.textMuted,
+            }}
+          >
+            {value || "Select date"}
+          </Text>
         </TouchableOpacity>
         {!!value && (
-          <TouchableOpacity onPress={() => onChange("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ paddingHorizontal: 12 }}>
+          <TouchableOpacity
+            onPress={() => onChange("")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={{ paddingHorizontal: 12 }}
+          >
             <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
-      <Modal visible={show} transparent animationType="fade" onRequestClose={() => setShow(false)}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center" }} activeOpacity={1} onPress={() => setShow(false)}>
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: "#fff", borderRadius: 16, padding: 16, width: 300 }}>
+      <Modal
+        visible={show}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShow(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          activeOpacity={1}
+          onPress={() => setShow(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: 16,
+              padding: 16,
+              width: 300,
+            }}
+          >
             {/* Month navigation */}
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="chevron-back" size={22} color={COLORS.primary} />
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <TouchableOpacity
+                onPress={prevMonth}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons
+                  name="chevron-back"
+                  size={22}
+                  color={COLORS.primary}
+                />
               </TouchableOpacity>
-              <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.text }}>{CAL_MONTHS[viewMonth]} {viewYear}</Text>
-              <TouchableOpacity onPress={atMaxMonth ? undefined : nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ opacity: atMaxMonth ? 0.25 : 1 }}>
-                <Ionicons name="chevron-forward" size={22} color={COLORS.primary} />
+              <Text
+                style={{ fontSize: 15, fontWeight: "700", color: COLORS.text }}
+              >
+                {CAL_MONTHS[viewMonth]} {viewYear}
+              </Text>
+              <TouchableOpacity
+                onPress={atMaxMonth ? undefined : nextMonth}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ opacity: atMaxMonth ? 0.25 : 1 }}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={22}
+                  color={COLORS.primary}
+                />
               </TouchableOpacity>
             </View>
             {/* Day-of-week headers */}
             <View style={{ flexDirection: "row", marginBottom: 6 }}>
-              {CAL_DOW.map(d => (
-                <Text key={d} style={{ flex: 1, textAlign: "center", fontSize: 11, fontWeight: "600", color: COLORS.textMuted }}>{d}</Text>
+              {CAL_DOW.map((d) => (
+                <Text
+                  key={d}
+                  style={{
+                    flex: 1,
+                    textAlign: "center",
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: COLORS.textMuted,
+                  }}
+                >
+                  {d}
+                </Text>
               ))}
             </View>
             {/* Day grid */}
             {Array.from({ length: cells.length / 7 }).map((_, week) => (
-              <View key={week} style={{ flexDirection: "row", marginBottom: 2 }}>
+              <View
+                key={week}
+                style={{ flexDirection: "row", marginBottom: 2 }}
+              >
                 {cells.slice(week * 7, week * 7 + 7).map((day, i) => {
-                  const future  = !!day && isFuture(day);
-                  const sel     = !!day && !!isSel(day);
-                  const tod     = !!day && isTod(day);
+                  const future = !!day && isFuture(day);
+                  const sel = !!day && !!isSel(day);
+                  const tod = !!day && isTod(day);
                   return (
                     <TouchableOpacity
                       key={i}
-                      onPress={() => { if (day && !future) selectDay(day); }}
+                      onPress={() => {
+                        if (day && !future) selectDay(day);
+                      }}
                       activeOpacity={day && !future ? 0.7 : 1}
-                      style={{ flex: 1, height: 36, alignItems: "center", justifyContent: "center", borderRadius: 18, backgroundColor: sel ? COLORS.primary : tod ? `${COLORS.primary}18` : "transparent", opacity: future ? 0.3 : 1 }}
+                      style={{
+                        flex: 1,
+                        height: 36,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 18,
+                        backgroundColor: sel
+                          ? COLORS.primary
+                          : tod
+                            ? `${COLORS.primary}18`
+                            : "transparent",
+                        opacity: future ? 0.3 : 1,
+                      }}
                     >
                       {!!day && (
-                        <Text style={{ fontSize: 13, fontWeight: sel || tod ? "700" : "400", color: sel ? "#fff" : tod ? COLORS.primary : COLORS.text }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: sel || tod ? "700" : "400",
+                            color: sel
+                              ? "#fff"
+                              : tod
+                                ? COLORS.primary
+                                : COLORS.text,
+                          }}
+                        >
                           {day}
                         </Text>
                       )}
@@ -904,8 +2246,23 @@ function CalendarDatePicker({ label, required, value, onChange, maxDate }: {
                 })}
               </View>
             ))}
-            <TouchableOpacity onPress={() => setShow(false)} style={{ marginTop: 10, alignItems: "center", paddingVertical: 8 }}>
-              <Text style={{ fontSize: 14, fontWeight: "600", color: COLORS.textMuted }}>Cancel</Text>
+            <TouchableOpacity
+              onPress={() => setShow(false)}
+              style={{
+                marginTop: 10,
+                alignItems: "center",
+                paddingVertical: 8,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: COLORS.textMuted,
+                }}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -915,14 +2272,31 @@ function CalendarDatePicker({ label, required, value, onChange, maxDate }: {
 }
 
 /* Highlight the matched portion of a string */
-function HighlightText({ text, query, style }: { text: string; query: string; style?: any }) {
+function HighlightText({
+  text,
+  query,
+  style,
+}: {
+  text: string;
+  query: string;
+  style?: any;
+}) {
   if (!query.trim()) return <Text style={style}>{text}</Text>;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
   if (idx === -1) return <Text style={style}>{text}</Text>;
   return (
     <Text style={style}>
       {text.slice(0, idx)}
-      <Text style={[style, { backgroundColor: `${COLORS.primary}28`, color: COLORS.primary, fontWeight: "700" }]}>
+      <Text
+        style={[
+          style,
+          {
+            backgroundColor: `${COLORS.primary}28`,
+            color: COLORS.primary,
+            fontWeight: "700",
+          },
+        ]}
+      >
         {text.slice(idx, idx + query.length)}
       </Text>
       {text.slice(idx + query.length)}
@@ -931,9 +2305,17 @@ function HighlightText({ text, query, style }: { text: string; query: string; st
 }
 
 function DogDropdown({
-  label, required, selected, onSelect, onClear, mode, localOptions, sexFilter,
+  label,
+  required,
+  selected,
+  onSelect,
+  onClear,
+  mode,
+  localOptions,
+  sexFilter,
 }: {
-  label: string; required?: boolean;
+  label: string;
+  required?: boolean;
   selected: DogOption | null;
   onSelect: (d: DogOption) => void;
   onClear: () => void;
@@ -941,34 +2323,56 @@ function DogDropdown({
   localOptions?: DogOption[];
   sexFilter?: string;
 }) {
-  const [query, setQuery]         = useState("");
-  const [results, setResults]     = useState<DogOption[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<DogOption[]>([]);
   const [searching, setSearching] = useState(false);
-  const [open, setOpen]           = useState(false);
-  const debounceRef               = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const blurTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (mode === "local") {
       const opts = localOptions ?? [];
-      if (!query.trim()) { setResults(opts.slice(0, 50)); return; }
+      if (!query.trim()) {
+        setResults(opts.slice(0, 50));
+        return;
+      }
       const q = query.toLowerCase();
       setResults(
-        opts.filter(d =>
-          (d.name ?? "").toLowerCase().includes(q) ||
-          (d.KP  ?? "").toLowerCase().includes(q)
-        ).slice(0, 50)
+        opts
+          .filter(
+            (d) =>
+              (d.name ?? "").toLowerCase().includes(q) ||
+              (d.KP ?? "").toLowerCase().includes(q),
+          )
+          .slice(0, 50),
       );
     } else {
-      if (!query.trim() || query.length < 2) { setResults([]); return; }
+      if (!query.trim() || query.length < 2) {
+        setResults([]);
+        return;
+      }
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         setSearching(true);
         try {
           const dogs = await searchDogs(query, 1, 20, sexFilter);
-          setResults(dogs.map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, owner: d.owner, sex: d.sex, color: d.color })));
-        } catch { setResults([]); }
-        finally { setSearching(false); }
+          setResults(
+            dogs.map((d) => ({
+              id: d.id,
+              name: d.dog_name,
+              KP: d.KP,
+              foreign_reg_no: d.foreign_reg_no ?? null,
+              owner: d.owner,
+              sex: d.sex,
+              color: d.color,
+            })),
+          );
+        } catch {
+          setResults([]);
+        } finally {
+          setSearching(false);
+        }
       }, 350);
     }
   }, [query, mode, localOptions, sexFilter]);
@@ -987,42 +2391,88 @@ function DogDropdown({
     setQuery("");
   };
 
-  const isMale   = (s?: string | null) => (s ?? "").toLowerCase() === "male";
+  const isMale = (s?: string | null) => (s ?? "").toLowerCase() === "male";
   const isFemale = (s?: string | null) => (s ?? "").toLowerCase() === "female";
-  const sexBg    = (s?: string | null) => isMale(s) ? `${COLORS.primary}18` : isFemale(s) ? "#F3E8FF" : "#F1F5F9";
-  const sexIcon  = (s?: string | null): any => isMale(s) ? "male" : isFemale(s) ? "female" : "paw";
-  const sexColor = (s?: string | null) => isMale(s) ? COLORS.primary : isFemale(s) ? "#9333EA" : COLORS.textMuted;
+  const sexBg = (s?: string | null) =>
+    isMale(s) ? `${COLORS.primary}18` : isFemale(s) ? "#F3E8FF" : "#F1F5F9";
+  const sexIcon = (s?: string | null): any =>
+    isMale(s) ? "male" : isFemale(s) ? "female" : "paw";
+  const sexColor = (s?: string | null) =>
+    isMale(s) ? COLORS.primary : isFemale(s) ? "#9333EA" : COLORS.textMuted;
 
   const showPanel = open && !selected;
   const showResults = showPanel && results.length > 0;
   const showRemoteHint = showPanel && mode === "remote" && query.length === 0;
   const showKeepTyping = showPanel && mode === "remote" && query.length === 1;
-  const showNoResults  = showPanel && mode === "remote" && query.length >= 2 && !searching && results.length === 0;
-  const showLocalEmpty = showPanel && mode === "local" && !searching && results.length === 0;
+  const showNoResults =
+    showPanel &&
+    mode === "remote" &&
+    query.length >= 2 &&
+    !searching &&
+    results.length === 0;
+  const showLocalEmpty =
+    showPanel && mode === "local" && !searching && results.length === 0;
 
   if (selected) {
     return (
       <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>
-          {label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
+        <Text
+          style={{
+            fontSize: 13,
+            fontWeight: "600",
+            color: "#334155",
+            marginBottom: 5,
+          }}
+        >
+          {label}
+          {required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
         </Text>
-        <View style={{
-          flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.primary,
-          borderRadius: 10, padding: 10, backgroundColor: `${COLORS.primary}08`, gap: 10,
-        }}>
-          <View style={{
-            width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
-            backgroundColor: sexBg(selected.sex),
-          }}>
-            <Ionicons name={sexIcon(selected.sex)} size={16} color={sexColor(selected.sex)} />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: COLORS.primary,
+            borderRadius: 10,
+            padding: 10,
+            backgroundColor: `${COLORS.primary}08`,
+            gap: 10,
+          }}
+        >
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: sexBg(selected.sex),
+            }}
+          >
+            <Ionicons
+              name={sexIcon(selected.sex)}
+              size={16}
+              color={sexColor(selected.sex)}
+            />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.text }}>{selected.name}</Text>
-            <Text style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}>
-              {kpLabel(selected.KP, selected.foreign_reg_no)}{selected.color ? ` · ${selected.color}` : ""}
+            <Text
+              style={{ fontSize: 13, fontWeight: "700", color: COLORS.text }}
+            >
+              {selected.name}
+            </Text>
+            <Text
+              style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 1 }}
+            >
+              {kpLabel(selected.KP, selected.foreign_reg_no)}
+              {selected.color ? ` · ${selected.color}` : ""}
             </Text>
           </View>
-          <TouchableOpacity onPress={onClear} activeOpacity={0.7} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity
+            onPress={onClear}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Ionicons name="close-circle" size={22} color={COLORS.textMuted} />
           </TouchableOpacity>
         </View>
@@ -1032,134 +2482,275 @@ function DogDropdown({
 
   return (
     <View style={{ marginBottom: 12 }}>
-      <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 5 }}>
-        {label}{required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
+      <Text
+        style={{
+          fontSize: 13,
+          fontWeight: "600",
+          color: "#334155",
+          marginBottom: 5,
+        }}
+      >
+        {label}
+        {required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
       </Text>
 
       {/* Input row */}
-      <View style={{
-        flexDirection: "row", alignItems: "center", borderWidth: 1.5,
-        borderColor: open ? COLORS.primary : COLORS.border,
-        borderRadius: 10, paddingHorizontal: 10, backgroundColor: "#fff",
-        shadowColor: open ? COLORS.primary : "transparent",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: open ? 0.12 : 0,
-        shadowRadius: 4,
-        elevation: open ? 2 : 0,
-      }}>
-        <Ionicons name="search" size={15} color={open ? COLORS.primary : COLORS.textMuted} style={{ marginRight: 6 }} />
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          borderWidth: 1.5,
+          borderColor: open ? COLORS.primary : COLORS.border,
+          borderRadius: 10,
+          paddingHorizontal: 10,
+          backgroundColor: "#fff",
+          shadowColor: open ? COLORS.primary : "transparent",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: open ? 0.12 : 0,
+          shadowRadius: 4,
+          elevation: open ? 2 : 0,
+        }}
+      >
+        <Ionicons
+          name="search"
+          size={15}
+          color={open ? COLORS.primary : COLORS.textMuted}
+          style={{ marginRight: 6 }}
+        />
         <TextInput
-          style={{ flex: 1, fontSize: 13, color: COLORS.text, paddingVertical: 11 }}
+          style={{
+            flex: 1,
+            fontSize: 13,
+            color: COLORS.text,
+            paddingVertical: 11,
+          }}
           value={query}
           onChangeText={setQuery}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholder={mode === "local" ? "Search by name or KP…" : "Search GSDCP database…"}
+          placeholder={
+            mode === "local"
+              ? "Search by name or KP…"
+              : "Search GSDCP database…"
+          }
           placeholderTextColor={COLORS.textMuted}
           returnKeyType="search"
           autoCorrect={false}
           autoCapitalize="none"
         />
-        {searching
-          ? <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 4 }} />
-          : query.length > 0
-            ? <TouchableOpacity onPress={() => setQuery("")} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            : <Ionicons name={open ? "chevron-up" : "chevron-down"} size={14} color={COLORS.textMuted} />
-        }
+        {searching ? (
+          <ActivityIndicator
+            size="small"
+            color={COLORS.primary}
+            style={{ marginLeft: 4 }}
+          />
+        ) : query.length > 0 ? (
+          <TouchableOpacity
+            onPress={() => setQuery("")}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        ) : (
+          <Ionicons
+            name={open ? "chevron-up" : "chevron-down"}
+            size={14}
+            color={COLORS.textMuted}
+          />
+        )}
       </View>
 
       {/* Dropdown panel */}
       {showPanel && (
-        <View style={{
-          borderWidth: 1, borderColor: COLORS.border, borderRadius: 10,
-          marginTop: 4, backgroundColor: "#fff",
-          shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1, shadowRadius: 8, elevation: 6,
-          overflow: "hidden",
-        }}>
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: COLORS.border,
+            borderRadius: 10,
+            marginTop: 4,
+            backgroundColor: "#fff",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 6,
+            overflow: "hidden",
+          }}
+        >
           {/* Result count header */}
           {showResults && (
-            <View style={{
-              flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-              paddingHorizontal: 12, paddingVertical: 7,
-              borderBottomWidth: 1, borderBottomColor: COLORS.border,
-              backgroundColor: "#F8FAFC",
-            }}>
-              <Text style={{ fontSize: 11, color: COLORS.textMuted, fontWeight: "600" }}>
-                {results.length} {results.length === 1 ? "dog" : "dogs"}{mode === "local" && query ? " matched" : ""}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderBottomWidth: 1,
+                borderBottomColor: COLORS.border,
+                backgroundColor: "#F8FAFC",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: COLORS.textMuted,
+                  fontWeight: "600",
+                }}
+              >
+                {results.length} {results.length === 1 ? "dog" : "dogs"}
+                {mode === "local" && query ? " matched" : ""}
               </Text>
               {mode === "local" && !query && (
-                <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Your registered dogs</Text>
+                <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                  Your registered dogs
+                </Text>
               )}
             </View>
           )}
 
           {/* Results list */}
-          {showResults && results.map((dog, i) => (
-            <TouchableOpacity
-              key={dog.id}
-              onPress={() => handleSelect(dog)}
-              activeOpacity={0.65}
-              style={[
-                { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 11, gap: 10 },
-                i < results.length - 1 && { borderBottomWidth: 1, borderBottomColor: "#F1F5F9" },
-              ]}
-            >
-              <View style={{
-                width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
-                backgroundColor: sexBg(dog.sex),
-              }}>
-                <Ionicons name={sexIcon(dog.sex)} size={14} color={sexColor(dog.sex)} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <HighlightText
-                  text={dog.name ?? ""}
-                  query={query}
-                  style={{ fontSize: 13, fontWeight: "600", color: COLORS.text }}
-                />
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 1, flexWrap: "wrap" }}>
-                  <HighlightText
-                    text={kpLabel(dog.KP, dog.foreign_reg_no)}
-                    query={query}
-                    style={{ fontSize: 11, color: COLORS.textMuted }}
+          {showResults &&
+            results.map((dog, i) => (
+              <TouchableOpacity
+                key={dog.id}
+                onPress={() => handleSelect(dog)}
+                activeOpacity={0.65}
+                style={[
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: 12,
+                    paddingVertical: 11,
+                    gap: 10,
+                  },
+                  i < results.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: "#F1F5F9",
+                  },
+                ]}
+              >
+                <View
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: sexBg(dog.sex),
+                  }}
+                >
+                  <Ionicons
+                    name={sexIcon(dog.sex)}
+                    size={14}
+                    color={sexColor(dog.sex)}
                   />
-                  {dog.color ? <Text style={{ fontSize: 11, color: COLORS.textMuted }}>· {dog.color}</Text> : null}
-                  {dog.owner && mode === "remote" ? (
-                    <Text style={{ fontSize: 11, color: COLORS.textMuted }} numberOfLines={1}>· {dog.owner}</Text>
-                  ) : null}
                 </View>
-              </View>
-              <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
-            </TouchableOpacity>
-          ))}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <HighlightText
+                    text={dog.name ?? ""}
+                    query={query}
+                    style={{
+                      fontSize: 13,
+                      fontWeight: "600",
+                      color: COLORS.text,
+                    }}
+                  />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                      marginTop: 1,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <HighlightText
+                      text={kpLabel(dog.KP, dog.foreign_reg_no)}
+                      query={query}
+                      style={{ fontSize: 11, color: COLORS.textMuted }}
+                    />
+                    {dog.color ? (
+                      <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                        · {dog.color}
+                      </Text>
+                    ) : null}
+                    {dog.owner && mode === "remote" ? (
+                      <Text
+                        style={{ fontSize: 11, color: COLORS.textMuted }}
+                        numberOfLines={1}
+                      >
+                        · {dog.owner}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
+              </TouchableOpacity>
+            ))}
 
           {/* Hints / empty states inside the panel */}
           {showRemoteHint && (
             <View style={{ alignItems: "center", paddingVertical: 20, gap: 6 }}>
-              <Ionicons name="search-outline" size={28} color={COLORS.textMuted} />
-              <Text style={{ fontSize: 13, color: COLORS.textMuted, fontWeight: "600" }}>Search the GSDCP database</Text>
-              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Type a dog name or KP number</Text>
+              <Ionicons
+                name="search-outline"
+                size={28}
+                color={COLORS.textMuted}
+              />
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: COLORS.textMuted,
+                  fontWeight: "600",
+                }}
+              >
+                Search the GSDCP database
+              </Text>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                Type a dog name or KP number
+              </Text>
             </View>
           )}
           {showKeepTyping && (
             <View style={{ alignItems: "center", paddingVertical: 16, gap: 4 }}>
-              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Keep typing to search…</Text>
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
+                Keep typing to search…
+              </Text>
             </View>
           )}
           {showNoResults && (
             <View style={{ alignItems: "center", paddingVertical: 20, gap: 6 }}>
               <Ionicons name="paw-outline" size={28} color={COLORS.textMuted} />
-              <Text style={{ fontSize: 13, color: COLORS.textMuted, fontWeight: "600" }}>No dogs found</Text>
-              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Try a different name or KP</Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: COLORS.textMuted,
+                  fontWeight: "600",
+                }}
+              >
+                No dogs found
+              </Text>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                Try a different name or KP
+              </Text>
             </View>
           )}
           {showLocalEmpty && (
             <View style={{ alignItems: "center", paddingVertical: 20, gap: 6 }}>
               <Ionicons name="paw-outline" size={28} color={COLORS.textMuted} />
-              <Text style={{ fontSize: 13, color: COLORS.textMuted, fontWeight: "600" }}>No matching dogs</Text>
-              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>Try a different name or KP</Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: COLORS.textMuted,
+                  fontWeight: "600",
+                }}
+              >
+                No matching dogs
+              </Text>
+              <Text style={{ fontSize: 11, color: COLORS.textMuted }}>
+                Try a different name or KP
+              </Text>
             </View>
           )}
         </View>
@@ -1172,25 +2763,28 @@ function DogDropdown({
 function StudCertTab() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
-  const [showForm, setShowForm]         = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [selectedCertId, setSelectedCertId] = useState<string | null>(null);
-  const [submitting, setSubmitting]     = useState(false);
-  const [submitError, setSubmitError]   = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const [selectedSire, setSelectedSire]         = useState<DogOption | null>(null);
-  const [selectedDam,  setSelectedDam]          = useState<DogOption | null>(null);
-  const [sireVerifying, setSireVerifying]       = useState(false);
-  const [sireVerification, setSireVerification] = useState<SireVerification | null>(null);
-  const [sireVerifyError, setSireVerifyError]   = useState<string | null>(null);
-  const [damVerifying, setDamVerifying]         = useState(false);
-  const [damVerification, setDamVerification]   = useState<SireVerification | null>(null);
-  const [damVerifyError, setDamVerifyError]     = useState<string | null>(null);
+  const [selectedSire, setSelectedSire] = useState<DogOption | null>(null);
+  const [selectedDam, setSelectedDam] = useState<DogOption | null>(null);
+  const [sireVerifying, setSireVerifying] = useState(false);
+  const [sireVerification, setSireVerification] =
+    useState<SireVerification | null>(null);
+  const [sireVerifyError, setSireVerifyError] = useState<string | null>(null);
+  const [damVerifying, setDamVerifying] = useState(false);
+  const [damVerification, setDamVerification] =
+    useState<SireVerification | null>(null);
+  const [damVerifyError, setDamVerifyError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     dateOfMating: "",
   });
-  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+  const set = (key: keyof typeof form) => (v: string) =>
+    setForm((f) => ({ ...f, [key]: v }));
 
   const { data: memberDetail } = useQuery<MemberDetail>({
     queryKey: ["member-detail", user ? `member-${user.id}` : null],
@@ -1200,10 +2794,17 @@ function StudCertTab() {
   });
   const allOwnedDogs: MemberOwnedDog[] = memberDetail?.ownedDogs?.length
     ? memberDetail.ownedDogs
-    : (user?.myDogs as MemberOwnedDog[] ?? []);
+    : ((user?.myDogs as MemberOwnedDog[]) ?? []);
   const sireOptions: DogOption[] = allOwnedDogs
-    .filter(d => (d.sex ?? "").toLowerCase() === "male")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
+    .filter((d) => (d.sex ?? "").toLowerCase() === "male")
+    .map((d) => ({
+      id: d.id,
+      name: d.dog_name,
+      KP: d.KP,
+      foreign_reg_no: d.foreign_reg_no ?? null,
+      sex: d.sex,
+      color: d.color,
+    }));
 
   useEffect(() => {
     if (!selectedSire || !user) {
@@ -1216,10 +2817,19 @@ function StudCertTab() {
     setSireVerification(null);
     setSireVerifyError(null);
     verifySire(selectedSire.id, user.id)
-      .then(result => { if (!cancelled) setSireVerification(result); })
-      .catch(err  => { if (!cancelled) setSireVerifyError(err?.message ?? "Verification unavailable"); })
-      .finally(()  => { if (!cancelled) setSireVerifying(false); });
-    return () => { cancelled = true; };
+      .then((result) => {
+        if (!cancelled) setSireVerification(result);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setSireVerifyError(err?.message ?? "Verification unavailable");
+      })
+      .finally(() => {
+        if (!cancelled) setSireVerifying(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedSire?.id]);
 
   useEffect(() => {
@@ -1233,19 +2843,32 @@ function StudCertTab() {
     setDamVerification(null);
     setDamVerifyError(null);
     verifyDam(selectedDam.id, user.id, selectedSire?.id)
-      .then(result => { if (!cancelled) setDamVerification(result); })
-      .catch(err  => { if (!cancelled) setDamVerifyError(err?.message ?? "Verification unavailable"); })
-      .finally(()  => { if (!cancelled) setDamVerifying(false); });
-    return () => { cancelled = true; };
+      .then((result) => {
+        if (!cancelled) setDamVerification(result);
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setDamVerifyError(err?.message ?? "Verification unavailable");
+      })
+      .finally(() => {
+        if (!cancelled) setDamVerifying(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedDam?.id, selectedSire?.id]);
 
   const CERT_PER_PAGE = 10;
-  const [allCerts, setAllCerts]     = useState<StudCertificate[]>([]);
-  const [certTotal, setCertTotal]   = useState(0);
-  const [certPage, setCertPage]     = useState(1);
+  const [allCerts, setAllCerts] = useState<StudCertificate[]>([]);
+  const [certTotal, setCertTotal] = useState(0);
+  const [certPage, setCertPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data: page1Certs, isLoading: certsLoading, refetch } = useQuery({
+  const {
+    data: page1Certs,
+    isLoading: certsLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["stud-certificates", user?.id],
     queryFn: () => fetchStudCertificates(user!.id, 1, CERT_PER_PAGE),
     enabled: !!user,
@@ -1264,40 +2887,63 @@ function StudCertTab() {
     if (loadingMore || allCerts.length >= certTotal) return;
     setLoadingMore(true);
     try {
-      const res = await fetchStudCertificates(user!.id, certPage + 1, CERT_PER_PAGE);
-      setAllCerts(prev => [...prev, ...res.certificates]);
-      setCertPage(prev => prev + 1);
+      const res = await fetchStudCertificates(
+        user!.id,
+        certPage + 1,
+        CERT_PER_PAGE,
+      );
+      setAllCerts((prev) => [...prev, ...res.certificates]);
+      setCertPage((prev) => prev + 1);
     } finally {
       setLoadingMore(false);
     }
   };
 
-  const { data: certDetail, isLoading: detailLoading } = useQuery<StudCertificateDetail>({
-    queryKey: ["stud-certificate-detail", selectedCertId],
-    queryFn: () => fetchStudCertificateDetail(selectedCertId!, user!.id),
-    enabled: !!selectedCertId && !!user,
-    staleTime: 0,
-    refetchOnMount: "always",
-  });
+  const { data: certDetail, isLoading: detailLoading } =
+    useQuery<StudCertificateDetail>({
+      queryKey: ["stud-certificate-detail", selectedCertId],
+      queryFn: () => fetchStudCertificateDetail(selectedCertId!, user!.id),
+      enabled: !!selectedCertId && !!user,
+      staleTime: 0,
+      refetchOnMount: "always",
+    });
 
   const handleSubmit = async () => {
-    if (!selectedSire)                                   { setSubmitError("Stud (sire) dog is required."); return; }
-    if (sireVerification && !sireVerification.eligible) { setSubmitError(`Sire not eligible: ${sireVerification.message}`); return; }
-    if (!selectedDam)                                   { setSubmitError("Dam dog is required."); return; }
-    if (damVerification && !damVerification.eligible)   { setSubmitError(`Dam not eligible: ${damVerification.message}`); return; }
-    if (!form.dateOfMating.trim()) { setSubmitError("Date of mating is required."); return; }
+    if (!selectedSire) {
+      setSubmitError("Stud (sire) dog is required.");
+      return;
+    }
+    if (sireVerification && !sireVerification.eligible) {
+      setSubmitError(`Sire not eligible: ${sireVerification.message}`);
+      return;
+    }
+    if (!selectedDam) {
+      setSubmitError("Dam dog is required.");
+      return;
+    }
+    if (damVerification && !damVerification.eligible) {
+      setSubmitError(`Dam not eligible: ${damVerification.message}`);
+      return;
+    }
+    if (!form.dateOfMating.trim()) {
+      setSubmitError("Date of mating is required.");
+      return;
+    }
     setSubmitError("");
     setSubmitting(true);
     // Convert DD-MM-YYYY → YYYY-MM-DD for the API
     const [matDD, matMM, matYYYY] = form.dateOfMating.split("-");
     const matingApiDate = `${matYYYY}-${matMM}-${matDD}`;
     try {
-      await submitStudCertificate({
-        user_id:     user!.id,
-        sire_id:     parseInt(selectedSire.id.replace(/^dog-/, ""), 10),
-        dam_id:      parseInt(selectedDam.id.replace(/^dog-/, ""), 10),
-        mating_date: matingApiDate,
-      }, user!.token);
+      await submitStudCertificate(
+        {
+          user_id: user!.id,
+          sire_id: parseInt(selectedSire.id.replace(/^dog-/, ""), 10),
+          dam_id: parseInt(selectedDam.id.replace(/^dog-/, ""), 10),
+          mating_date: matingApiDate,
+        },
+        user!.token,
+      );
       setSelectedSire(null);
       setSelectedDam(null);
       setSireVerification(null);
@@ -1321,11 +2967,33 @@ function StudCertTab() {
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedCertId(null)} />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
           <Text style={styles.cardHeading}>Certificate Detail</Text>
           {certDetail && (
-            <View style={[tStyles.statusPill, { backgroundColor: certDetail.status === "Used" ? "#DCFCE7" : "#FEF9C3" }]}>
-              <Text style={[tStyles.statusPillText, { color: certDetail.status === "Used" ? "#166534" : "#854D0E" }]}>
+            <View
+              style={[
+                tStyles.statusPill,
+                {
+                  backgroundColor:
+                    certDetail.status === "Used" ? "#DCFCE7" : "#FEF9C3",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  tStyles.statusPillText,
+                  {
+                    color: certDetail.status === "Used" ? "#166534" : "#854D0E",
+                  },
+                ]}
+              >
                 {certDetail.status ?? "Pending"}
               </Text>
             </View>
@@ -1333,28 +3001,51 @@ function StudCertTab() {
         </View>
 
         {detailLoading ? (
-          <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
+          <ActivityIndicator
+            style={{ marginVertical: 32 }}
+            color={COLORS.primary}
+          />
         ) : certDetail ? (
           <>
             <FormSection title="SIRE" />
             <DogListItem
               dog={certDogToDog(certDetail.sire, "Male")}
-              onPress={() => navigation.push("DogProfile", { id: certDetail.sire.id, name: certDetail.sire.name })}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: certDetail.sire.id,
+                  name: certDetail.sire.name,
+                })
+              }
             />
             <View style={styles.divider} />
             <FormSection title="DAM" />
             <DogListItem
               dog={certDogToDog(certDetail.dam, "Female")}
-              onPress={() => navigation.push("DogProfile", { id: certDetail.dam.id, name: certDetail.dam.name })}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: certDetail.dam.id,
+                  name: certDetail.dam.name,
+                })
+              }
             />
             <View style={styles.divider} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="calendar-outline" size={16} color={COLORS.textMuted} />
-              <Text style={tStyles.certDate}>Mating date: {formatDate(certDetail.mating_date)}</Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={COLORS.textMuted}
+              />
+              <Text style={tStyles.certDate}>
+                Mating date: {formatDate(certDetail.mating_date)}
+              </Text>
             </View>
           </>
         ) : (
-          <Text style={tStyles.emptyRowText}>Could not load certificate details.</Text>
+          <Text style={tStyles.emptyRowText}>
+            Could not load certificate details.
+          </Text>
         )}
       </View>
     );
@@ -1364,12 +3055,18 @@ function StudCertTab() {
   if (showForm) {
     return (
       <View style={styles.card}>
-        <FormBackBtn onPress={() => {
-          setShowForm(false); setSubmitError("");
-          setSelectedSire(null); setSelectedDam(null);
-          setSireVerification(null); setSireVerifyError(null);
-          setDamVerification(null); setDamVerifyError(null);
-        }} />
+        <FormBackBtn
+          onPress={() => {
+            setShowForm(false);
+            setSubmitError("");
+            setSelectedSire(null);
+            setSelectedDam(null);
+            setSireVerification(null);
+            setSireVerifyError(null);
+            setDamVerification(null);
+            setDamVerifyError(null);
+          }}
+        />
         <Text style={styles.cardHeading}>New Stud Certificate</Text>
 
         <FormSection title="STUD (SIRE)" />
@@ -1380,39 +3077,85 @@ function StudCertTab() {
           localOptions={sireOptions}
           selected={selectedSire}
           onSelect={setSelectedSire}
-          onClear={() => { setSelectedSire(null); setSireVerification(null); setSireVerifyError(null); }}
+          onClear={() => {
+            setSelectedSire(null);
+            setSireVerification(null);
+            setSireVerifyError(null);
+          }}
         />
 
         {/* Sire verification status */}
-        {selectedSire && (
-          sireVerifying ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, marginTop: -4 }}>
+        {selectedSire &&
+          (sireVerifying ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+                marginTop: -4,
+              }}
+            >
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Verifying sire eligibility…</Text>
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
+                Verifying sire eligibility…
+              </Text>
             </View>
           ) : sireVerification ? (
-            <View style={{
-              flexDirection: "row", alignItems: "center", gap: 8,
-              marginBottom: 10, marginTop: -4,
-              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-              backgroundColor: sireVerification.eligible ? "#DCFCE7" : "#FEE2E2",
-            }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+                marginTop: -4,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 8,
+                backgroundColor: sireVerification.eligible
+                  ? "#DCFCE7"
+                  : "#FEE2E2",
+              }}
+            >
               <Ionicons
-                name={sireVerification.eligible ? "checkmark-circle" : "close-circle"}
+                name={
+                  sireVerification.eligible
+                    ? "checkmark-circle"
+                    : "close-circle"
+                }
                 size={16}
                 color={sireVerification.eligible ? "#16A34A" : "#DC2626"}
               />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: sireVerification.eligible ? "#166534" : "#991B1B", flex: 1 }}>
-                {sireVerification.eligible ? "Eligible" : "Not Eligible"}{sireVerification.message ? ` — ${sireVerification.message}` : ""}
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "600",
+                  color: sireVerification.eligible ? "#166534" : "#991B1B",
+                  flex: 1,
+                }}
+              >
+                {sireVerification.eligible ? "Eligible" : "Not Eligible"}
+                {sireVerification.message
+                  ? ` — ${sireVerification.message}`
+                  : ""}
               </Text>
             </View>
           ) : sireVerifyError ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, marginTop: -4 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 10,
+                marginTop: -4,
+              }}
+            >
               <Ionicons name="warning-outline" size={14} color="#D97706" />
-              <Text style={{ fontSize: 12, color: "#92400E" }}>Verification unavailable</Text>
+              <Text style={{ fontSize: 12, color: "#92400E" }}>
+                Verification unavailable
+              </Text>
             </View>
-          ) : null
-        )}
+          ) : null)}
 
         <View style={styles.divider} />
         <FormSection title="DAM (BITCH)" />
@@ -1423,43 +3166,90 @@ function StudCertTab() {
           sexFilter="Female"
           selected={selectedDam}
           onSelect={setSelectedDam}
-          onClear={() => { setSelectedDam(null); setDamVerification(null); setDamVerifyError(null); }}
+          onClear={() => {
+            setSelectedDam(null);
+            setDamVerification(null);
+            setDamVerifyError(null);
+          }}
         />
 
         {/* Dam verification status */}
-        {selectedDam && (
-          damVerifying ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, marginTop: -4 }}>
+        {selectedDam &&
+          (damVerifying ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+                marginTop: -4,
+              }}
+            >
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Verifying dam eligibility…</Text>
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
+                Verifying dam eligibility…
+              </Text>
             </View>
           ) : damVerification ? (
-            <View style={{
-              flexDirection: "row", alignItems: "center", gap: 8,
-              marginBottom: 10, marginTop: -4,
-              paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
-              backgroundColor: damVerification.eligible ? "#DCFCE7" : "#FEE2E2",
-            }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+                marginTop: -4,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 8,
+                backgroundColor: damVerification.eligible
+                  ? "#DCFCE7"
+                  : "#FEE2E2",
+              }}
+            >
               <Ionicons
-                name={damVerification.eligible ? "checkmark-circle" : "close-circle"}
+                name={
+                  damVerification.eligible ? "checkmark-circle" : "close-circle"
+                }
                 size={16}
                 color={damVerification.eligible ? "#16A34A" : "#DC2626"}
               />
-              <Text style={{ fontSize: 12, fontWeight: "600", color: damVerification.eligible ? "#166534" : "#991B1B", flex: 1 }}>
-                {damVerification.eligible ? "Eligible" : "Not Eligible"}{damVerification.message ? ` — ${damVerification.message}` : ""}
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "600",
+                  color: damVerification.eligible ? "#166534" : "#991B1B",
+                  flex: 1,
+                }}
+              >
+                {damVerification.eligible ? "Eligible" : "Not Eligible"}
+                {damVerification.message ? ` — ${damVerification.message}` : ""}
               </Text>
             </View>
           ) : damVerifyError ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, marginTop: -4 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 10,
+                marginTop: -4,
+              }}
+            >
               <Ionicons name="warning-outline" size={14} color="#D97706" />
-              <Text style={{ fontSize: 12, color: "#92400E" }}>Verification unavailable</Text>
+              <Text style={{ fontSize: 12, color: "#92400E" }}>
+                Verification unavailable
+              </Text>
             </View>
-          ) : null
-        )}
+          ) : null)}
 
         <View style={styles.divider} />
         <FormSection title="MATING DETAILS" />
-        <CalendarDatePicker label="Date of Mating" required value={form.dateOfMating} onChange={set("dateOfMating")} />
+        <CalendarDatePicker
+          label="Date of Mating"
+          required
+          value={form.dateOfMating}
+          onChange={set("dateOfMating")}
+        />
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
         <SubmitBtn
@@ -1480,13 +3270,28 @@ function StudCertTab() {
     <View style={styles.card}>
       <ListHeader title="Stud Certificates" onNew={() => setShowForm(true)} />
       {submitSuccess && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: "#DCFCE7",
+          }}
+        >
           <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
-          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>Stud certificate submitted successfully.</Text>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>
+            Stud certificate submitted successfully.
+          </Text>
         </View>
       )}
       {certsLoading ? (
-        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+        <ActivityIndicator
+          style={{ marginVertical: 24 }}
+          color={COLORS.primary}
+        />
       ) : allCerts.length === 0 ? (
         <View style={tStyles.emptyRow}>
           <Ionicons name="ribbon-outline" size={20} color={COLORS.textMuted} />
@@ -1497,38 +3302,82 @@ function StudCertTab() {
           {allCerts.map((c, i) => (
             <TouchableOpacity
               key={c.id}
-              style={[tStyles.certRow, i < allCerts.length - 1 && tStyles.certRowBorder]}
+              style={[
+                tStyles.certRow,
+                i < allCerts.length - 1 && tStyles.certRowBorder,
+              ]}
               onPress={() => setSelectedCertId(c.id)}
               activeOpacity={0.7}
             >
               <View style={{ flex: 1, gap: 2 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
                   <Ionicons name="male" size={12} color={COLORS.primary} />
-                  <Text style={tStyles.certSire} numberOfLines={1}>{c.sire.name}</Text>
+                  <Text style={tStyles.certSire} numberOfLines={1}>
+                    {c.sire.name}
+                  </Text>
                 </View>
-                <Text style={tStyles.certKP} numberOfLines={1}>KP {c.sire.KP}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                <Text style={tStyles.certKP} numberOfLines={1}>
+                  KP {c.sire.KP}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 4,
+                  }}
+                >
                   <Ionicons name="female" size={12} color="#9333EA" />
-                  <Text style={tStyles.certDam} numberOfLines={1}>{c.dam.name}</Text>
+                  <Text style={tStyles.certDam} numberOfLines={1}>
+                    {c.dam.name}
+                  </Text>
                 </View>
-                <Text style={tStyles.certKP} numberOfLines={1}>KP {c.dam.KP}</Text>
+                <Text style={tStyles.certKP} numberOfLines={1}>
+                  KP {c.dam.KP}
+                </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
-                <View style={[tStyles.statusPill, { backgroundColor: c.status === "Used" ? "#DCFCE7" : "#FEF9C3" }]}>
-                  <Text style={[tStyles.statusPillText, { color: c.status === "Used" ? "#166534" : "#854D0E" }]}>
+                <View
+                  style={[
+                    tStyles.statusPill,
+                    {
+                      backgroundColor:
+                        c.status === "Used" ? "#DCFCE7" : "#FEF9C3",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      tStyles.statusPillText,
+                      { color: c.status === "Used" ? "#166534" : "#854D0E" },
+                    ]}
+                  >
                     {c.status ?? "Pending"}
                   </Text>
                 </View>
-                <Text style={tStyles.certDate}>{formatDate(c.mating_date)}</Text>
+                <Text style={tStyles.certDate}>
+                  {formatDate(c.mating_date)}
+                </Text>
                 <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
               </View>
             </TouchableOpacity>
           ))}
           {allCerts.length < certTotal && (
-            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMoreCerts} disabled={loadingMore} activeOpacity={0.7}>
-              {loadingMore
-                ? <ActivityIndicator size="small" color={COLORS.primary} />
-                : <Text style={tStyles.loadMoreText}>Load more ({certTotal - allCerts.length} remaining)</Text>}
+            <TouchableOpacity
+              style={tStyles.loadMoreBtn}
+              onPress={loadMoreCerts}
+              disabled={loadingMore}
+              activeOpacity={0.7}
+            >
+              {loadingMore ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text style={tStyles.loadMoreText}>
+                  Load more ({certTotal - allCerts.length} remaining)
+                </Text>
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -1537,25 +3386,29 @@ function StudCertTab() {
   );
 }
 
-/* ── Tab: Litter Inspection ─────────────────────────── */
+/* ── Tab: Litter Inspection ──────────────────────")�──── */
 function LitterInspectionTab() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
-  const [showForm, setShowForm]           = useState(false);
-  const [selectedId, setSelectedId]       = useState<string | null>(null);
-  const [submitting, setSubmitting]       = useState(false);
-  const [submitError, setSubmitError]     = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [inspSire, setInspSire]           = useState<DogOption | null>(null);
-  const [inspDam,  setInspDam]            = useState<DogOption | null>(null);
-  const [certCheck, setCertCheck]         = useState<CertificateCheck | null>(null);
-  const [certChecking, setCertChecking]   = useState(false);
+  const [inspSire, setInspSire] = useState<DogOption | null>(null);
+  const [inspDam, setInspDam] = useState<DogOption | null>(null);
+  const [certCheck, setCertCheck] = useState<CertificateCheck | null>(null);
+  const [certChecking, setCertChecking] = useState(false);
   const [certCheckError, setCertCheckError] = useState<string | null>(null);
   const [form, setForm] = useState({
     dateOfWhelping: "",
-    totalPups: "", malePups: "", femalePups: "", deadPups: "",
+    totalPups: "",
+    malePups: "",
+    femalePups: "",
+    deadPups: "",
   });
-  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
+  const set = (key: keyof typeof form) => (v: string) =>
+    setForm((f) => ({ ...f, [key]: v }));
 
   const { data: inspMemberDetail } = useQuery<MemberDetail>({
     queryKey: ["member-detail", user ? `member-${user.id}` : null],
@@ -1565,18 +3418,30 @@ function LitterInspectionTab() {
   });
   const allInspOwnedDogs: MemberOwnedDog[] = inspMemberDetail?.ownedDogs?.length
     ? inspMemberDetail.ownedDogs
-    : (user?.myDogs as MemberOwnedDog[] ?? []);
+    : ((user?.myDogs as MemberOwnedDog[]) ?? []);
   const damOptions: DogOption[] = allInspOwnedDogs
-    .filter(d => (d.sex ?? "").toLowerCase() === "female")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
+    .filter((d) => (d.sex ?? "").toLowerCase() === "female")
+    .map((d) => ({
+      id: d.id,
+      name: d.dog_name,
+      KP: d.KP,
+      foreign_reg_no: d.foreign_reg_no ?? null,
+      sex: d.sex,
+      color: d.color,
+    }));
 
   const INSP_PER_PAGE = 10;
   const [allInspections, setAllInspections] = useState<LitterInspection[]>([]);
-  const [inspTotal, setInspTotal]           = useState(0);
-  const [inspPage, setInspPage]             = useState(1);
+  const [inspTotal, setInspTotal] = useState(0);
+  const [inspPage, setInspPage] = useState(1);
   const [loadingMoreInsp, setLoadingMoreInsp] = useState(false);
 
-  const { data: page1Insp, isLoading, error: listError, refetch } = useQuery({
+  const {
+    data: page1Insp,
+    isLoading,
+    error: listError,
+    refetch,
+  } = useQuery({
     queryKey: ["litter-inspections", user?.id],
     queryFn: () => fetchLitterInspections(user!.id, 1, INSP_PER_PAGE),
     enabled: !!user,
@@ -1602,49 +3467,82 @@ function LitterInspectionTab() {
     setCertCheck(null);
     setCertCheckError(null);
     checkLitterCertificate(inspSire.id, inspDam.id, user?.id)
-      .then(result => { if (!cancelled) setCertCheck(result); })
-      .catch(err   => { if (!cancelled) setCertCheckError(err?.message ?? "Check unavailable"); })
-      .finally(()  => { if (!cancelled) setCertChecking(false); });
-    return () => { cancelled = true; };
+      .then((result) => {
+        if (!cancelled) setCertCheck(result);
+      })
+      .catch((err) => {
+        if (!cancelled) setCertCheckError(err?.message ?? "Check unavailable");
+      })
+      .finally(() => {
+        if (!cancelled) setCertChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [inspSire?.id, inspDam?.id]);
 
   const loadMoreInspections = async () => {
     if (loadingMoreInsp || allInspections.length >= inspTotal) return;
     setLoadingMoreInsp(true);
     try {
-      const res = await fetchLitterInspections(user!.id, inspPage + 1, INSP_PER_PAGE);
-      setAllInspections(prev => [...prev, ...res.inspections]);
-      setInspPage(prev => prev + 1);
+      const res = await fetchLitterInspections(
+        user!.id,
+        inspPage + 1,
+        INSP_PER_PAGE,
+      );
+      setAllInspections((prev) => [...prev, ...res.inspections]);
+      setInspPage((prev) => prev + 1);
     } finally {
       setLoadingMoreInsp(false);
     }
   };
 
-  const { data: detail, isLoading: detailLoading } = useQuery<LitterInspectionDetail>({
-    queryKey: ["litter-inspection-detail", selectedId],
-    queryFn: () => fetchLitterInspectionDetail(selectedId!, user!.id),
-    enabled: !!selectedId && !!user,
-    staleTime: 0,
-    refetchOnMount: "always",
-  });
+  const { data: detail, isLoading: detailLoading } =
+    useQuery<LitterInspectionDetail>({
+      queryKey: ["litter-inspection-detail", selectedId],
+      queryFn: () => fetchLitterInspectionDetail(selectedId!, user!.id),
+      enabled: !!selectedId && !!user,
+      staleTime: 0,
+      refetchOnMount: "always",
+    });
 
   const setNum = (key: keyof typeof form) => (v: string) =>
-    setForm(f => ({ ...f, [key]: v.replace(/[^0-9]/g, "") }));
+    setForm((f) => ({ ...f, [key]: v.replace(/[^0-9]/g, "") }));
 
-  const totalVal  = parseInt(form.totalPups)  || 0;
-  const maleVal   = parseInt(form.malePups)   || 0;
+  const totalVal = parseInt(form.totalPups) || 0;
+  const maleVal = parseInt(form.malePups) || 0;
   const femaleVal = parseInt(form.femalePups) || 0;
-  const deadVal   = parseInt(form.deadPups)   || 0;
-  const puppySum  = maleVal + femaleVal + deadVal;
+  const deadVal = parseInt(form.deadPups) || 0;
+  const puppySum = maleVal + femaleVal + deadVal;
   const puppyMismatch = form.totalPups.trim() !== "" && totalVal !== puppySum;
 
   const handleSubmit = async () => {
-    if (!inspSire)                   { setSubmitError("Sire dog is required."); return; }
-    if (!inspDam)                    { setSubmitError("Dam dog is required."); return; }
-    if (!form.dateOfWhelping.trim()) { setSubmitError("Whelping date is required."); return; }
-    if (!form.malePups.trim())       { setSubmitError("Number of male puppies is required."); return; }
-    if (!form.femalePups.trim())     { setSubmitError("Number of female puppies is required."); return; }
-    if (puppyMismatch)               { setSubmitError(`Total (${totalVal}) must equal Male + Female + Expired (${puppySum}).`); return; }
+    if (!inspSire) {
+      setSubmitError("Sire dog is required.");
+      return;
+    }
+    if (!inspDam) {
+      setSubmitError("Dam dog is required.");
+      return;
+    }
+    if (!form.dateOfWhelping.trim()) {
+      setSubmitError("Whelping date is required.");
+      return;
+    }
+    if (!form.malePups.trim()) {
+      setSubmitError("Number of male puppies is required.");
+      return;
+    }
+    if (!form.femalePups.trim()) {
+      setSubmitError("Number of female puppies is required.");
+      return;
+    }
+    if (puppyMismatch) {
+      setSubmitError(
+        `Total (${totalVal}) must equal Male + Female + Expired (${puppySum}).`,
+      );
+      return;
+    }
     setSubmitError("");
     setSubmitting(true);
     const today = new Date().toISOString().split("T")[0];
@@ -1653,25 +3551,31 @@ function LitterInspectionTab() {
     const whelpingApiDate = `${yyyy}-${mm}-${dd}`;
     try {
       await submitLitterInspection({
-        user_id:            user!.id,
-        sire_id:            parseInt(inspSire.id.replace(/^dog-/, ""), 10),
-        dam_id:             parseInt(inspDam.id.replace(/^dog-/, ""), 10),
-        sire_name:          inspSire.name,
-        sire_kp:            inspSire.KP,
-        dam_name:           inspDam.name,
-        dam_kp:             inspDam.KP,
-        date_of_whelping:   whelpingApiDate,
+        user_id: user!.id,
+        sire_id: parseInt(inspSire.id.replace(/^dog-/, ""), 10),
+        dam_id: parseInt(inspDam.id.replace(/^dog-/, ""), 10),
+        sire_name: inspSire.name,
+        sire_kp: inspSire.KP,
+        dam_name: inspDam.name,
+        dam_kp: inspDam.KP,
+        date_of_whelping: whelpingApiDate,
         date_of_inspection: today,
-        total_puppies:      form.totalPups.trim() || undefined,
-        male_pups:          form.malePups.trim(),
-        female_pups:        form.femalePups.trim(),
-        dead_pups:          form.deadPups.trim() || "0",
-        inspector_name:     "",
-        remarks:            "",
+        total_puppies: form.totalPups.trim() || undefined,
+        male_pups: form.malePups.trim(),
+        female_pups: form.femalePups.trim(),
+        dead_pups: form.deadPups.trim() || "0",
+        inspector_name: "",
+        remarks: "",
       });
       setInspSire(null);
       setInspDam(null);
-      setForm({ dateOfWhelping: "", totalPups: "", malePups: "", femalePups: "", deadPups: "" });
+      setForm({
+        dateOfWhelping: "",
+        totalPups: "",
+        malePups: "",
+        femalePups: "",
+        deadPups: "",
+      });
       setShowForm(false);
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 5000);
@@ -1689,11 +3593,33 @@ function LitterInspectionTab() {
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedId(null)} />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
           <Text style={styles.cardHeading}>Litter Inspection</Text>
           {detail && (
-            <View style={[tStyles.statusPill, { backgroundColor: detail.status === "Approved" ? "#DCFCE7" : "#FEF9C3" }]}>
-              <Text style={[tStyles.statusPillText, { color: detail.status === "Approved" ? "#166534" : "#854D0E" }]}>
+            <View
+              style={[
+                tStyles.statusPill,
+                {
+                  backgroundColor:
+                    detail.status === "Approved" ? "#DCFCE7" : "#FEF9C3",
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  tStyles.statusPillText,
+                  {
+                    color: detail.status === "Approved" ? "#166534" : "#854D0E",
+                  },
+                ]}
+              >
                 {detail.status ?? "Pending"}
               </Text>
             </View>
@@ -1701,45 +3627,82 @@ function LitterInspectionTab() {
         </View>
 
         {detailLoading ? (
-          <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
+          <ActivityIndicator
+            style={{ marginVertical: 32 }}
+            color={COLORS.primary}
+          />
         ) : detail ? (
           <>
             <FormSection title="SIRE" />
             <DogListItem
               dog={certDogToDog(detail.sire, "Male")}
-              onPress={() => navigation.push("DogProfile", { id: detail.sire.id, name: detail.sire.name })}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: detail.sire.id,
+                  name: detail.sire.name,
+                })
+              }
             />
             <View style={styles.divider} />
             <FormSection title="DAM" />
             <DogListItem
               dog={certDogToDog(detail.dam, "Female")}
-              onPress={() => navigation.push("DogProfile", { id: detail.dam.id, name: detail.dam.name })}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: detail.dam.id,
+                  name: detail.dam.name,
+                })
+              }
             />
             <View style={styles.divider} />
 
             {/* Pup counts */}
             <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
               {[
-                { label: "Male", value: detail.male_puppies, color: COLORS.primary },
-                { label: "Female", value: detail.female_puppies, color: "#9333EA" },
-                { label: "Expired", value: detail.expired_puppies, color: "#EF4444" },
+                {
+                  label: "Male",
+                  value: detail.male_puppies,
+                  color: COLORS.primary,
+                },
+                {
+                  label: "Female",
+                  value: detail.female_puppies,
+                  color: "#9333EA",
+                },
+                {
+                  label: "Expired",
+                  value: detail.expired_puppies,
+                  color: "#EF4444",
+                },
               ].map(({ label, value, color }) => (
                 <View key={label} style={tStyles.pupCountBox}>
-                  <Text style={[tStyles.pupCountNum, { color }]}>{value ?? "—"}</Text>
+                  <Text style={[tStyles.pupCountNum, { color }]}>
+                    {value ?? "—"}
+                  </Text>
                   <Text style={tStyles.pupCountLabel}>{label}</Text>
                 </View>
               ))}
             </View>
 
             {detail.whelping_date && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Whelped: {formatDate(detail.whelping_date)}</Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={15}
+                  color={COLORS.textMuted}
+                />
+                <Text style={tStyles.certDate}>
+                  Whelped: {formatDate(detail.whelping_date)}
+                </Text>
               </View>
             )}
           </>
         ) : (
-          <Text style={tStyles.emptyRowText}>Could not load inspection details.</Text>
+          <Text style={tStyles.emptyRowText}>
+            Could not load inspection details.
+          </Text>
         )}
       </View>
     );
@@ -1749,12 +3712,18 @@ function LitterInspectionTab() {
   if (showForm) {
     return (
       <View style={styles.card}>
-        <FormBackBtn onPress={() => { setShowForm(false); setSubmitError(""); }} />
+        <FormBackBtn
+          onPress={() => {
+            setShowForm(false);
+            setSubmitError("");
+          }}
+        />
         <Text style={styles.cardHeading}>New Litter Inspection</Text>
 
         <FormSection title="SIRE" />
         <DogDropdown
-          label="Sire Dog" required
+          label="Sire Dog"
+          required
           mode="remote"
           sexFilter="male"
           selected={inspSire}
@@ -1765,7 +3734,8 @@ function LitterInspectionTab() {
         <View style={styles.divider} />
         <FormSection title="DAM" />
         <DogDropdown
-          label="Dam Dog" required
+          label="Dam Dog"
+          required
           mode="local"
           localOptions={damOptions}
           selected={inspDam}
@@ -1774,64 +3744,165 @@ function LitterInspectionTab() {
         />
 
         {/* Stud certificate check banner */}
-        {inspSire && inspDam && (
-          certChecking ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, padding: 10, borderRadius: 8, backgroundColor: "#F1F5F9" }}>
+        {inspSire &&
+          inspDam &&
+          (certChecking ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+                padding: 10,
+                borderRadius: 8,
+                backgroundColor: "#F1F5F9",
+              }}
+            >
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>Checking stud certificate…</Text>
+              <Text style={{ fontSize: 12, color: COLORS.textMuted }}>
+                Checking stud certificate…
+              </Text>
             </View>
           ) : certCheck ? (
-            <View style={{
-              flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10,
-              padding: 10, borderRadius: 8,
-              backgroundColor: certCheck.found ? "#DCFCE7" : "#FEE2E2",
-            }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+                padding: 10,
+                borderRadius: 8,
+                backgroundColor: certCheck.found ? "#DCFCE7" : "#FEE2E2",
+              }}
+            >
               <Ionicons
                 name={certCheck.found ? "checkmark-circle" : "close-circle"}
                 size={16}
                 color={certCheck.found ? "#16A34A" : "#DC2626"}
               />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: "700", color: certCheck.found ? "#166534" : "#991B1B" }}>
-                  {certCheck.found ? "Stud Certificate Found" : "No Stud Certificate"}
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: certCheck.found ? "#166534" : "#991B1B",
+                  }}
+                >
+                  {certCheck.found
+                    ? "Stud Certificate Found"
+                    : "No Stud Certificate"}
                 </Text>
                 {certCheck.found && certCheck.matingDate ? (
-                  <Text style={{ fontSize: 11, color: "#166534", marginTop: 1 }}>Mating date: {certCheck.matingDate}</Text>
+                  <Text
+                    style={{ fontSize: 11, color: "#166534", marginTop: 1 }}
+                  >
+                    Mating date: {certCheck.matingDate}
+                  </Text>
                 ) : certCheck.found && !certCheck.matingDate ? (
-                  <Text style={{ fontSize: 11, color: "#166534", marginTop: 1 }}>{certCheck.message}</Text>
+                  <Text
+                    style={{ fontSize: 11, color: "#166534", marginTop: 1 }}
+                  >
+                    {certCheck.message}
+                  </Text>
                 ) : !certCheck.found ? (
-                  <Text style={{ fontSize: 11, color: "#991B1B", marginTop: 1 }}>{certCheck.message}</Text>
+                  <Text
+                    style={{ fontSize: 11, color: "#991B1B", marginTop: 1 }}
+                  >
+                    {certCheck.message}
+                  </Text>
                 ) : null}
               </View>
             </View>
           ) : certCheckError ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, padding: 10, borderRadius: 8, backgroundColor: "#FFFBEB" }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 10,
+                padding: 10,
+                borderRadius: 8,
+                backgroundColor: "#FFFBEB",
+              }}
+            >
               <Ionicons name="warning-outline" size={14} color="#D97706" />
-              <Text style={{ fontSize: 12, color: "#92400E" }}>Certificate check unavailable</Text>
+              <Text style={{ fontSize: 12, color: "#92400E" }}>
+                Certificate check unavailable
+              </Text>
             </View>
-          ) : null
-        )}
+          ) : null)}
 
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
-        <CalendarDatePicker label="Whelping Date" required value={form.dateOfWhelping} onChange={set("dateOfWhelping")} />
-        <FormField label="Total No. of Puppies (Born)" value={form.totalPups} onChangeText={setNum("totalPups")} placeholder="0" keyboardType="number-pad" />
+        <CalendarDatePicker
+          label="Whelping Date"
+          required
+          value={form.dateOfWhelping}
+          onChange={set("dateOfWhelping")}
+        />
+        <FormField
+          label="Total No. of Puppies (Born)"
+          value={form.totalPups}
+          onChangeText={setNum("totalPups")}
+          placeholder="0"
+          keyboardType="number-pad"
+        />
         {puppyMismatch && (
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10, marginTop: -6, paddingHorizontal: 4 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 10,
+              marginTop: -6,
+              paddingHorizontal: 4,
+            }}
+          >
             <Ionicons name="warning-outline" size={13} color="#D97706" />
-            <Text style={{ fontSize: 12, color: "#92400E" }}>Total must equal Male + Female + Expired ({puppySum})</Text>
+            <Text style={{ fontSize: 12, color: "#92400E" }}>
+              Total must equal Male + Female + Expired ({puppySum})
+            </Text>
           </View>
         )}
         <View style={fStyles.row}>
-          <View style={{ flex: 1 }}><FormField label="Male (Alive)"   value={form.malePups}   onChangeText={setNum("malePups")}   placeholder="0" keyboardType="number-pad" required /></View>
+          <View style={{ flex: 1 }}>
+            <FormField
+              label="Male (Alive)"
+              value={form.malePups}
+              onChangeText={setNum("malePups")}
+              placeholder="0"
+              keyboardType="number-pad"
+              required
+            />
+          </View>
           <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Female (Alive)" value={form.femalePups} onChangeText={setNum("femalePups")} placeholder="0" keyboardType="number-pad" required /></View>
+          <View style={{ flex: 1 }}>
+            <FormField
+              label="Female (Alive)"
+              value={form.femalePups}
+              onChangeText={setNum("femalePups")}
+              placeholder="0"
+              keyboardType="number-pad"
+              required
+            />
+          </View>
           <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}><FormField label="Expired"        value={form.deadPups}   onChangeText={setNum("deadPups")}   placeholder="0" keyboardType="number-pad" /></View>
+          <View style={{ flex: 1 }}>
+            <FormField
+              label="Expired"
+              value={form.deadPups}
+              onChangeText={setNum("deadPups")}
+              placeholder="0"
+              keyboardType="number-pad"
+            />
+          </View>
         </View>
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
-        <SubmitBtn label={submitting ? "Submitting…" : "Submit Litter Inspection"} onPress={handleSubmit} />
+        <SubmitBtn
+          label={submitting ? "Submitting…" : "Submit Litter Inspection"}
+          onPress={handleSubmit}
+        />
       </View>
     );
   }
@@ -1841,17 +3912,34 @@ function LitterInspectionTab() {
     <View style={styles.card}>
       <ListHeader title="Litter Inspections" onNew={() => setShowForm(true)} />
       {submitSuccess && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: "#DCFCE7",
+          }}
+        >
           <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
-          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>Litter inspection submitted successfully.</Text>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>
+            Litter inspection submitted successfully.
+          </Text>
         </View>
       )}
       {isLoading ? (
-        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+        <ActivityIndicator
+          style={{ marginVertical: 24 }}
+          color={COLORS.primary}
+        />
       ) : listError ? (
         <View style={tStyles.emptyRow}>
           <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-          <Text style={[tStyles.emptyRowText, { color: "#EF4444" }]}>Could not load inspections</Text>
+          <Text style={[tStyles.emptyRowText, { color: "#EF4444" }]}>
+            Could not load inspections
+          </Text>
         </View>
       ) : allInspections.length === 0 ? (
         <View style={tStyles.emptyRow}>
@@ -1861,33 +3949,80 @@ function LitterInspectionTab() {
       ) : (
         <View style={tStyles.certList}>
           {allInspections.map((item, i) => {
-            const totalPups = item.total_puppies ?? ((Number(item.male_puppies) || 0) + (Number(item.female_puppies) || 0));
+            const totalPups =
+              item.total_puppies ??
+              (Number(item.male_puppies) || 0) +
+                (Number(item.female_puppies) || 0);
             return (
               <TouchableOpacity
                 key={item.id}
-                style={[tStyles.certRow, i < allInspections.length - 1 && tStyles.certRowBorder]}
+                style={[
+                  tStyles.certRow,
+                  i < allInspections.length - 1 && tStyles.certRowBorder,
+                ]}
                 onPress={() => setSelectedId(item.id)}
                 activeOpacity={0.7}
               >
                 <View style={{ flex: 1, gap: 2 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
                     <Ionicons name="male" size={12} color={COLORS.primary} />
-                    <Text style={tStyles.certSire} numberOfLines={1}>{item.sire.name}</Text>
+                    <Text style={tStyles.certSire} numberOfLines={1}>
+                      {item.sire.name}
+                    </Text>
                   </View>
-                  <Text style={tStyles.certKP} numberOfLines={1}>KP {item.sire.KP}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                  <Text style={tStyles.certKP} numberOfLines={1}>
+                    KP {item.sire.KP}
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 4,
+                    }}
+                  >
                     <Ionicons name="female" size={12} color="#9333EA" />
-                    <Text style={tStyles.certDam} numberOfLines={1}>{item.dam.name}</Text>
+                    <Text style={tStyles.certDam} numberOfLines={1}>
+                      {item.dam.name}
+                    </Text>
                   </View>
-                  <Text style={tStyles.certKP} numberOfLines={1}>KP {item.dam.KP}</Text>
+                  <Text style={tStyles.certKP} numberOfLines={1}>
+                    KP {item.dam.KP}
+                  </Text>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
-                  <View style={[tStyles.statusPill, { backgroundColor: item.status === "Approved" ? "#DCFCE7" : "#FEF9C3" }]}>
-                    <Text style={[tStyles.statusPillText, { color: item.status === "Approved" ? "#166534" : "#854D0E" }]}>
+                  <View
+                    style={[
+                      tStyles.statusPill,
+                      {
+                        backgroundColor:
+                          item.status === "Approved" ? "#DCFCE7" : "#FEF9C3",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        tStyles.statusPillText,
+                        {
+                          color:
+                            item.status === "Approved" ? "#166534" : "#854D0E",
+                        },
+                      ]}
+                    >
                       {item.status ?? "Pending"}
                     </Text>
                   </View>
-                  {item.whelping_date && <Text style={tStyles.certDate}>{formatDate(item.whelping_date)}</Text>}
+                  {item.whelping_date && (
+                    <Text style={tStyles.certDate}>
+                      {formatDate(item.whelping_date)}
+                    </Text>
+                  )}
                   <Text style={tStyles.certKP}>{totalPups} pups</Text>
                   <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
                 </View>
@@ -1895,10 +4030,19 @@ function LitterInspectionTab() {
             );
           })}
           {allInspections.length < inspTotal && (
-            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMoreInspections} disabled={loadingMoreInsp} activeOpacity={0.7}>
-              {loadingMoreInsp
-                ? <ActivityIndicator size="small" color={COLORS.primary} />
-                : <Text style={tStyles.loadMoreText}>Load more ({inspTotal - allInspections.length} remaining)</Text>}
+            <TouchableOpacity
+              style={tStyles.loadMoreBtn}
+              onPress={loadMoreInspections}
+              disabled={loadingMoreInsp}
+              activeOpacity={0.7}
+            >
+              {loadingMoreInsp ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text style={tStyles.loadMoreText}>
+                  Load more ({inspTotal - allInspections.length} remaining)
+                </Text>
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -1911,27 +4055,37 @@ function LitterInspectionTab() {
 function LitterRegistrationTab() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
-  const [showForm, setShowForm]         = useState(false);
-  const [selectedId, setSelectedId]     = useState<string | null>(null);
-  const [submitting, setSubmitting]     = useState(false);
-  const [submitError, setSubmitError]   = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [regSire, setRegSire]           = useState<DogOption | null>(null);
-  const [regDam,  setRegDam]            = useState<DogOption | null>(null);
+  const [regSire, setRegSire] = useState<DogOption | null>(null);
+  const [regDam, setRegDam] = useState<DogOption | null>(null);
   const [dateOfWhelping, setDateOfWhelping] = useState("");
-  const [inspCheck, setInspCheck]       = useState<LitterInspectionCheck | null>(null);
+  const [inspCheck, setInspCheck] = useState<LitterInspectionCheck | null>(
+    null,
+  );
   const [inspChecking, setInspChecking] = useState(false);
   const [inspCheckError, setInspCheckError] = useState("");
-  const [puppies, setPuppies] = useState<{ name: string; sex: string; color: string }[]>([
-    { name: "", sex: "Male", color: "" },
-  ]);
+  const [puppies, setPuppies] = useState<
+    { name: string; sex: string; color: string }[]
+  >([{ name: "", sex: "Male", color: "" }]);
   const updatePuppy = (idx: number, field: string, val: string) =>
-    setPuppies(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p));
-  const addPuppy    = () => setPuppies(prev => [...prev, { name: "", sex: "Male", color: "" }]);
-  const removePuppy = (idx: number) => setPuppies(prev => prev.filter((_, i) => i !== idx));
+    setPuppies((prev) =>
+      prev.map((p, i) => (i === idx ? { ...p, [field]: val } : p)),
+    );
+  const addPuppy = () =>
+    setPuppies((prev) => [...prev, { name: "", sex: "Male", color: "" }]);
+  const removePuppy = (idx: number) =>
+    setPuppies((prev) => prev.filter((_, i) => i !== idx));
 
   useEffect(() => {
-    if (!regSire || !regDam || !dateOfWhelping) { setInspCheck(null); setInspCheckError(""); return; }
+    if (!regSire || !regDam || !dateOfWhelping) {
+      setInspCheck(null);
+      setInspCheckError("");
+      return;
+    }
     const [dd, mm, yyyy] = dateOfWhelping.split("-");
     const apiDate = `${yyyy}-${mm}-${dd}`;
     let cancelled = false;
@@ -1939,10 +4093,21 @@ function LitterRegistrationTab() {
     setInspCheck(null);
     setInspCheckError("");
     checkLitterInspection(regSire.id, regDam.id, apiDate)
-      .then(result => { if (!cancelled) { setInspCheck(result); setInspCheckError(""); } })
-      .catch((e: any) => { if (!cancelled) setInspCheckError(e.message ?? "Verification failed"); })
-      .finally(() => { if (!cancelled) setInspChecking(false); });
-    return () => { cancelled = true; };
+      .then((result) => {
+        if (!cancelled) {
+          setInspCheck(result);
+          setInspCheckError("");
+        }
+      })
+      .catch((e: any) => {
+        if (!cancelled) setInspCheckError(e.message ?? "Verification failed");
+      })
+      .finally(() => {
+        if (!cancelled) setInspChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [regSire?.id, regDam?.id, dateOfWhelping]);
 
   const { data: regMemberDetail } = useQuery<MemberDetail>({
@@ -1953,19 +4118,31 @@ function LitterRegistrationTab() {
   });
   const allRegOwnedDogs: MemberOwnedDog[] = regMemberDetail?.ownedDogs?.length
     ? regMemberDetail.ownedDogs
-    : (user?.myDogs as MemberOwnedDog[] ?? []);
+    : ((user?.myDogs as MemberOwnedDog[]) ?? []);
   const regDamOptions: DogOption[] = allRegOwnedDogs
-    .filter(d => (d.sex ?? "").toLowerCase() === "female")
-    .map(d => ({ id: d.id, name: d.dog_name, KP: d.KP, foreign_reg_no: d.foreign_reg_no ?? null, sex: d.sex, color: d.color }));
+    .filter((d) => (d.sex ?? "").toLowerCase() === "female")
+    .map((d) => ({
+      id: d.id,
+      name: d.dog_name,
+      KP: d.KP,
+      foreign_reg_no: d.foreign_reg_no ?? null,
+      sex: d.sex,
+      color: d.color,
+    }));
 
   const REG_PER_PAGE = 10;
-  const [allRegs, setAllRegs]             = useState<LitterRegistration[]>([]);
-  const [regTotal, setRegTotal]           = useState(0);
-  const [regPage, setRegPage]             = useState(1);
+  const [allRegs, setAllRegs] = useState<LitterRegistration[]>([]);
+  const [regTotal, setRegTotal] = useState(0);
+  const [regPage, setRegPage] = useState(1);
   const [loadingMoreReg, setLoadingMoreReg] = useState(false);
-  const [regStats, setRegStats]           = useState<LitterRegStats | null>(null);
+  const [regStats, setRegStats] = useState<LitterRegStats | null>(null);
 
-  const { data: page1Regs, isLoading, error: listError, refetch } = useQuery({
+  const {
+    data: page1Regs,
+    isLoading,
+    error: listError,
+    refetch,
+  } = useQuery({
     queryKey: ["litter-registrations", user?.id],
     queryFn: () => fetchLitterRegistrations(user!.id, 1, REG_PER_PAGE),
     enabled: !!user,
@@ -1985,54 +4162,88 @@ function LitterRegistrationTab() {
     if (loadingMoreReg || allRegs.length >= regTotal) return;
     setLoadingMoreReg(true);
     try {
-      const res = await fetchLitterRegistrations(user!.id, regPage + 1, REG_PER_PAGE);
-      setAllRegs(prev => [...prev, ...res.registrations]);
-      setRegPage(prev => prev + 1);
+      const res = await fetchLitterRegistrations(
+        user!.id,
+        regPage + 1,
+        REG_PER_PAGE,
+      );
+      setAllRegs((prev) => [...prev, ...res.registrations]);
+      setRegPage((prev) => prev + 1);
     } finally {
       setLoadingMoreReg(false);
     }
   };
 
-  const { data: detail, isLoading: detailLoading } = useQuery<LitterRegistrationDetail>({
-    queryKey: ["litter-registration-detail", selectedId],
-    queryFn: () => fetchLitterRegistrationDetail(selectedId!, user!.id),
-    enabled: !!selectedId && !!user,
-    staleTime: 0,
-    refetchOnMount: "always",
-  });
+  const { data: detail, isLoading: detailLoading } =
+    useQuery<LitterRegistrationDetail>({
+      queryKey: ["litter-registration-detail", selectedId],
+      queryFn: () => fetchLitterRegistrationDetail(selectedId!, user!.id),
+      enabled: !!selectedId && !!user,
+      staleTime: 0,
+      refetchOnMount: "always",
+    });
 
   const handleSubmit = async () => {
-    if (!regSire)                    { setSubmitError("Sire dog is required."); return; }
-    if (!regDam)                     { setSubmitError("Dam dog is required."); return; }
-    if (!dateOfWhelping.trim())      { setSubmitError("Whelping date is required."); return; }
-    if (puppies.length === 0)        { setSubmitError("Add at least one puppy."); return; }
-    const badIdx = puppies.findIndex(p => !p.name.trim());
-    if (badIdx !== -1)               { setSubmitError(`Puppy ${badIdx + 1} needs a name.`); return; }
+    if (!regSire) {
+      setSubmitError("Sire dog is required.");
+      return;
+    }
+    if (!regDam) {
+      setSubmitError("Dam dog is required.");
+      return;
+    }
+    if (!dateOfWhelping.trim()) {
+      setSubmitError("Whelping date is required.");
+      return;
+    }
+    if (puppies.length === 0) {
+      setSubmitError("Add at least one puppy.");
+      return;
+    }
+    const badIdx = puppies.findIndex((p) => !p.name.trim());
+    if (badIdx !== -1) {
+      setSubmitError(`Puppy ${badIdx + 1} needs a name.`);
+      return;
+    }
     const parsedSireId = parseInt(String(regSire.id).replace(/^dog-/, ""), 10);
-    const parsedDamId  = parseInt(String(regDam.id).replace(/^dog-/, ""), 10);
-    if (isNaN(parsedSireId)) { setSubmitError("Could not resolve sire dog ID. Please re-select the sire and try again."); return; }
-    if (isNaN(parsedDamId))  { setSubmitError("Could not resolve dam dog ID. Please re-select the dam and try again."); return; }
+    const parsedDamId = parseInt(String(regDam.id).replace(/^dog-/, ""), 10);
+    if (isNaN(parsedSireId)) {
+      setSubmitError(
+        "Could not resolve sire dog ID. Please re-select the sire and try again.",
+      );
+      return;
+    }
+    if (isNaN(parsedDamId)) {
+      setSubmitError(
+        "Could not resolve dam dog ID. Please re-select the dam and try again.",
+      );
+      return;
+    }
     setSubmitError("");
     setSubmitting(true);
     const [dd, mm, yyyy] = dateOfWhelping.split("-");
     const whelpingApiDate = `${yyyy}-${mm}-${dd}`;
-    const malePups   = String(puppies.filter(p => p.sex === "Male").length);
-    const femalePups = String(puppies.filter(p => p.sex === "Female").length);
+    const malePups = String(puppies.filter((p) => p.sex === "Male").length);
+    const femalePups = String(puppies.filter((p) => p.sex === "Female").length);
     try {
       await submitLitterRegistration({
-        user_id:          user!.id,
-        kennel_id:        user!.myKennel?.kennel_id ?? null,
-        sire_id:          parsedSireId,
-        sire_name:        regSire.name,
-        sire_kp:          regSire.KP,
-        dam_id:           parsedDamId,
-        dam_name:         regDam.name,
-        dam_kp:           regDam.KP,
+        user_id: user!.id,
+        kennel_id: user!.myKennel?.kennel_id ?? null,
+        sire_id: parsedSireId,
+        sire_name: regSire.name,
+        sire_kp: regSire.KP,
+        dam_id: parsedDamId,
+        dam_name: regDam.name,
+        dam_kp: regDam.KP,
         date_of_whelping: whelpingApiDate,
-        male_pups:        malePups,
-        female_pups:      femalePups,
-        remarks:          "",
-        puppies:          puppies.map(p => ({ name: p.name.trim(), sex: p.sex, color: p.color.trim() })),
+        male_pups: malePups,
+        female_pups: femalePups,
+        remarks: "",
+        puppies: puppies.map((p) => ({
+          name: p.name.trim(),
+          sex: p.sex,
+          color: p.color.trim(),
+        })),
       });
       setRegSire(null);
       setRegDam(null);
@@ -2056,60 +4267,119 @@ function LitterRegistrationTab() {
     return (
       <View style={styles.card}>
         <FormBackBtn onPress={() => setSelectedId(null)} />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
           <Text style={styles.cardHeading}>Litter Registration</Text>
-          {detail && (() => {
-            const dApproved = detail.status === "Approved";
-            const dGranted  = detail.status === "Permission Granted";
-            const dRejected = detail.status === "Rejected";
-            const dBg   = dApproved ? "#DCFCE7" : dRejected ? "#FEE2E2" : dGranted ? "#EFF6FF" : "#FEF9C3";
-            const dTxt  = dApproved ? "#166534" : dRejected ? "#991B1B" : dGranted ? "#1D4ED8" : "#854D0E";
-            return (
-              <View style={[tStyles.statusPill, { backgroundColor: dBg }]}>
-                <Text style={[tStyles.statusPillText, { color: dTxt }]}>{detail.status ?? "Pending"}</Text>
-              </View>
-            );
-          })()}
+          {detail &&
+            (() => {
+              const dApproved = detail.status === "Approved";
+              const dGranted = detail.status === "Permission Granted";
+              const dRejected = detail.status === "Rejected";
+              const dBg = dApproved
+                ? "#DCFCE7"
+                : dRejected
+                  ? "#FEE2E2"
+                  : dGranted
+                    ? "#EFF6FF"
+                    : "#FEF9C3";
+              const dTxt = dApproved
+                ? "#166534"
+                : dRejected
+                  ? "#991B1B"
+                  : dGranted
+                    ? "#1D4ED8"
+                    : "#854D0E";
+              return (
+                <View style={[tStyles.statusPill, { backgroundColor: dBg }]}>
+                  <Text style={[tStyles.statusPillText, { color: dTxt }]}>
+                    {detail.status ?? "Pending"}
+                  </Text>
+                </View>
+              );
+            })()}
         </View>
 
         {detailLoading ? (
-          <ActivityIndicator style={{ marginVertical: 32 }} color={COLORS.primary} />
+          <ActivityIndicator
+            style={{ marginVertical: 32 }}
+            color={COLORS.primary}
+          />
         ) : detail ? (
           <>
             {detail.registration_no && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 10, backgroundColor: "#F0FDF4", borderRadius: 8 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 12,
+                  padding: 10,
+                  backgroundColor: "#F0FDF4",
+                  borderRadius: 8,
+                }}
+              >
                 <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
-                <Text style={{ fontSize: 13, color: "#166534", fontWeight: "600" }}>Reg No: {detail.registration_no}</Text>
+                <Text
+                  style={{ fontSize: 13, color: "#166534", fontWeight: "600" }}
+                >
+                  Reg No: {detail.registration_no}
+                </Text>
               </View>
             )}
             <FormSection title="SIRE" />
             <DogListItem
               dog={certDogToDog(detail.sire, "Male")}
-              onPress={() => navigation.push("DogProfile", { id: detail.sire.id, name: detail.sire.name })}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: detail.sire.id,
+                  name: detail.sire.name,
+                })
+              }
             />
             <View style={styles.divider} />
             <FormSection title="DAM" />
             <DogListItem
               dog={certDogToDog(detail.dam, "Female")}
-              onPress={() => navigation.push("DogProfile", { id: detail.dam.id, name: detail.dam.name })}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: detail.dam.id,
+                  name: detail.dam.name,
+                })
+              }
             />
             <View style={styles.divider} />
 
             {/* Pup count boxes — derive from puppies array if counts are 0 */}
             {(() => {
               const pups = detail.puppies ?? [];
-              const males   = pups.filter(p => p.sex === "Male").length   || detail.male_puppies   || 0;
-              const females = pups.filter(p => p.sex === "Female").length || detail.female_puppies || 0;
-              const total   = pups.length || detail.puppy_count || 0;
+              const males =
+                pups.filter((p) => p.sex === "Male").length ||
+                detail.male_puppies ||
+                0;
+              const females =
+                pups.filter((p) => p.sex === "Female").length ||
+                detail.female_puppies ||
+                0;
+              const total = pups.length || detail.puppy_count || 0;
               return (
-                <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+                <View
+                  style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}
+                >
                   {[
-                    { label: "Male",   value: males,   color: COLORS.primary },
+                    { label: "Male", value: males, color: COLORS.primary },
                     { label: "Female", value: females, color: "#9333EA" },
-                    { label: "Total",  value: total,   color: COLORS.accent },
+                    { label: "Total", value: total, color: COLORS.accent },
                   ].map(({ label, value, color }) => (
                     <View key={label} style={tStyles.pupCountBox}>
-                      <Text style={[tStyles.pupCountNum, { color }]}>{value}</Text>
+                      <Text style={[tStyles.pupCountNum, { color }]}>
+                        {value}
+                      </Text>
                       <Text style={tStyles.pupCountLabel}>{label}</Text>
                     </View>
                   ))}
@@ -2118,9 +4388,22 @@ function LitterRegistrationTab() {
             })()}
 
             {detail.dob && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <Ionicons name="calendar-outline" size={15} color={COLORS.textMuted} />
-                <Text style={tStyles.certDate}>Whelped: {formatDate(detail.dob)}</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 12,
+                }}
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={15}
+                  color={COLORS.textMuted}
+                />
+                <Text style={tStyles.certDate}>
+                  Whelped: {formatDate(detail.dob)}
+                </Text>
               </View>
             )}
 
@@ -2130,57 +4413,163 @@ function LitterRegistrationTab() {
                 <View style={styles.divider} />
                 <FormSection title={`PUPPIES (${detail.puppies.length})`} />
                 {detail.puppies.map((pup, i) => {
-                  const isDead = pup.dead_check === "1" || pup.dead_check === 1 || (pup.dead_check as any) === true;
-                  const dogId  = pup.dog_id ? `dog-${pup.dog_id}` : null;
-                  const sexColor = pup.sex === "Male" ? COLORS.primary : "#9333EA";
+                  const isDead =
+                    pup.dead_check === "1" ||
+                    pup.dead_check === 1 ||
+                    (pup.dead_check as any) === true;
+                  const dogId = pup.dog_id ? `dog-${pup.dog_id}` : null;
+                  const sexColor =
+                    pup.sex === "Male" ? COLORS.primary : "#9333EA";
                   const Row = dogId ? TouchableOpacity : View;
                   return (
                     <Row
                       key={pup.id}
-                      {...(dogId ? {
-                        onPress: () => navigation.push("DogProfile", { id: dogId, name: pup.name }),
-                        activeOpacity: 0.7,
-                      } : {})}
+                      {...(dogId
+                        ? {
+                            onPress: () =>
+                              navigation.push("DogProfile", {
+                                id: dogId,
+                                name: pup.name,
+                              }),
+                            activeOpacity: 0.7,
+                          }
+                        : {})}
                       style={[
-                        { flexDirection: "row", alignItems: "center", paddingVertical: 8, gap: 10 },
-                        i < detail.puppies.length - 1 && { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+                        {
+                          flexDirection: "row",
+                          alignItems: "center",
+                          paddingVertical: 8,
+                          gap: 10,
+                        },
+                        i < detail.puppies.length - 1 && {
+                          borderBottomWidth: 1,
+                          borderBottomColor: COLORS.border,
+                        },
                         isDead && { opacity: 0.5 },
                       ]}
                     >
-                      <View style={{
-                        width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
-                        backgroundColor: isDead ? "#F1F5F9" : pup.sex === "Male" ? `${COLORS.primary}18` : "#F3E8FF",
-                      }}>
+                      <View
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: 15,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: isDead
+                            ? "#F1F5F9"
+                            : pup.sex === "Male"
+                              ? `${COLORS.primary}18`
+                              : "#F3E8FF",
+                        }}
+                      >
                         <Ionicons
-                          name={isDead ? "skull-outline" : pup.sex === "Male" ? "male" : "female"}
+                          name={
+                            isDead
+                              ? "skull-outline"
+                              : pup.sex === "Male"
+                                ? "male"
+                                : "female"
+                          }
                           size={14}
                           color={isDead ? COLORS.textMuted : sexColor}
                         />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Text style={{ fontSize: 13, fontWeight: "600", color: isDead ? COLORS.textMuted : COLORS.text }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              fontWeight: "600",
+                              color: isDead ? COLORS.textMuted : COLORS.text,
+                            }}
+                          >
                             {pup.name}
                           </Text>
                           {isDead && (
-                            <View style={{ backgroundColor: "#FEE2E2", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
-                              <Text style={{ fontSize: 9, fontWeight: "700", color: "#991B1B", letterSpacing: 0.3 }}>DECEASED</Text>
+                            <View
+                              style={{
+                                backgroundColor: "#FEE2E2",
+                                paddingHorizontal: 6,
+                                paddingVertical: 1,
+                                borderRadius: 8,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: "700",
+                                  color: "#991B1B",
+                                  letterSpacing: 0.3,
+                                }}
+                              >
+                                DECEASED
+                              </Text>
                             </View>
                           )}
                         </View>
-                        {pup.color && <Text style={{ fontSize: 11, color: COLORS.textMuted }}>{pup.color}</Text>}
+                        {pup.color && (
+                          <Text
+                            style={{ fontSize: 11, color: COLORS.textMuted }}
+                          >
+                            {pup.color}
+                          </Text>
+                        )}
                       </View>
                       <View style={{ alignItems: "flex-end", gap: 3 }}>
-                        {pup.microchip
-                          ? <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-                              <Ionicons name="checkmark-circle" size={12} color="#16A34A" />
-                              <Text style={{ fontSize: 10, color: "#16A34A", fontWeight: "600" }}>Chipped</Text>
-                            </View>
-                          : <Text style={{ fontSize: 10, color: COLORS.textMuted }}>No chip</Text>}
-                        {pup.DNA_taken === "Yes" && (
-                          <Text style={{ fontSize: 10, color: COLORS.accent, fontWeight: "600" }}>DNA ✓</Text>
+                        {pup.microchip ? (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                          >
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={12}
+                              color="#16A34A"
+                            />
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                color: "#16A34A",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Chipped
+                            </Text>
+                          </View>
+                        ) : (
+                          <Text
+                            style={{ fontSize: 10, color: COLORS.textMuted }}
+                          >
+                            No chip
+                          </Text>
                         )}
-                        {dogId && <Ionicons name="chevron-forward" size={13} color="#CBD5E1" />}
+                        {pup.DNA_taken === "Yes" && (
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              color: COLORS.accent,
+                              fontWeight: "600",
+                            }}
+                          >
+                            DNA ✓
+                          </Text>
+                        )}
+                        {dogId && (
+                          <Ionicons
+                            name="chevron-forward"
+                            size={13}
+                            color="#CBD5E1"
+                          />
+                        )}
                       </View>
                     </Row>
                   );
@@ -2189,7 +4578,9 @@ function LitterRegistrationTab() {
             )}
           </>
         ) : (
-          <Text style={tStyles.emptyRowText}>Could not load registration details.</Text>
+          <Text style={tStyles.emptyRowText}>
+            Could not load registration details.
+          </Text>
         )}
       </View>
     );
@@ -2199,13 +4590,20 @@ function LitterRegistrationTab() {
   if (showForm) {
     return (
       <View style={styles.card}>
-        <FormBackBtn onPress={() => { setShowForm(false); setSubmitError(""); }} />
+        <FormBackBtn
+          onPress={() => {
+            setShowForm(false);
+            setSubmitError("");
+          }}
+        />
         <Text style={styles.cardHeading}>New Litter Registration</Text>
 
         <FormSection title="SIRE" />
         <DogDropdown
-          label="Sire Dog" required
-          mode="remote" sexFilter="male"
+          label="Sire Dog"
+          required
+          mode="remote"
+          sexFilter="male"
           selected={regSire}
           onSelect={setRegSire}
           onClear={() => setRegSire(null)}
@@ -2214,7 +4612,8 @@ function LitterRegistrationTab() {
         <View style={styles.divider} />
         <FormSection title="DAM" />
         <DogDropdown
-          label="Dam Dog" required
+          label="Dam Dog"
+          required
           mode="local"
           localOptions={regDamOptions}
           selected={regDam}
@@ -2224,134 +4623,297 @@ function LitterRegistrationTab() {
 
         <View style={styles.divider} />
         <FormSection title="LITTER DETAILS" />
-        <CalendarDatePicker label="Date of Whelping" required value={dateOfWhelping} onChange={setDateOfWhelping} />
+        <CalendarDatePicker
+          label="Date of Whelping"
+          required
+          value={dateOfWhelping}
+          onChange={setDateOfWhelping}
+        />
 
         {/* Inspection verification banner */}
         {(inspChecking || inspCheck || inspCheckError) && (
-          <View style={{
-            flexDirection: "row", alignItems: "center", gap: 8,
-            borderRadius: 10, padding: 12, marginTop: 8,
-            backgroundColor: inspChecking
-              ? "#F1F5F9"
-              : inspCheck?.found
-                ? "#F0FDF4"
-                : "#FFF7ED",
-            borderWidth: 1,
-            borderColor: inspChecking
-              ? COLORS.border
-              : inspCheck?.found
-                ? "#86EFAC"
-                : "#FED7AA",
-          }}>
-            {inspChecking
-              ? <ActivityIndicator size="small" color={COLORS.primary} />
-              : <Ionicons
-                  name={inspCheck?.found ? "checkmark-circle" : "warning"}
-                  size={18}
-                  color={inspCheck?.found ? "#16A34A" : "#EA580C"}
-                />
-            }
-            <View style={{ flex: 1 }}>
-              {inspChecking
-                ? <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Verifying litter inspection…</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              borderRadius: 10,
+              padding: 12,
+              marginTop: 8,
+              backgroundColor: inspChecking
+                ? "#F1F5F9"
                 : inspCheck?.found
-                  ? <View>
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: "#15803D" }}>Litter inspection verified</Text>
-                      {inspCheck.matingDate
-                        ? <Text style={{ fontSize: 11, color: "#16A34A", marginTop: 1 }}>{"Mating date: " + inspCheck.matingDate}</Text>
-                        : null}
-                    </View>
-                  : <Text style={{ fontSize: 13, fontWeight: "600", color: "#C2410C" }}>{inspCheckError || (inspCheck ? inspCheck.message : "") || "No matching litter inspection found"}</Text>
-              }
+                  ? "#F0FDF4"
+                  : "#FFF7ED",
+              borderWidth: 1,
+              borderColor: inspChecking
+                ? COLORS.border
+                : inspCheck?.found
+                  ? "#86EFAC"
+                  : "#FED7AA",
+            }}
+          >
+            {inspChecking ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Ionicons
+                name={inspCheck?.found ? "checkmark-circle" : "warning"}
+                size={18}
+                color={inspCheck?.found ? "#16A34A" : "#EA580C"}
+              />
+            )}
+            <View style={{ flex: 1 }}>
+              {inspChecking ? (
+                <Text style={{ fontSize: 13, color: COLORS.textMuted }}>
+                  Verifying litter inspection…
+                </Text>
+              ) : inspCheck?.found ? (
+                <View>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: "700",
+                      color: "#15803D",
+                    }}
+                  >
+                    Litter inspection verified
+                  </Text>
+                  {inspCheck.matingDate ? (
+                    <Text
+                      style={{ fontSize: 11, color: "#16A34A", marginTop: 1 }}
+                    >
+                      {"Mating date: " + inspCheck.matingDate}
+                    </Text>
+                  ) : null}
+                </View>
+              ) : (
+                <Text
+                  style={{ fontSize: 13, fontWeight: "600", color: "#C2410C" }}
+                >
+                  {inspCheckError ||
+                    (inspCheck ? inspCheck.message : "") ||
+                    "No matching litter inspection found"}
+                </Text>
+              )}
             </View>
           </View>
         )}
 
         {inspCheck?.found && (
-        <View>
-        <View style={styles.divider} />
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <FormSection title={`PUPPIES (${puppies.length})`} />
-          <TouchableOpacity
-            onPress={addPuppy}
-            activeOpacity={0.7}
-            style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, backgroundColor: `${COLORS.primary}12` }}
-          >
-            <Ionicons name="add-circle-outline" size={16} color={COLORS.primary} />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: COLORS.primary }}>Add Puppy</Text>
-          </TouchableOpacity>
-        </View>
-
-        {puppies.map((pup, idx) => (
-          <View key={idx} style={{ borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 12, marginBottom: 10, backgroundColor: "#FAFAFA" }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", color: COLORS.textMuted }}>PUPPY {idx + 1}</Text>
-              {puppies.length > 1 && (
-                <TouchableOpacity onPress={() => removePuppy(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="trash-outline" size={15} color="#EF4444" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Name */}
-            <FormField
-              label="Name" required
-              value={pup.name}
-              onChangeText={v => updatePuppy(idx, "name", v)}
-              placeholder="Puppy name"
-            />
-
-            {/* Sex toggle */}
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 6 }}>
-              Gender <Text style={{ color: COLORS.error }}>*</Text>
-            </Text>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-              {["Male", "Female"].map(s => (
-                <TouchableOpacity
-                  key={s}
-                  onPress={() => updatePuppy(idx, "sex", s)}
-                  activeOpacity={0.7}
+          <View>
+            <View style={styles.divider} />
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 10,
+              }}
+            >
+              <FormSection title={`PUPPIES (${puppies.length})`} />
+              <TouchableOpacity
+                onPress={addPuppy}
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  paddingVertical: 4,
+                  paddingHorizontal: 10,
+                  borderRadius: 8,
+                  backgroundColor: `${COLORS.primary}12`,
+                }}
+              >
+                <Ionicons
+                  name="add-circle-outline"
+                  size={16}
+                  color={COLORS.primary}
+                />
+                <Text
                   style={{
-                    flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center",
-                    borderWidth: 1.5,
-                    borderColor: pup.sex === s ? (s === "Male" ? COLORS.primary : "#9333EA") : COLORS.border,
-                    backgroundColor: pup.sex === s ? (s === "Male" ? `${COLORS.primary}15` : "#9333EA15") : "#fff",
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: COLORS.primary,
                   }}
                 >
-                  <Ionicons
-                    name={s === "Male" ? "male" : "female"}
-                    size={14}
-                    color={pup.sex === s ? (s === "Male" ? COLORS.primary : "#9333EA") : COLORS.textMuted}
-                  />
-                  <Text style={{ fontSize: 12, fontWeight: "600", marginTop: 2, color: pup.sex === s ? (s === "Male" ? COLORS.primary : "#9333EA") : COLORS.textMuted }}>
-                    {s}
+                  Add Puppy
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {puppies.map((pup, idx) => (
+              <View
+                key={idx}
+                style={{
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 10,
+                  backgroundColor: "#FAFAFA",
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "700",
+                      color: COLORS.textMuted,
+                    }}
+                  >
+                    PUPPY {idx + 1}
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {puppies.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => removePuppy(idx)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={15}
+                        color="#EF4444"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
 
-            {/* Color */}
-            <Text style={{ fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 6 }}>Color</Text>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-              {["Black - Brown", "Black", "Sable"].map(c => (
-                <TouchableOpacity
-                  key={c}
-                  onPress={() => updatePuppy(idx, "color", c)}
-                  activeOpacity={0.7}
+                {/* Name */}
+                <FormField
+                  label="Name"
+                  required
+                  value={pup.name}
+                  onChangeText={(v) => updatePuppy(idx, "name", v)}
+                  placeholder="Puppy name"
+                />
+
+                {/* Sex toggle */}
+                <Text
                   style={{
-                    paddingVertical: 7, paddingHorizontal: 14, borderRadius: 8, alignItems: "center",
-                    borderWidth: 1.5,
-                    borderColor: pup.color === c ? COLORS.primary : COLORS.border,
-                    backgroundColor: pup.color === c ? `${COLORS.primary}15` : "#fff",
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: "#334155",
+                    marginBottom: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: pup.color === c ? COLORS.primary : COLORS.textMuted }}>{c}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  Gender <Text style={{ color: COLORS.error }}>*</Text>
+                </Text>
+                <View
+                  style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}
+                >
+                  {["Male", "Female"].map((s) => (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => updatePuppy(idx, "sex", s)}
+                      activeOpacity={0.7}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        alignItems: "center",
+                        borderWidth: 1.5,
+                        borderColor:
+                          pup.sex === s
+                            ? s === "Male"
+                              ? COLORS.primary
+                              : "#9333EA"
+                            : COLORS.border,
+                        backgroundColor:
+                          pup.sex === s
+                            ? s === "Male"
+                              ? `${COLORS.primary}15`
+                              : "#9333EA15"
+                            : "#fff",
+                      }}
+                    >
+                      <Ionicons
+                        name={s === "Male" ? "male" : "female"}
+                        size={14}
+                        color={
+                          pup.sex === s
+                            ? s === "Male"
+                              ? COLORS.primary
+                              : "#9333EA"
+                            : COLORS.textMuted
+                        }
+                      />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "600",
+                          marginTop: 2,
+                          color:
+                            pup.sex === s
+                              ? s === "Male"
+                                ? COLORS.primary
+                                : "#9333EA"
+                              : COLORS.textMuted,
+                        }}
+                      >
+                        {s}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Color */}
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: "#334155",
+                    marginBottom: 6,
+                  }}
+                >
+                  Color
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 8,
+                    marginBottom: 12,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {["Black - Brown", "Black", "Sable"].map((c) => (
+                    <TouchableOpacity
+                      key={c}
+                      onPress={() => updatePuppy(idx, "color", c)}
+                      activeOpacity={0.7}
+                      style={{
+                        paddingVertical: 7,
+                        paddingHorizontal: 14,
+                        borderRadius: 8,
+                        alignItems: "center",
+                        borderWidth: 1.5,
+                        borderColor:
+                          pup.color === c ? COLORS.primary : COLORS.border,
+                        backgroundColor:
+                          pup.color === c ? `${COLORS.primary}15` : "#fff",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "600",
+                          color:
+                            pup.color === c ? COLORS.primary : COLORS.textMuted,
+                        }}
+                      >
+                        {c}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
           </View>
-        ))}
-        </View>
         )}
 
         {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
@@ -2365,7 +4927,7 @@ function LitterRegistrationTab() {
             !regDam ||
             !dateOfWhelping ||
             puppies.length === 0 ||
-            puppies.some(p => !p.name.trim())
+            puppies.some((p) => !p.name.trim())
           }
         />
       </View>
@@ -2375,104 +4937,1777 @@ function LitterRegistrationTab() {
   /* ── List view ── */
   return (
     <View style={styles.card}>
-      <ListHeader title="Litter Registrations" onNew={() => setShowForm(true)} />
+      <ListHeader
+        title="Litter Registrations"
+        onNew={() => setShowForm(true)}
+      />
       {submitSuccess && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12, padding: 12, borderRadius: 10, backgroundColor: "#DCFCE7" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: "#DCFCE7",
+          }}
+        >
           <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
-          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>Litter registration submitted successfully.</Text>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>
+            Litter registration submitted successfully.
+          </Text>
         </View>
       )}
 
       {regStats && (
-        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 8,
+            marginBottom: 14,
+            flexWrap: "wrap",
+          }}
+        >
           {[
-            { label: "Submitted",    value: regStats.submitted,   bg: "#EFF6FF", text: "#1D4ED8" },
-            { label: "Approved",     value: regStats.approved,    bg: "#F0FDF4", text: "#166534" },
-            { label: "Rejected",     value: regStats.rejected,    bg: "#FEF2F2", text: "#991B1B" },
-            { label: "Microchipped", value: regStats.microchipped, bg: "#FEF9C3", text: "#854D0E" },
+            {
+              label: "Submitted",
+              value: regStats.submitted,
+              bg: "#EFF6FF",
+              text: "#1D4ED8",
+            },
+            {
+              label: "Approved",
+              value: regStats.approved,
+              bg: "#F0FDF4",
+              text: "#166534",
+            },
+            {
+              label: "Rejected",
+              value: regStats.rejected,
+              bg: "#FEF2F2",
+              text: "#991B1B",
+            },
+            {
+              label: "Microchipped",
+              value: regStats.microchipped,
+              bg: "#FEF9C3",
+              text: "#854D0E",
+            },
           ].map(({ label, value, bg, text }) => (
-            <View key={label} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, backgroundColor: bg }}>
-              <Text style={{ fontSize: 12, fontWeight: "600", color: text }}>{value} {label}</Text>
+            <View
+              key={label}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 20,
+                backgroundColor: bg,
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "600", color: text }}>
+                {value} {label}
+              </Text>
             </View>
           ))}
         </View>
       )}
 
       {isLoading ? (
-        <ActivityIndicator style={{ marginVertical: 24 }} color={COLORS.primary} />
+        <ActivityIndicator
+          style={{ marginVertical: 24 }}
+          color={COLORS.primary}
+        />
       ) : listError ? (
         <View style={tStyles.emptyRow}>
           <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
-          <Text style={[tStyles.emptyRowText, { color: "#EF4444" }]}>Could not load registrations</Text>
+          <Text style={[tStyles.emptyRowText, { color: "#EF4444" }]}>
+            Could not load registrations
+          </Text>
         </View>
       ) : allRegs.length === 0 ? (
         <View style={tStyles.emptyRow}>
-          <Ionicons name="document-text-outline" size={20} color={COLORS.textMuted} />
+          <Ionicons
+            name="document-text-outline"
+            size={20}
+            color={COLORS.textMuted}
+          />
           <Text style={tStyles.emptyRowText}>No litter registrations yet</Text>
         </View>
       ) : (
         <View style={tStyles.certList}>
           {allRegs.map((item, i) => {
-            const males   = item.male_puppies   ?? 0;
+            const males = item.male_puppies ?? 0;
             const females = item.female_puppies ?? 0;
-            const total   = item.puppy_count != null && item.puppy_count > 0
-              ? item.puppy_count
-              : males + females;
+            const total =
+              item.puppy_count != null && item.puppy_count > 0
+                ? item.puppy_count
+                : males + females;
             const isApproved = item.status === "Approved";
-            const isGranted  = item.status === "Permission Granted";
+            const isGranted = item.status === "Permission Granted";
             const isRejected = item.status === "Rejected";
-            const pillBg   = isApproved ? "#DCFCE7" : isRejected ? "#FEE2E2" : isGranted ? "#EFF6FF" : "#FEF9C3";
-            const pillText = isApproved ? "#166534" : isRejected ? "#991B1B" : isGranted ? "#1D4ED8" : "#854D0E";
+            const pillBg = isApproved
+              ? "#DCFCE7"
+              : isRejected
+                ? "#FEE2E2"
+                : isGranted
+                  ? "#EFF6FF"
+                  : "#FEF9C3";
+            const pillText = isApproved
+              ? "#166534"
+              : isRejected
+                ? "#991B1B"
+                : isGranted
+                  ? "#1D4ED8"
+                  : "#854D0E";
             return (
               <TouchableOpacity
                 key={item.id}
-                style={[tStyles.certRow, i < allRegs.length - 1 && tStyles.certRowBorder]}
+                style={[
+                  tStyles.certRow,
+                  i < allRegs.length - 1 && tStyles.certRowBorder,
+                ]}
                 onPress={() => setSelectedId(item.id)}
                 activeOpacity={0.7}
               >
                 <View style={{ flex: 1, gap: 2 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
                     <Ionicons name="male" size={12} color={COLORS.primary} />
-                    <Text style={tStyles.certSire} numberOfLines={1}>{item.sire.name}</Text>
+                    <Text style={tStyles.certSire} numberOfLines={1}>
+                      {item.sire.name}
+                    </Text>
                   </View>
-                  <Text style={tStyles.certKP} numberOfLines={1}>KP {item.sire.KP}</Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 }}>
+                  <Text style={tStyles.certKP} numberOfLines={1}>
+                    KP {item.sire.KP}
+                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 4,
+                    }}
+                  >
                     <Ionicons name="female" size={12} color="#9333EA" />
-                    <Text style={tStyles.certDam} numberOfLines={1}>{item.dam.name}</Text>
+                    <Text style={tStyles.certDam} numberOfLines={1}>
+                      {item.dam.name}
+                    </Text>
                   </View>
-                  <Text style={tStyles.certKP} numberOfLines={1}>KP {item.dam.KP}</Text>
+                  <Text style={tStyles.certKP} numberOfLines={1}>
+                    KP {item.dam.KP}
+                  </Text>
                   {/* Puppy count chips */}
                   <View style={{ flexDirection: "row", gap: 4, marginTop: 6 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: `${COLORS.primary}12`, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 3,
+                        backgroundColor: `${COLORS.primary}12`,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                        borderRadius: 10,
+                      }}
+                    >
                       <Ionicons name="male" size={10} color={COLORS.primary} />
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.primary }}>{males}</Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: COLORS.primary,
+                        }}
+                      >
+                        {males}
+                      </Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F3E8FF", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 3,
+                        backgroundColor: "#F3E8FF",
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                        borderRadius: 10,
+                      }}
+                    >
                       <Ionicons name="female" size={10} color="#9333EA" />
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: "#9333EA" }}>{females}</Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: "#9333EA",
+                        }}
+                      >
+                        {females}
+                      </Text>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F1F5F9", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
-                      <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.textMuted }}>{total} total</Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 3,
+                        backgroundColor: "#F1F5F9",
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                        borderRadius: 10,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: COLORS.textMuted,
+                        }}
+                      >
+                        {total} total
+                      </Text>
                     </View>
                   </View>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: 6, marginLeft: 8 }}>
-                  <View style={[tStyles.statusPill, { backgroundColor: pillBg }]}>
-                    <Text style={[tStyles.statusPillText, { color: pillText }]}>{item.status ?? "Pending"}</Text>
+                  <View
+                    style={[tStyles.statusPill, { backgroundColor: pillBg }]}
+                  >
+                    <Text style={[tStyles.statusPillText, { color: pillText }]}>
+                      {item.status ?? "Pending"}
+                    </Text>
                   </View>
-                  {item.whelping_date && <Text style={tStyles.certDate}>{formatDate(item.whelping_date)}</Text>}
+                  {item.whelping_date && (
+                    <Text style={tStyles.certDate}>
+                      {formatDate(item.whelping_date)}
+                    </Text>
+                  )}
                   <Ionicons name="chevron-forward" size={14} color="#CBD5E1" />
                 </View>
               </TouchableOpacity>
             );
           })}
           {allRegs.length < regTotal && (
-            <TouchableOpacity style={tStyles.loadMoreBtn} onPress={loadMoreRegs} disabled={loadingMoreReg} activeOpacity={0.7}>
-              {loadingMoreReg
-                ? <ActivityIndicator size="small" color={COLORS.primary} />
-                : <Text style={tStyles.loadMoreText}>Load more ({regTotal - allRegs.length} remaining)</Text>}
+            <TouchableOpacity
+              style={tStyles.loadMoreBtn}
+              onPress={loadMoreRegs}
+              disabled={loadingMoreReg}
+              activeOpacity={0.7}
+            >
+              {loadingMoreReg ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text style={tStyles.loadMoreText}>
+                  Load more ({regTotal - allRegs.length} remaining)
+                </Text>
+              )}
             </TouchableOpacity>
           )}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ── Tab: HD/ED Registration ────────────────────────── */
+const HD_GRADES = [
+  "Normal",
+  "Fast Normal",
+  "Noch Zugelassen",
+  "Mittlere HD",
+  "Schwere HD",
+];
+const ED_GRADES = ["ED-Normal (0)", "ED Grade 1", "ED Grade 2", "ED Grade 3"];
+
+function GradeSelector({
+  label,
+  required,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <View style={fStyles.field}>
+      <Text style={fStyles.label}>
+        {label}
+        {required ? <Text style={fStyles.required}> *</Text> : null}
+      </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {options.map((opt) => {
+          const active = value === opt;
+          return (
+            <TouchableOpacity
+              key={opt}
+              activeOpacity={0.75}
+              onPress={() => onChange(opt)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 20,
+                backgroundColor: active
+                  ? COLORS.primary
+                  : "rgba(15,92,59,0.07)",
+                borderWidth: 1,
+                borderColor: active ? COLORS.primary : COLORS.border,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "600",
+                  color: active ? "#fff" : COLORS.textMuted,
+                }}
+              >
+                {opt}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const hdedStyles = StyleSheet.create({
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    gap: 12,
+  },
+  cardLeft: { justifyContent: "center" },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "rgba(15,92,59,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardBody: { flex: 1, gap: 2 },
+  dogName: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
+  dogKP: { fontSize: 12, color: COLORS.textMuted },
+  dateRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 3 },
+  dateText: { fontSize: 12, color: COLORS.textMuted },
+  cardRight: { alignItems: "flex-end", justifyContent: "center", gap: 2 },
+});
+
+function HDEDTab() {
+  const { user } = useAuth();
+  const navigation = useNavigation<any>();
+  const [showForm, setShowForm] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<HDEDRequest | null>(
+    null,
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [selectedDog, setSelectedDog] = useState<DogOption | null>(null);
+
+  const { data: memberDetail } = useQuery<MemberDetail>({
+    queryKey: ["member-detail", user ? `member-${user.id}` : null],
+    queryFn: () => fetchMemberDetail(`member-${user!.id}`),
+    enabled: !!user,
+    staleTime: 300_000,
+  });
+  const allOwnedDogs: MemberOwnedDog[] = memberDetail?.ownedDogs?.length
+    ? memberDetail.ownedDogs
+    : ((user?.myDogs as MemberOwnedDog[]) ?? []);
+  const dogOptions: DogOption[] = allOwnedDogs.map((d) => ({
+    id: d.id,
+    name: d.dog_name,
+    KP: d.KP,
+    foreign_reg_no: d.foreign_reg_no ?? null,
+    sex: d.sex,
+    color: d.color,
+  }));
+
+  const {
+    data: hdedRequests = [],
+    isLoading: requestsLoading,
+    refetch: refetchRequests,
+  } = useQuery<HDEDRequest[]>({
+    queryKey: ["hded-requests", user?.id],
+    queryFn: () => fetchHDEDRequests(user!.id),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+
+  const { data: hdedDetail, isLoading: hdedDetailLoading } =
+    useQuery<HDEDRequest>({
+      queryKey: ["hded-request-detail", selectedRequest?.id],
+      queryFn: () => fetchHDEDRequestDetail(selectedRequest!.id, user!.id),
+      enabled: !!selectedRequest && !!user,
+      staleTime: 60_000,
+    });
+
+  const dogNumericId = selectedDog
+    ? parseInt(selectedDog.id.replace(/^dog-/, ""), 10)
+    : null;
+  const { data: dogInfo, isLoading: dogInfoLoading } = useQuery<HDEDDogInfo>({
+    queryKey: ["hded-dog-info", user?.id, dogNumericId],
+    queryFn: () => fetchHDEDDogInfo(user!.id, dogNumericId!),
+    enabled: !!selectedDog && !!user && dogNumericId !== null,
+    staleTime: 0,
+  });
+
+  const resetForm = () => {
+    setSelectedDog(null);
+    setSubmitError("");
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedDog) {
+      setSubmitError("Please select a dog.");
+      return;
+    }
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await submitNewHDEDRequest(
+        user!.id,
+        parseInt(selectedDog.id.replace(/^dog-/, ""), 10),
+      );
+      resetForm();
+      setShowForm(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
+      refetchRequests();
+    } catch (e: any) {
+      setSubmitError(e.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const statusColors = (status: string | null) => {
+    const s = (status ?? "").toLowerCase();
+    if (s === "approved") return { bg: "#DCFCE7", text: "#166534" };
+    if (s === "rejected") return { bg: "#FEE2E2", text: "#991B1B" };
+    return { bg: "#FEF9C3", text: "#854D0E" };
+  };
+
+  if (selectedRequest) {
+    const r = hdedDetail ?? selectedRequest;
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setSelectedRequest(null)} />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 16,
+          }}
+        >
+          <Text style={styles.cardHeading}>HD/ED Request</Text>
+          {r.status ? (
+            <View
+              style={[
+                tStyles.statusPill,
+                { backgroundColor: statusColors(r.status).bg },
+              ]}
+            >
+              <Text
+                style={[
+                  tStyles.statusPillText,
+                  { color: statusColors(r.status).text },
+                ]}
+              >
+                {r.status}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        <FormSection title="DOG" />
+        {r.dog ? (
+          <DogListItem
+            dog={
+              {
+                id: r.dog.id,
+                dog_name: r.dog.name?.trim() ?? "—",
+                KP: r.dog.KP,
+                foreign_reg_no: r.dog.foreign_reg_no,
+                sex: r.dog.sex ?? "Unknown",
+                color: null,
+                hair: r.dog.hair ?? null,
+                imageUrl: r.dog.imageURL ?? null,
+                microchip: r.dog.microchip ?? null,
+                dob: null,
+                breed: "GSD",
+                owner: null,
+              } as any
+            }
+            onPress={() =>
+              navigation.push("DogProfile", {
+                id: r.dog!.id,
+                name: r.dog!.name,
+              })
+            }
+          />
+        ) : (
+          <Text style={{ color: COLORS.textMuted, fontSize: 13 }}>
+            No dog information
+          </Text>
+        )}
+
+        <View style={styles.divider} />
+        <FormSection title="APPOINTMENT" />
+        <View style={{ gap: 10 }}>
+          {r.appointment_date ? (
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={16}
+                color={COLORS.textMuted}
+              />
+              <View>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: COLORS.textMuted,
+                    fontWeight: "600",
+                    letterSpacing: 0.4,
+                    marginBottom: 2,
+                  }}
+                >
+                  DATE
+                </Text>
+                <Text
+                  style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
+                >
+                  {formatDate(r.appointment_date)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+          {r.appointment_time ? (
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={COLORS.textMuted}
+              />
+              <View>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: COLORS.textMuted,
+                    fontWeight: "600",
+                    letterSpacing: 0.4,
+                    marginBottom: 2,
+                  }}
+                >
+                  TIME
+                </Text>
+                <Text
+                  style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}
+                >
+                  {r.appointment_time.slice(0, 5)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        {hdedDetailLoading ? (
+          <ActivityIndicator style={{ marginTop: 20 }} color={COLORS.primary} />
+        ) : null}
+
+        {r.detail ? (
+          <>
+            <View style={styles.divider} />
+            <FormSection title="RESULTS" />
+            <View style={{ gap: 10 }}>
+              {r.detail.hd_result ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="medkit-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      HD RESULT
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {r.detail.hd_result}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              {r.detail.ed_result ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="medkit-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      ED RESULT
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {r.detail.ed_result}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              {r.detail.date_radiographed ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      DATE RADIOGRAPHED
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {formatDate(r.detail.date_radiographed)}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+              {r.detail.radiographed_by ? (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: COLORS.textMuted,
+                        fontWeight: "600",
+                        letterSpacing: 0.4,
+                        marginBottom: 2,
+                      }}
+                    >
+                      RADIOGRAPHED BY
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                    >
+                      {r.detail.radiographed_by}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </>
+        ) : null}
+      </View>
+    );
+  }
+
+  if (showForm) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn
+          onPress={() => {
+            setShowForm(false);
+            resetForm();
+          }}
+        />
+        <Text style={styles.cardHeading}>New HD/ED Request</Text>
+        <Text
+          style={{ fontSize: 13, color: COLORS.textMuted, marginBottom: 16 }}
+        >
+          Select the dog you would like to submit an HD/ED evaluation request
+          for.
+        </Text>
+
+        <FormSection title="DOG" />
+        <DogDropdown
+          label="Select Dog"
+          required
+          mode="local"
+          localOptions={dogOptions}
+          selected={selectedDog}
+          onSelect={setSelectedDog}
+          onClear={() => setSelectedDog(null)}
+        />
+
+        {selectedDog && dogInfoLoading ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 10,
+            }}
+          >
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>
+              Checking eligibility…
+            </Text>
+          </View>
+        ) : null}
+
+        {selectedDog && !dogInfoLoading && dogInfo ? (
+          dogInfo.eligible ? (
+            <View
+              style={{
+                marginTop: 12,
+                borderRadius: 10,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "#BBF7D0",
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: 12,
+                  backgroundColor: "#DCFCE7",
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                <Text
+                  style={{ fontSize: 13, color: "#166534", fontWeight: "600" }}
+                >
+                  This dog is eligible — charges below
+                </Text>
+              </View>
+              {dogInfo.charges ? (
+                <View
+                  style={{ backgroundColor: "#F0FDF4", padding: 12, gap: 8 }}
+                >
+                  {[
+                    { label: "HD/ED Evaluation", key: "HDED_charge" },
+                    { label: "DNA Testing", key: "DNA_charge" },
+                    { label: "GBW Fee", key: "GBW_charge" },
+                  ]
+                    .filter(({ key }) => {
+                      const v =
+                        dogInfo.charges![key as keyof typeof dogInfo.charges];
+                      return v != null && v !== "";
+                    })
+                    .map(({ label, key }) => (
+                      <View
+                        key={key}
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ fontSize: 13, color: COLORS.textMuted }}>
+                          {label}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "600",
+                            color: COLORS.text,
+                          }}
+                        >
+                          PKR{" "}
+                          {
+                            dogInfo.charges![
+                              key as keyof typeof dogInfo.charges
+                            ]
+                          }
+                        </Text>
+                      </View>
+                    ))}
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: "#BBF7D0",
+                      marginTop: 4,
+                    }}
+                  />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "700",
+                        color: "#166534",
+                      }}
+                    >
+                      Total
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "700",
+                        color: "#166534",
+                      }}
+                    >
+                      PKR{" "}
+                      {(() => {
+                        const parse = (s: any) =>
+                          s != null && s !== ""
+                            ? parseInt(String(s).replace(/,/g, ""), 10) || 0
+                            : 0;
+                        const c = dogInfo.charges!;
+                        return (
+                          parse(c.HDED_charge) +
+                          parse(c.DNA_charge) +
+                          parse(c.GBW_charge)
+                        ).toLocaleString();
+                      })()}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 10,
+                padding: 12,
+                backgroundColor: "#FEE2E2",
+                borderRadius: 8,
+              }}
+            >
+              <Ionicons name="alert-circle" size={16} color="#DC2626" />
+              <Text
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  color: "#991B1B",
+                  fontWeight: "500",
+                }}
+              >
+                {dogInfo.message ??
+                  "This dog cannot be submitted for a new request."}
+              </Text>
+            </View>
+          )
+        ) : null}
+
+        {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
+        <SubmitBtn
+          label={submitting ? "Submitting…" : "Submit Request"}
+          onPress={handleSubmit}
+          disabled={
+            submitting || dogInfoLoading || (!!dogInfo && !dogInfo.eligible)
+          }
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.card}>
+      <ListHeader
+        title="HD/ED Requests"
+        onNew={() => {
+          resetForm();
+          setShowForm(true);
+        }}
+      />
+      {submitSuccess && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: "#DCFCE7",
+          }}
+        >
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>
+            HD/ED request submitted successfully.
+          </Text>
+        </View>
+      )}
+      {requestsLoading ? (
+        <ActivityIndicator
+          style={{ marginVertical: 24 }}
+          color={COLORS.primary}
+        />
+      ) : hdedRequests.length === 0 ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons
+            name="document-outline"
+            size={20}
+            color={COLORS.textMuted}
+          />
+          <Text style={tStyles.emptyRowText}>No HD/ED requests yet</Text>
+        </View>
+      ) : (
+        <View style={tStyles.certList}>
+          {hdedRequests.map((r) => (
+            <TouchableOpacity
+              key={r.id}
+              activeOpacity={0.7}
+              onPress={() => setSelectedRequest(r)}
+              style={hdedStyles.card}
+            >
+              <View style={hdedStyles.cardBody}>
+                <Text style={hdedStyles.dogName} numberOfLines={1}>
+                  {r.dog?.name?.trim() ?? "—"}
+                </Text>
+                <Text style={hdedStyles.dogKP}>
+                  {r.dog?.KP
+                    ? `KP: ${r.dog.KP}`
+                    : (r.dog?.foreign_reg_no ?? "")}
+                </Text>
+                {r.appointment_date ? (
+                  <View style={hdedStyles.dateRow}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={11}
+                      color={COLORS.textMuted}
+                    />
+                    <Text style={hdedStyles.dateText}>
+                      {formatDate(r.appointment_date)}
+                      {r.appointment_time
+                        ? `  ·  ${r.appointment_time.slice(0, 5)}`
+                        : ""}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={hdedStyles.cardRight}>
+                {r.status ? (
+                  <View
+                    style={[
+                      tStyles.statusPill,
+                      {
+                        backgroundColor: statusColors(r.status).bg,
+                        marginBottom: 6,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        tStyles.statusPillText,
+                        { color: statusColors(r.status).text },
+                      ]}
+                    >
+                      {r.status}
+                    </Text>
+                  </View>
+                ) : null}
+                <Ionicons
+                  name="chevron-forward"
+                  size={14}
+                  color={COLORS.textMuted}
+                />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ── Tab: Single Dog Registration ───────────────────── */
+const SEX_OPTIONS = ["Male", "Female"];
+const HAIR_OPTIONS = ["Stock Hair", "Long Stock Hair"];
+const COLOR_OPTIONS = [
+  "Black & Tan",
+  "Sable",
+  "Black & Gold",
+  "Bi-Color",
+  "All Black",
+  "All White",
+  "Other",
+];
+
+function OptionPillSelector({
+  label,
+  required,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <View style={fStyles.field}>
+      <Text style={fStyles.label}>
+        {label}
+        {required ? <Text style={fStyles.required}> *</Text> : null}
+      </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {options.map((opt) => {
+          const active = value === opt;
+          return (
+            <TouchableOpacity
+              key={opt}
+              activeOpacity={0.75}
+              onPress={() => onChange(opt)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderRadius: 20,
+                backgroundColor: active
+                  ? COLORS.primary
+                  : "rgba(15,92,59,0.07)",
+                borderWidth: 1,
+                borderColor: active ? COLORS.primary : COLORS.border,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "600",
+                  color: active ? "#fff" : COLORS.textMuted,
+                }}
+              >
+                {opt}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function SingleDogRegTab() {
+  const { user } = useAuth();
+  const navigation = useNavigation<any>();
+  const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [selectedRequest, setSelectedRequest] =
+    useState<SingleDogRegistration | null>(null);
+
+  const [form, setForm] = useState({ dog_name: "", gender: "", dob: "", hair: "" });
+  const set = (key: keyof typeof form) => (v: string) =>
+    setForm((f) => ({ ...f, [key]: v }));
+
+  const [photos, setPhotos] = useState<SDRPickedFile[]>([]);
+  const [videos, setVideos] = useState<SDRPickedFile[]>([]);
+  const [documents, setDocuments] = useState<SDRPickedFile[]>([]);
+
+  const {
+    data: regs = [],
+    isLoading: regsLoading,
+    refetch,
+  } = useQuery<SingleDogRegistration[]>({
+    queryKey: ["sdr-requests", user?.id],
+    queryFn: () => fetchSingleDogRegistrations(user!.id),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
+
+  const { data: sdrDetail, isLoading: sdrDetailLoading } =
+    useQuery<SDRRequestDetail>({
+      queryKey: ["sdr-request-detail", selectedRequest?.id],
+      queryFn: () => fetchSDRRequestDetail(selectedRequest!.id, user!.id),
+      enabled: !!selectedRequest && !!user,
+      staleTime: 60_000,
+    });
+
+  const resetForm = () => {
+    setForm({ dog_name: "", gender: "", dob: "", hair: "" });
+    setPhotos([]);
+    setVideos([]);
+    setDocuments([]);
+    setSubmitError("");
+  };
+
+  const hairApiValue = (h: string) => {
+    if (h === "Stock Hair") return "S";
+    if (h === "Long Stock Hair") return "L";
+    return h;
+  };
+
+  const pickPhotos = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      quality: 0.85,
+    });
+    if (!result.canceled) {
+      const picked: SDRPickedFile[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.fileName ?? `photo_${Date.now()}.jpg`,
+        mimeType: a.mimeType ?? "image/jpeg",
+      }));
+      setPhotos((prev) => [...prev, ...picked]);
+    }
+  };
+
+  const pickVideos = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["videos"],
+      allowsMultipleSelection: true,
+      videoMaxDuration: 300,
+    });
+    if (!result.canceled) {
+      const picked: SDRPickedFile[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.fileName ?? `video_${Date.now()}.mp4`,
+        mimeType: a.mimeType ?? "video/mp4",
+      }));
+      setVideos((prev) => [...prev, ...picked]);
+    }
+  };
+
+  const pickDocuments = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["application/pdf", "image/*"],
+      multiple: true,
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled) {
+      const picked: SDRPickedFile[] = result.assets.map((a) => ({
+        uri: a.uri,
+        name: a.name,
+        mimeType: a.mimeType ?? "application/octet-stream",
+      }));
+      setDocuments((prev) => [...prev, ...picked]);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!form.dog_name.trim()) { setSubmitError("Dog name is required."); return; }
+    if (!form.gender) { setSubmitError("Gender is required."); return; }
+    if (!form.dob.trim()) { setSubmitError("Date of birth is required."); return; }
+    if (!form.hair) { setSubmitError("Hair type is required."); return; }
+    if (photos.length === 0) { setSubmitError("At least one photo is required."); return; }
+    if (videos.length === 0) { setSubmitError("At least one video is required."); return; }
+    setSubmitError("");
+    setSubmitting(true);
+    try {
+      await submitSingleDogRegistration(
+        {
+          user_id: user!.id,
+          dog_name: form.dog_name.trim(),
+          gender: form.gender,
+          dob: form.dob,
+          hair: hairApiValue(form.hair),
+          photos,
+          videos,
+          documents: documents.length ? documents : undefined,
+        },
+        user!.token,
+      );
+      resetForm();
+      setShowForm(false);
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 5000);
+      refetch();
+    } catch (e: any) {
+      setSubmitError(e.message ?? "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const FilePickerRow = ({
+    label,
+    required,
+    files,
+    onPick,
+    onRemove,
+  }: {
+    label: string;
+    required?: boolean;
+    files: SDRPickedFile[];
+    onPick: () => void;
+    onRemove: (i: number) => void;
+  }) => (
+    <View style={{ marginBottom: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.textMuted, flex: 1 }}>
+          {label}
+          {required ? <Text style={{ color: "#EF4444" }}> *</Text> : null}
+        </Text>
+        <TouchableOpacity
+          style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primary + "15", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}
+          onPress={onPick}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="attach-outline" size={15} color={COLORS.primary} />
+          <Text style={{ fontSize: 12, fontWeight: "600", color: COLORS.primary }}>Add</Text>
+        </TouchableOpacity>
+      </View>
+      {files.map((f, i) => (
+        <View key={i} style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F5F5F2", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7, marginBottom: 5 }}>
+          <Ionicons name="document-outline" size={14} color={COLORS.textMuted} style={{ marginRight: 7 }} />
+          <Text style={{ fontSize: 12, color: COLORS.text, flex: 1 }} numberOfLines={1}>{f.name}</Text>
+          <TouchableOpacity onPress={() => onRemove(i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={18} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
+      ))}
+      {files.length === 0 && (
+        <Text style={{ fontSize: 12, color: COLORS.textMuted, fontStyle: "italic" }}>No files selected</Text>
+      )}
+    </View>
+  );
+
+  if (showForm) {
+    return (
+      <View style={styles.card}>
+        <FormBackBtn
+          onPress={() => {
+            setShowForm(false);
+            resetForm();
+          }}
+        />
+        <Text style={styles.cardHeading}>Single Dog Registrations</Text>
+
+        <FormSection title="DOG INFORMATION" />
+        <FormField
+          label="Dog Name"
+          required
+          value={form.dog_name}
+          onChangeText={set("dog_name")}
+          placeholder="Full registered name"
+        />
+        <OptionPillSelector
+          label="Gender"
+          required
+          value={form.gender}
+          options={SEX_OPTIONS}
+          onChange={set("gender")}
+        />
+        <OptionPillSelector
+          label="Hair Type"
+          required
+          value={form.hair}
+          options={HAIR_OPTIONS}
+          onChange={set("hair")}
+        />
+        <CalendarDatePicker
+          label="Date of Birth"
+          required
+          value={form.dob}
+          onChange={set("dob")}
+        />
+
+        <View style={styles.divider} />
+        <FormSection title="PHOTOS" />
+        <FilePickerRow
+          label="Dog Photos"
+          required
+          files={photos}
+          onPick={pickPhotos}
+          onRemove={(i) => setPhotos((p) => p.filter((_, idx) => idx !== i))}
+        />
+
+        <View style={styles.divider} />
+        <FormSection title="VIDEOS" />
+        <FilePickerRow
+          label="Dog Videos"
+          required
+          files={videos}
+          onPick={pickVideos}
+          onRemove={(i) => setVideos((p) => p.filter((_, idx) => idx !== i))}
+        />
+
+        <View style={styles.divider} />
+        <FormSection title="DOCUMENTS (OPTIONAL)" />
+        <FilePickerRow
+          label="Supporting Documents"
+          files={documents}
+          onPick={pickDocuments}
+          onRemove={(i) => setDocuments((p) => p.filter((_, idx) => idx !== i))}
+        />
+
+        {!!submitError && <Text style={tStyles.errorText}>{submitError}</Text>}
+        <SubmitBtn
+          label={submitting ? "Submitting…" : "Submit Registration"}
+          onPress={handleSubmit}
+          disabled={submitting}
+        />
+      </View>
+    );
+  }
+
+  if (selectedRequest) {
+    const status = sdrDetail?.status ?? selectedRequest.status;
+    const statusBg =
+      status === "Request Approved and Posted"
+        ? "#DCFCE7"
+        : status?.toLowerCase().includes("reject")
+          ? "#FEE2E2"
+          : "#FEF9C3";
+    const statusColor =
+      status === "Request Approved and Posted"
+        ? "#166534"
+        : status?.toLowerCase().includes("reject")
+          ? "#991B1B"
+          : "#854D0E";
+
+    const InfoRow = ({
+      label,
+      value,
+    }: {
+      label: string;
+      value: string | null | undefined;
+    }) =>
+      value ? (
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            paddingVertical: 7,
+            borderBottomWidth: 1,
+            borderBottomColor: "#F0F0EE",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 13,
+              color: COLORS.textMuted,
+              flexShrink: 0,
+              marginRight: 12,
+            }}
+          >
+            {label}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "500",
+              color: COLORS.text,
+              flex: 1,
+              textAlign: "right",
+            }}
+          >
+            {value}
+          </Text>
+        </View>
+      ) : null;
+
+    return (
+      <View style={styles.card}>
+        <FormBackBtn onPress={() => setSelectedRequest(null)} />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 4,
+          }}
+        >
+          <Text style={[styles.cardHeading, { marginBottom: 0, flex: 1 }]}>
+            {sdrDetail?.dog?.name ?? selectedRequest.dog_name}
+          </Text>
+          {sdrDetail?.dog?.id ? (
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                marginLeft: 8,
+              }}
+              onPress={() =>
+                navigation.push("DogProfile", {
+                  id: sdrDetail.dog.id,
+                  name: sdrDetail.dog.name?.trim() ?? "",
+                })
+              }
+              activeOpacity={0.7}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "600",
+                  color: COLORS.primary,
+                }}
+              >
+                Profile
+              </Text>
+              <Ionicons
+                name="arrow-forward-circle-outline"
+                size={18}
+                color={COLORS.primary}
+              />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        {status ? (
+          <View
+            style={[
+              tStyles.statusPill,
+              {
+                alignSelf: "flex-start",
+                marginBottom: 14,
+                backgroundColor: statusBg,
+              },
+            ]}
+          >
+            <Text style={[tStyles.statusPillText, { color: statusColor }]}>
+              {status}
+            </Text>
+          </View>
+        ) : null}
+
+        {sdrDetailLoading ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={{ fontSize: 13, color: COLORS.textMuted }}>
+              Loading details…
+            </Text>
+          </View>
+        ) : null}
+
+        {sdrDetail ? (
+          <>
+            <FormSection title="APPOINTMENT" />
+            <InfoRow
+              label="Date"
+              value={
+                sdrDetail.appointment_date
+                  ? formatDate(sdrDetail.appointment_date)
+                  : null
+              }
+            />
+            <InfoRow
+              label="Time"
+              value={sdrDetail.appointment_time?.slice(0, 5) ?? null}
+            />
+
+            <FormSection title="DOG" />
+            <InfoRow label="KP Number" value={sdrDetail.dog?.KP} />
+            <InfoRow label="Sex" value={sdrDetail.dog?.sex} />
+            <InfoRow label="Color" value={sdrDetail.dog?.color} />
+            <InfoRow label="Hair" value={sdrDetail.dog?.hair} />
+            <InfoRow label="Microchip" value={sdrDetail.dog?.microchip} />
+            <InfoRow
+              label="Foreign Reg. No."
+              value={sdrDetail.dog?.foreign_reg_no}
+            />
+
+            <FormSection title="ASSESSMENT" />
+            <InfoRow label="Height (cm)" value={sdrDetail.height} />
+            <InfoRow label="Bite" value={sdrDetail.bite} />
+            <InfoRow
+              label="Dentition Faults"
+              value={sdrDetail.dentition_faults}
+            />
+            {sdrDetail.dog?.sex?.toLowerCase() !== "female" ? (
+              <InfoRow label="Neutered" value={sdrDetail.neutered} />
+            ) : null}
+            {sdrDetail.dog?.sex?.toLowerCase() !== "female" ? (
+              <InfoRow label="Testicles" value={sdrDetail.testicles} />
+            ) : null}
+            <InfoRow label="DNA Status" value={sdrDetail.DNA_status} />
+
+            {sdrDetail.pics?.length > 0 ? (
+              <>
+                <FormSection title="PHOTOS" />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    marginTop: 4,
+                  }}
+                >
+                  {sdrDetail.pics.map((p: SDRProofFile) => (
+                    <LazyImage
+                      key={p.id}
+                      source={{
+                        uri: `https://gsdcp.org/public/sdr_pic_proof/${p.name}`,
+                      }}
+                      style={{ width: 90, height: 90, borderRadius: 8 }}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : null}
+
+            {sdrDetail.docs?.length > 0 ? (
+              <>
+                <FormSection title="DOCUMENTS" />
+                {sdrDetail.docs.map((d: SDRProofFile) => (
+                  <View
+                    key={d.id}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      paddingVertical: 6,
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#F0F0EE",
+                    }}
+                  >
+                    <Ionicons
+                      name="document-outline"
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <Text
+                      style={{ fontSize: 13, color: COLORS.text, flex: 1 }}
+                      numberOfLines={1}
+                    >
+                      {d.name}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            ) : null}
+
+            {sdrDetail.vids?.length > 0 ? (
+              <>
+                <FormSection title="VIDEOS" />
+                {sdrDetail.vids.map((v: SDRProofFile) => (
+                  <View
+                    key={v.id}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      paddingVertical: 6,
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#F0F0EE",
+                    }}
+                  >
+                    <Ionicons
+                      name="videocam-outline"
+                      size={16}
+                      color={COLORS.primary}
+                    />
+                    <Text
+                      style={{ fontSize: 13, color: COLORS.text, flex: 1 }}
+                      numberOfLines={1}
+                    >
+                      {v.name}
+                    </Text>
+                  </View>
+                ))}
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.card}>
+      <ListHeader
+        title="Single Dog Registrations"
+        onNew={() => {
+          resetForm();
+          setShowForm(true);
+        }}
+      />
+      {submitSuccess && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: "#DCFCE7",
+          }}
+        >
+          <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+          <Text style={{ fontSize: 13, fontWeight: "600", color: "#166534" }}>
+            Single Dog registration Request submitted successfully.
+          </Text>
+        </View>
+      )}
+      {regsLoading ? (
+        <ActivityIndicator
+          style={{ marginVertical: 24 }}
+          color={COLORS.primary}
+        />
+      ) : regs.length === 0 ? (
+        <View style={tStyles.emptyRow}>
+          <Ionicons name="paw-outline" size={20} color={COLORS.textMuted} />
+          <Text style={tStyles.emptyRowText}>No dog registrations yet</Text>
+        </View>
+      ) : (
+        <View style={tStyles.certList}>
+          {regs.map((r, i) => (
+            <TouchableOpacity
+              key={r.id}
+              style={[
+                tStyles.certRow,
+                i < regs.length - 1 && tStyles.certRowBorder,
+              ]}
+              onPress={() => setSelectedRequest(r)}
+              activeOpacity={0.7}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={tStyles.certSire} numberOfLines={1}>
+                  {r.dog_name}
+                </Text>
+                {r.appointment_date ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      marginTop: 4,
+                    }}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={12}
+                      color={COLORS.textMuted}
+                    />
+                    <Text style={tStyles.certDate}>
+                      {formatDate(r.appointment_date)}
+                      {r.appointment_time
+                        ? `  ·  ${r.appointment_time.slice(0, 5)}`
+                        : ""}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              {r.status ? (
+                <View
+                  style={[
+                    tStyles.statusPill,
+                    {
+                      backgroundColor:
+                        r.status === "Approved"
+                          ? "#DCFCE7"
+                          : r.status === "Rejected"
+                            ? "#FEE2E2"
+                            : "#FEF9C3",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      tStyles.statusPillText,
+                      {
+                        color:
+                          r.status === "Approved"
+                            ? "#166534"
+                            : r.status === "Rejected"
+                              ? "#991B1B"
+                              : "#854D0E",
+                      },
+                    ]}
+                  >
+                    {r.status}
+                  </Text>
+                </View>
+              ) : null}
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={COLORS.textMuted}
+                style={{ marginLeft: 6 }}
+              />
+            </TouchableOpacity>
+          ))}
         </View>
       )}
     </View>
@@ -2482,15 +6717,21 @@ function LitterRegistrationTab() {
 /* ── Screen ─────────────────────────────────────────── */
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
-  const insets     = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("detail");
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoVersion, setPhotoVersion] = useState(() => Date.now());
 
-  const { data: detail, isLoading, refetch, isRefetching } = useQuery<MemberDetail>({
+  const {
+    data: detail,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery<MemberDetail>({
     queryKey: ["member-detail", user?.member_id],
-    queryFn:  () => fetchMemberDetail(user!.member_id),
-    enabled:  !!user?.member_id,
+    queryFn: () => fetchMemberDetail(user!.member_id),
+    enabled: !!user?.member_id,
     retry: 1,
   });
 
@@ -2499,9 +6740,12 @@ export default function ProfileScreen() {
       // Alert.alert is a no-op on web — open the file picker directly
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsEditing: true, aspect: [1, 1], quality: 0.8,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
       });
-      if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
+      if (!result.canceled && result.assets[0])
+        await doUpload(result.assets[0].uri);
       return;
     }
     Alert.alert("Change Profile Photo", "Choose a source", [
@@ -2509,18 +6753,42 @@ export default function ProfileScreen() {
         text: "Camera",
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed to take a photo."); return; }
-          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
-          if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
+          if (!perm.granted) {
+            Alert.alert(
+              "Permission required",
+              "Camera access is needed to take a photo.",
+            );
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ["images"],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0])
+            await doUpload(result.assets[0].uri);
         },
       },
       {
         text: "Photo Library",
         onPress: async () => {
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed to pick a photo."); return; }
-          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
-          if (!result.canceled && result.assets[0]) await doUpload(result.assets[0].uri);
+          if (!perm.granted) {
+            Alert.alert(
+              "Permission required",
+              "Photo library access is needed to pick a photo.",
+            );
+            return;
+          }
+          const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ["images"],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+          });
+          if (!result.canceled && result.assets[0])
+            await doUpload(result.assets[0].uri);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -2531,11 +6799,20 @@ export default function ProfileScreen() {
     if (!user) return;
     setPhotoUploading(true);
     try {
-      await uploadProfilePhoto(uri, { id: user.id, phone: user.phone, email: user.email }, user.token);
+      await uploadProfilePhoto(
+        uri,
+        { id: user.id, phone: user.phone, email: user.email },
+        user.token,
+      );
       const fresh = await fetchProfileShow(user.id);
       if (fresh?.photo) await updateUser({ photo: fresh.photo });
+      setPhotoVersion(Date.now());
+      refetch();
     } catch (e: any) {
-      Alert.alert("Upload failed", e.message ?? "Could not upload photo. Please try again.");
+      Alert.alert(
+        "Upload failed",
+        e.message ?? "Could not upload photo. Please try again.",
+      );
     } finally {
       setPhotoUploading(false);
     }
@@ -2550,33 +6827,65 @@ export default function ProfileScreen() {
   }
 
   const fallbackMember: Member = {
-    id:            user.member_id,
-    member_name:   user.name,
+    id: user.member_id,
+    member_name: user.name,
     membership_no: user.membership_no ?? "",
-    imageUrl:      user.photo ? `https://gsdcp.org/storage/photos/${user.photo}` : null,
-    city:          user.city,
-    country:       user.country,
+    imageUrl: user.photo
+      ? `https://gsdcp.org/public/members/profile_pic/${user.photo}?v=${photoVersion}`
+      : null,
+    city: user.city,
+    country: user.country,
   };
 
-  const member     = detail?.member ?? fallbackMember;
-  const ownedDogs  = detail?.ownedDogs ?? (user.myDogs as MemberOwnedDog[]) ?? [];
-  const kennel     = detail?.kennel ?? (user.myKennel as MemberKennel | null);
+  const member = detail?.member ?? fallbackMember;
+  const ownedDogs =
+    detail?.ownedDogs ?? (user.myDogs as MemberOwnedDog[]) ?? [];
+  const kennel = detail?.kennel ?? (user.myKennel as MemberKennel | null);
   const memberName = member.member_name.trim() || "GSDCP Member";
-  const initials   = getInitials(memberName);
-  const hasPhoto   = isValidImage(member.imageUrl);
-  const mType      = getMembershipType(member.membership_no);
+  const initials = getInitials(memberName);
+  const hasPhoto = isValidImage(member.imageUrl);
+  const mType = getMembershipType(member.membership_no);
 
   function renderTabContent() {
     if (isLoading && activeTab !== "detail") {
-      return <View style={styles.loadingWrap}><ActivityIndicator size="small" color={COLORS.primary} /></View>;
+      return (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        </View>
+      );
     }
     switch (activeTab) {
-      case "detail":               return <DetailTab detail={detail} fallbackMember={fallbackMember} email={user.email} phone={user.phone} refetchDetail={refetch} />;
-      case "kennel":               return <KennelTab kennel={kennel} navigation={navigation} />;
-      case "dogs":                 return <DogsTab dogs={ownedDogs} onDogPress={(dog) => navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })} />;
-      case "stud":                 return <StudCertTab />;
-      case "litter-inspection":    return <LitterInspectionTab />;
-      case "litter-registration":  return <LitterRegistrationTab />;
+      case "detail":
+        return (
+          <DetailTab
+            detail={detail}
+            fallbackMember={fallbackMember}
+            email={user.email}
+            phone={user.phone}
+            refetchDetail={refetch}
+          />
+        );
+      case "kennel":
+        return <KennelTab kennel={kennel} navigation={navigation} refetch={refetch} memberId={user.member_id} />;
+      case "dogs":
+        return (
+          <DogsTab
+            userId={String(user.member_id)}
+            onDogPress={(dog) =>
+              navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })
+            }
+          />
+        );
+      case "stud":
+        return <StudCertTab />;
+      case "litter-inspection":
+        return <LitterInspectionTab />;
+      case "litter-registration":
+        return <LitterRegistrationTab />;
+      case "hd-ed":
+        return <HDEDTab />;
+      case "single-dog-reg":
+        return <SingleDogRegTab />;
     }
   }
 
@@ -2584,35 +6893,70 @@ export default function ProfileScreen() {
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
+        />
+      }
     >
       {/* ── Hero ── */}
-      <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
-        <LinearGradient colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]} style={styles.heroGradient} pointerEvents="none" />
+      <ImageBackground
+        source={heroBg}
+        style={styles.heroBanner}
+        resizeMode="cover"
+      >
+        <LinearGradient
+          colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
+          style={styles.heroGradient}
+          pointerEvents="none"
+        />
       </ImageBackground>
 
       {/* ── Avatar & Identity ── */}
       <View style={styles.profileSection}>
-        <TouchableOpacity activeOpacity={0.85} onPress={handleChangePhoto} disabled={photoUploading} style={styles.avatarOuter}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={handleChangePhoto}
+          disabled={photoUploading}
+          style={styles.avatarOuter}
+        >
           {hasPhoto ? (
-            <LazyImage source={{ uri: member.imageUrl! }} style={styles.avatarImage} resizeMode="cover" />
+            <LazyImage
+              source={{ uri: member.imageUrl! }}
+              style={styles.avatarImage}
+              resizeMode="cover"
+            />
           ) : (
             <View style={styles.avatarInner}>
               <Text style={styles.avatarInitials}>{initials}</Text>
             </View>
           )}
           <View style={styles.avatarCameraOverlay}>
-            {photoUploading
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Ionicons name="camera" size={18} color="#fff" />}
+            {photoUploading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="camera" size={18} color="#fff" />
+            )}
           </View>
         </TouchableOpacity>
         <Text style={styles.memberName}>{memberName}</Text>
         <View style={[styles.typeBadge, { backgroundColor: mType.bg }]}>
-          <Text style={[styles.typeBadgeText, { color: mType.color }]}>{mType.label}</Text>
+          <Text style={[styles.typeBadgeText, { color: mType.color }]}>
+            {mType.label}
+          </Text>
         </View>
-        <Text style={styles.memberNo}>Membership No: {member.membership_no}</Text>
-        <TouchableOpacity style={styles.signOutBtn} activeOpacity={0.8} onPress={logout} data-testid="btn-sign-out">
+        <Text style={styles.memberNo}>
+          Membership No: {member.membership_no}
+        </Text>
+        <TouchableOpacity
+          style={styles.signOutBtn}
+          activeOpacity={0.8}
+          onPress={logout}
+          data-testid="btn-sign-out"
+        >
           <Ionicons name="log-out-outline" size={14} color={COLORS.error} />
           <Text style={styles.signOutBtnText}>Sign Out</Text>
         </TouchableOpacity>
@@ -2626,7 +6970,7 @@ export default function ProfileScreen() {
       >
         {TABS.map((t) => {
           const active = t.id === activeTab;
-          const count  = t.id === "dogs" && !isLoading ? ownedDogs.length : null;
+          const count = t.id === "dogs" && !isLoading ? ownedDogs.length : null;
           return (
             <TouchableOpacity
               key={t.id}
@@ -2635,11 +6979,27 @@ export default function ProfileScreen() {
               activeOpacity={0.75}
               data-testid={`tab-${t.id}`}
             >
-              <Ionicons name={t.icon} size={15} color={active ? "#fff" : COLORS.textMuted} style={{ marginRight: 5 }} />
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</Text>
+              <Ionicons
+                name={t.icon}
+                size={15}
+                color={active ? "#fff" : COLORS.textMuted}
+                style={{ marginRight: 5 }}
+              />
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>
+                {t.label}
+              </Text>
               {count !== null && count > 0 && (
-                <View style={[styles.tabBadge, active && styles.tabBadgeActive]}>
-                  <Text style={[styles.tabBadgeText, active && styles.tabBadgeTextActive]}>{count}</Text>
+                <View
+                  style={[styles.tabBadge, active && styles.tabBadgeActive]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      active && styles.tabBadgeTextActive,
+                    ]}
+                  >
+                    {count}
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -2648,9 +7008,7 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* ── Tab Content ── */}
-      <View style={styles.contentArea}>
-        {renderTabContent()}
-      </View>
+      <View style={styles.contentArea}>{renderTabContent()}</View>
 
       <View style={{ height: 48 }} />
     </ScrollView>
@@ -2660,131 +7018,196 @@ export default function ProfileScreen() {
 /* ── Table / list styles ────────────────────────────── */
 const tStyles = StyleSheet.create({
   listHeader: {
-    flexDirection: "row", alignItems: "center",
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   listTitle: { flex: 1, fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  sectionHeading: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
   newBtn: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, backgroundColor: COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
   },
   newBtnText: { fontSize: 13, fontWeight: "700", color: "#fff" },
 
   table: {
-    borderWidth: 1, borderColor: "#E2E8F0",
-    borderRadius: 10, overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    overflow: "hidden",
   },
   tableHeadRow: { backgroundColor: "#F1F5F9" },
   tableRow: {
     flexDirection: "row",
-    paddingHorizontal: 12, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: "#E2E8F0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
   },
-  tableHeadCell: { fontSize: 10, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 0.5 },
-  tableCell:     { fontSize: 13, fontWeight: "500", color: "#0F172A" },
+  tableHeadCell: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    letterSpacing: 0.5,
+  },
+  tableCell: { fontSize: 13, fontWeight: "500", color: "#0F172A" },
 
   emptyRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    justifyContent: "center", paddingVertical: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    justifyContent: "center",
+    paddingVertical: 28,
   },
   emptyRowText: { fontSize: 13, color: COLORS.textMuted },
 
   backBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     marginBottom: 16,
   },
   backBtnText: { fontSize: 13, fontWeight: "600", color: COLORS.primary },
 
   errorText: {
-    fontSize: 13, color: "#DC2626",
-    marginTop: 8, marginBottom: 4,
+    fontSize: 13,
+    color: "#DC2626",
+    marginTop: 8,
+    marginBottom: 4,
     fontWeight: "500",
   },
 
   /* ── Cert card list ── */
   certList: {
-    borderWidth: 1, borderColor: "#E2E8F0",
-    borderRadius: 10, overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    overflow: "hidden",
   },
   certRow: {
-    flexDirection: "row", alignItems: "flex-start",
-    paddingHorizontal: 14, paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     backgroundColor: "#fff",
   },
   certRowBorder: {
-    borderBottomWidth: 1, borderBottomColor: "#F1F5F9",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
   certSire: {
-    fontSize: 13, fontWeight: "700", color: "#0F172A", flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
+    flex: 1,
   },
   certDam: {
-    fontSize: 13, fontWeight: "500", color: "#334155", flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#334155",
+    flex: 1,
   },
   certKP: {
-    fontSize: 11, color: COLORS.textMuted, marginLeft: 18,
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginLeft: 18,
   },
   certDate: {
-    fontSize: 11, color: COLORS.textMuted, fontWeight: "500",
+    fontSize: 11,
+    color: COLORS.textMuted,
+    fontWeight: "500",
   },
   certId: {
-    fontSize: 10, color: "#CBD5E1", letterSpacing: 0.3,
+    fontSize: 10,
+    color: "#CBD5E1",
+    letterSpacing: 0.3,
   },
   statusPill: {
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 12,
   },
   statusPillText: {
-    fontSize: 11, fontWeight: "700", letterSpacing: 0.2,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
 
   /* ── Pup count boxes (litter inspection detail) ── */
   pupCountBox: {
-    flex: 1, alignItems: "center",
+    flex: 1,
+    alignItems: "center",
     backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,
     paddingVertical: 10,
-    borderWidth: 1, borderColor: COLORS.border,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   pupCountNum: {
-    fontSize: 22, fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "700",
   },
   pupCountLabel: {
-    fontSize: FONT_SIZES.xs, color: COLORS.textSecondary, marginTop: 2,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
 
   /* ── Load more button ── */
   loadMoreBtn: {
-    alignItems: "center", justifyContent: "center",
-    paddingVertical: 12, marginTop: 4,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   loadMoreText: {
-    fontSize: FONT_SIZES.sm, color: COLORS.primary, fontWeight: "600",
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.primary,
+    fontWeight: "600",
   },
 });
 
 /* ── Form styles ────────────────────────────────────── */
 const fStyles = StyleSheet.create({
   section: {
-    fontSize: 11, fontWeight: "700", color: COLORS.textMuted,
-    letterSpacing: 1, marginBottom: 14, marginTop: 4,
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    letterSpacing: 1,
+    marginBottom: 14,
+    marginTop: 4,
   },
   field: { marginBottom: 16 },
   label: { fontSize: 13, fontWeight: "600", color: "#334155", marginBottom: 6 },
   required: { color: COLORS.error },
   input: {
     backgroundColor: "#F8FAFC",
-    borderWidth: 1, borderColor: "#E2E8F0",
-    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11,
-    fontSize: 14, color: "#0F172A",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: "#0F172A",
   },
   inputMulti: { height: 96, textAlignVertical: "top", paddingTop: 11 },
   row: { flexDirection: "row", marginBottom: 0 },
   submitBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 8, marginTop: 24, paddingVertical: 14,
-    borderRadius: 12, backgroundColor: COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
   },
   submitBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 });
@@ -2794,59 +7217,119 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f6f8f7" },
 
   heroBanner: { width: "100%", height: 256 },
-  heroGradient: { position: "absolute", left: 0, right: 0, bottom: 0, height: 256 },
-
-  profileSection: { alignItems: "center", marginTop: -80, paddingHorizontal: 16, marginBottom: 24 },
-  avatarOuter: {
-    width: 136, height: 136, borderRadius: 68,
-    borderWidth: 4, borderColor: COLORS.accent,
-    backgroundColor: "#fff", overflow: "hidden",
-    marginBottom: SPACING.sm,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 10, elevation: 8,
+  heroGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 256,
   },
-  avatarInner: { flex: 1, backgroundColor: "rgba(15,92,59,0.08)", justifyContent: "center", alignItems: "center" },
+
+  profileSection: {
+    alignItems: "center",
+    marginTop: -80,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  avatarOuter: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+    borderWidth: 4,
+    borderColor: COLORS.accent,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+    marginBottom: SPACING.sm,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  avatarInner: {
+    flex: 1,
+    backgroundColor: "rgba(15,92,59,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   avatarImage: { width: "100%", height: "100%" },
   avatarInitials: { fontSize: 42, fontWeight: "800", color: COLORS.primary },
   avatarCameraOverlay: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    height: 36, backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center", alignItems: "center",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 36,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   memberName: {
-    fontSize: 24, fontWeight: "800", color: "#0F172A",
-    textAlign: "center", paddingHorizontal: SPACING.lg,
-    marginTop: 12, marginBottom: 8, lineHeight: 32,
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#0F172A",
+    textAlign: "center",
+    paddingHorizontal: SPACING.lg,
+    marginTop: 12,
+    marginBottom: 8,
+    lineHeight: 32,
   },
-  typeBadge: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: BORDER_RADIUS.full, marginBottom: 6 },
+  typeBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.full,
+    marginBottom: 6,
+  },
   typeBadgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   memberNo: { fontSize: 14, fontWeight: "500", color: "#64748B" },
 
   signOutBtn: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    marginTop: 12, paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5, borderColor: "#FECACA",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#FECACA",
     backgroundColor: "#FEF2F2",
   },
   signOutBtnText: { fontSize: 13, fontWeight: "700", color: COLORS.error },
 
-  tabBar: { paddingHorizontal: 16, paddingVertical: 4, gap: 8, marginBottom: 20 },
+  tabBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    gap: 8,
+    marginBottom: 20,
+  },
   tab: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 14, height: 38,
-    borderRadius: 9999, backgroundColor: "rgba(15,92,59,0.07)",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: 9999,
+    backgroundColor: "rgba(15,92,59,0.07)",
   },
   tabActive: {
     backgroundColor: COLORS.primary,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.22, shadowRadius: 5, elevation: 3,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    elevation: 3,
   },
   tabText: { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
   tabTextActive: { color: "#fff" },
   tabBadge: {
-    marginLeft: 6, minWidth: 18, height: 18, borderRadius: 9,
+    marginLeft: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: "rgba(15,92,59,0.15)",
-    alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
   },
   tabBadgeActive: { backgroundColor: "rgba(255,255,255,0.25)" },
   tabBadgeText: { fontSize: 10, fontWeight: "700", color: COLORS.primary },
@@ -2854,54 +7337,124 @@ const styles = StyleSheet.create({
 
   contentArea: { paddingHorizontal: 16, minHeight: 320 },
   card: {
-    backgroundColor: "#fff", borderRadius: 16, padding: 24, marginBottom: 16,
-    borderWidth: 1, borderColor: "rgba(15,92,59,0.05)",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(15,92,59,0.05)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  cardHeadingRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
+  cardHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+  },
   cardHeading: { flex: 1, fontSize: 18, fontWeight: "700", color: "#0F172A" },
   cardEditBtn: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 20, borderWidth: 1, borderColor: COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
   },
   cardEditBtnText: { fontSize: 12, fontWeight: "700", color: COLORS.primary },
 
   detailsGrid: { gap: 20 },
   detailItem: { flexDirection: "row", alignItems: "center", gap: 16 },
   detailIconWrap: {
-    width: 40, height: 40, borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: "rgba(15,92,59,0.08)",
-    justifyContent: "center", alignItems: "center",
+    justifyContent: "center",
+    alignItems: "center",
   },
   detailTextWrap: { flex: 1 },
-  detailLabel: { fontSize: 12, fontWeight: "500", color: "#94A3B8", marginBottom: 2 },
+  detailLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#94A3B8",
+    marginBottom: 2,
+  },
   detailValue: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
 
-  divider: { height: 1, backgroundColor: "rgba(15,92,59,0.06)", marginVertical: 20 },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(15,92,59,0.06)",
+    marginVertical: 20,
+  },
   kennelHeader: { flexDirection: "row", alignItems: "center" },
   kennelAvatar: { width: 64, height: 64, borderRadius: 12, overflow: "hidden" },
-  kennelAvatarPlaceholder: { backgroundColor: "rgba(15,92,59,0.1)", justifyContent: "center", alignItems: "center" },
-  kennelAvatarInitials: { fontSize: 20, fontWeight: "700", color: COLORS.primary },
-  kennelName: { fontSize: 17, fontWeight: "700", color: "#0F172A", marginBottom: 2 },
-  kennelSuffix: { fontSize: 13, fontStyle: "italic", color: COLORS.textMuted, marginBottom: 2 },
+  kennelAvatarPlaceholder: {
+    backgroundColor: "rgba(15,92,59,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  kennelAvatarInitials: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  kennelName: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 2,
+  },
+  kennelSuffix: {
+    fontSize: 13,
+    fontStyle: "italic",
+    color: COLORS.textMuted,
+    marginBottom: 2,
+  },
   kennelCity: { fontSize: 13, color: COLORS.textMuted },
   kennelViewBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    marginTop: 24, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
   },
   kennelViewBtnText: { fontSize: 14, fontWeight: "700", color: "#fff" },
 
-  emptyState: { alignItems: "center", paddingVertical: 56, paddingHorizontal: SPACING.xl, gap: 10 },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 56,
+    paddingHorizontal: SPACING.xl,
+    gap: 10,
+  },
   emptyIconWrap: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: "rgba(15,92,59,0.08)",
-    justifyContent: "center", alignItems: "center", marginBottom: 4,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
   },
   emptyTitle: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
-  emptyDesc: { fontSize: 13, color: COLORS.textMuted, textAlign: "center", lineHeight: 20 },
+  emptyDesc: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
+  },
 
   loadingWrap: { padding: SPACING.xl, alignItems: "center" },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: SPACING.md },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: SPACING.md,
+  },
 });

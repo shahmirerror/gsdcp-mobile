@@ -63,9 +63,9 @@ const MENU_ITEMS = [
     route: "KennelDirectoryTab",
     dx: -143,
     dy: -83,
-    iconColor: "#fff",
-    bg: COLORS.primary,
-    border: "#083A24",
+    iconColor: COLORS.primary,
+    bg: COLORS.background,
+    border: COLORS.primary,
   },
   {
     label: "Member\nDirectory",
@@ -73,9 +73,9 @@ const MENU_ITEMS = [
     route: "MemberDirectoryTab",
     dx: -83,
     dy: -143,
-    iconColor: "#fff",
-    bg: "#2563EB",
-    border: "#1E40AF",
+    iconColor: COLORS.primary,
+    bg: COLORS.background,
+    border: COLORS.primary,
   },
   {
     label: "Recent\nMatings",
@@ -83,9 +83,9 @@ const MENU_ITEMS = [
     route: "RecentMatingsTab",
     dx: 83,
     dy: -143,
-    iconColor: "#fff",
-    bg: "#DC2626",
-    border: "#991B1B",
+    iconColor: COLORS.primary,
+    bg: COLORS.background,
+    border: COLORS.primary,
   },
   {
     label: "The\nClub",
@@ -93,9 +93,9 @@ const MENU_ITEMS = [
     route: "TheClubTab",
     dx: 143,
     dy: -83,
-    iconColor: "#fff",
-    bg: COLORS.accent,
-    border: "#A07C3A",
+    iconColor: COLORS.primary,
+    bg: COLORS.background,
+    border: COLORS.primary,
   },
   {
     label: "Virtual\nBreeding",
@@ -103,9 +103,9 @@ const MENU_ITEMS = [
     route: "VirtualBreedingTab",
     dx: 0,
     dy: -185,
-    iconColor: "#fff",
-    bg: "#7C3AED",
-    border: "#5B21B6",
+    iconColor: COLORS.primary,
+    bg: COLORS.background,
+    border: COLORS.primary,
   },
 ];
 
@@ -227,7 +227,9 @@ export default function CustomTabBar({
           size={24}
           color={isFocused ? COLORS.primary : COLORS.textMuted}
         />
-        {isFocused && <Text style={styles.tabLabelActive}>{cfg.label}</Text>}
+        <Text style={isFocused ? styles.tabLabelActive : styles.tabLabelMuted}>
+          {cfg.label}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -269,6 +271,9 @@ export default function CustomTabBar({
             resizeMode="contain"
           />
         </TouchableOpacity>
+        {!isOverlay && !menuOpen && (
+          <Text style={styles.holdHint}>Press & Hold</Text>
+        )}
       </Animated.View>
     );
   };
@@ -427,6 +432,12 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginTop: 1,
   },
+  tabLabelMuted: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
   homeBtnWrap: {
     position: "absolute",
     top: -PROTRUDE,
@@ -454,6 +465,13 @@ const styles = StyleSheet.create({
   homeLogo: {
     width: 32,
     height: 32,
+  },
+  holdHint: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    letterSpacing: 0.2,
+    marginTop: 10,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import { fetchKennels, Kennel, KennelOwner } from "../lib/api";
+import { fetchKennels, Kennel, KennelBreeder, Breeder } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
@@ -30,7 +30,7 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function OwnerRow({ owner, styles }: { owner: KennelOwner; styles: any }) {
+function OwnerRow({ owner, styles, onPress }: { owner: KennelBreeder; styles: any; onPress?: () => void }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!owner.imageUrl && !owner.imageUrl.includes("user-not-found") && !imgErr;
   const initials = (owner.name || "?")
@@ -39,8 +39,8 @@ function OwnerRow({ owner, styles }: { owner: KennelOwner; styles: any }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  return (
-    <View style={styles.ownerRow}>
+  const inner = (
+    <>
       {hasImg ? (
         <Image
           source={{ uri: owner.imageUrl! }}
@@ -67,7 +67,17 @@ function OwnerRow({ owner, styles }: { owner: KennelOwner; styles: any }) {
           ) : null}
         </View>
       </View>
-    </View>
+      {onPress ? (
+        <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+      ) : null}
+    </>
+  );
+  return onPress ? (
+    <TouchableOpacity style={styles.ownerRow} onPress={onPress} activeOpacity={0.7}>
+      {inner}
+    </TouchableOpacity>
+  ) : (
+    <View style={styles.ownerRow}>{inner}</View>
   );
 }
 
@@ -375,12 +385,40 @@ export default function KennelDirectoryScreen() {
                     </View>
                   ))}
                 </View>
-                {previewKennel.owners && previewKennel.owners.length > 0 ? (
+                {previewKennel.breeders && previewKennel.breeders.length > 0 ? (
                   <>
                     <View style={styles.previewDivider} />
-                    <Text style={styles.ownersHeading}>Owners</Text>
-                    {previewKennel.owners.map((owner: KennelOwner, idx: number) => (
-                      <OwnerRow key={idx} owner={owner} styles={styles} />
+                    <Text style={styles.ownersHeading}>{previewKennel.breeders.length === 1 ? "Breeder" : "Breeders"}</Text>
+                    {previewKennel.breeders.map((owner: KennelBreeder, idx: number) => (
+                      <OwnerRow
+                        key={idx}
+                        owner={owner}
+                        styles={styles}
+                        onPress={owner.breeder_id ? () => {
+                          setPreviewKennel(null);
+                          navigation.navigate("BreederProfile", {
+                            id: owner.breeder_id!,
+                            breederData: {
+                              id: previewKennel.id,
+                              memberId: owner.breeder_id!,
+                              name: owner.name,
+                              kennelName: previewKennel.kennelName,
+                              location: previewKennel.location,
+                              city: previewKennel.city,
+                              country: previewKennel.country,
+                              phone: owner.phone,
+                              email: owner.email,
+                              membership_no: owner.membership_no,
+                              imageUrl: owner.imageUrl || "",
+                              kennelImage: previewKennel.imageUrl || "",
+                              activeSince: previewKennel.activeSince,
+                              totalLitters: 0,
+                              description: null,
+                              breederType: null,
+                            } as Breeder,
+                          });
+                        } : undefined}
+                      />
                     ))}
                   </>
                 ) : null}
@@ -633,7 +671,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
   },
   emptyState: {
     alignItems: "center",

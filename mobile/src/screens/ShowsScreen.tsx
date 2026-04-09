@@ -21,8 +21,18 @@ import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
 
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 function getSeasonForDate(dateStr: string): string {
@@ -45,7 +55,6 @@ function getCurrentSeason(): string {
   return `${year - 1} – ${year}`;
 }
 
-
 function formatDateRange(dates: string[]): string {
   if (!dates || dates.length === 0) return "TBA";
   if (dates.length === 1) return formatDate(dates[0]);
@@ -58,15 +67,34 @@ const STATUS_COLORS: Record<string, string> = {
   Past: "#9CA3AF",
 };
 
-function PreviewJudgeRow({ judge, onPress }: { judge: ShowJudge; onPress: () => void }) {
+function PreviewJudgeRow({
+  judge,
+  onPress,
+}: {
+  judge: ShowJudge;
+  onPress: () => void;
+}) {
   const [imgError, setImgError] = useState(false);
-  const initials = judge.full_name.split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("");
+  const initials = judge.full_name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
   const hasImg = !!judge.imageUrl && !imgError;
   return (
-    <TouchableOpacity style={styles.judgeRow} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.judgeRow}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.judgeAvatarWrap}>
         {hasImg ? (
-          <LazyImage source={{ uri: judge.imageUrl! }} style={styles.judgeAvatarImg} onError={() => setImgError(true)} />
+          <LazyImage
+            source={{ uri: judge.imageUrl! }}
+            style={styles.judgeAvatarImg}
+            onError={() => setImgError(true)}
+          />
         ) : (
           <Text style={styles.judgeAvatarInitials}>{initials}</Text>
         )}
@@ -75,8 +103,12 @@ function PreviewJudgeRow({ judge, onPress }: { judge: ShowJudge; onPress: () => 
         <Text style={styles.judgeLabel}>JUDGE</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.judgeName} numberOfLines={1}>{judge.full_name}</Text>
-        {judge.credentials ? <Text style={styles.judgeCredentials}>{judge.credentials}</Text> : null}
+        <Text style={styles.judgeName} numberOfLines={1}>
+          {judge.full_name}
+        </Text>
+        {judge.credentials ? (
+          <Text style={styles.judgeCredentials}>{judge.credentials}</Text>
+        ) : null}
       </View>
       <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
     </TouchableOpacity>
@@ -87,7 +119,12 @@ function ShowListItem({ show, onPress }: { show: Show; onPress: () => void }) {
   const statusColor = STATUS_COLORS[show.status] || COLORS.textMuted;
 
   return (
-    <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-show-${show.id}`}>
+    <TouchableOpacity
+      style={styles.listItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+      data-testid={`card-show-${show.id}`}
+    >
       <View style={styles.dateBlock}>
         {show.dates.length > 0 ? (
           <>
@@ -97,32 +134,44 @@ function ShowListItem({ show, onPress }: { show: Show; onPress: () => void }) {
             <Text style={styles.dateMonth}>
               {MONTHS[parseInt(show.dates[0].split("-")[1], 10) - 1]}
             </Text>
-            <Text style={styles.dateYear}>
-              {show.dates[0].split("-")[0]}
-            </Text>
+            <Text style={styles.dateYear}>{show.dates[0].split("-")[0]}</Text>
           </>
         ) : (
           <Text style={styles.dateMonth}>TBA</Text>
         )}
       </View>
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={1} data-testid={`text-show-name-${show.id}`}>
+        <Text
+          style={styles.itemName}
+          numberOfLines={1}
+          data-testid={`text-show-name-${show.id}`}
+        >
           {show.name}
         </Text>
-        <Text style={styles.itemSub} numberOfLines={1}>{show.event_type}</Text>
+        <Text style={styles.itemSub} numberOfLines={1}>
+          {show.event_type}
+        </Text>
         <View style={styles.badges}>
-          <View style={[styles.statusBadge, { backgroundColor: `${statusColor}18` }]}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.statusBadgeText, { color: statusColor }]}>{show.status}</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: `${statusColor}18` },
+            ]}
+          >
+            <View
+              style={[styles.statusDot, { backgroundColor: statusColor }]}
+            />
+            <Text style={[styles.statusBadgeText, { color: statusColor }]}>
+              {show.status}
+            </Text>
           </View>
-          {show.location && (
+          {show.city && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText} numberOfLines={1}>{show.location}</Text>
+              <Text style={styles.badgeText} numberOfLines={1}>
+                {show.city}
+              </Text>
             </View>
           )}
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{show.entryCount} entries</Text>
-          </View>
         </View>
         {show.status === "Upcoming" && show.last_date_of_entry ? (
           <Text style={styles.entryDeadline}>
@@ -173,7 +222,13 @@ export default function ShowsScreen() {
     setTempSeason("All");
   };
 
-  const { data: shows, isLoading, isError, refetch, isRefetching } = useQuery<Show[]>({
+  const {
+    data: shows,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useQuery<Show[]>({
     queryKey: ["shows"],
     queryFn: fetchShows,
   });
@@ -208,7 +263,7 @@ export default function ShowsScreen() {
       results = results.filter(
         (s) =>
           s.name.toLowerCase().includes(q) ||
-          (s.location && s.location.toLowerCase().includes(q)) ||
+          (s.city && s.city.toLowerCase().includes(q)) ||
           s.judges.some((j) => j.full_name.toLowerCase().includes(q)),
       );
     }
@@ -223,7 +278,10 @@ export default function ShowsScreen() {
 
     if (seasonFilter !== "All") {
       results = results.filter(
-        (s) => s.dates && s.dates.length > 0 && getSeasonForDate(s.dates[0]) === seasonFilter,
+        (s) =>
+          s.dates &&
+          s.dates.length > 0 &&
+          getSeasonForDate(s.dates[0]) === seasonFilter,
       );
     }
 
@@ -245,13 +303,23 @@ export default function ShowsScreen() {
             data-testid="input-search-shows"
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} data-testid="btn-clear-search">
-              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+            <TouchableOpacity
+              onPress={() => setSearch("")}
+              data-testid="btn-clear-search"
+            >
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={COLORS.textMuted}
+              />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity
-          style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
+          style={[
+            styles.filterButton,
+            activeFilterCount > 0 && styles.filterButtonActive,
+          ]}
           onPress={openFilters}
           activeOpacity={0.7}
           data-testid="btn-open-filters"
@@ -263,7 +331,9 @@ export default function ShowsScreen() {
           />
           {activeFilterCount > 0 && (
             <View style={styles.filterBadgeCount}>
-              <Text style={styles.filterBadgeCountText}>{activeFilterCount}</Text>
+              <Text style={styles.filterBadgeCountText}>
+                {activeFilterCount}
+              </Text>
             </View>
           )}
         </TouchableOpacity>
@@ -273,9 +343,16 @@ export default function ShowsScreen() {
         <View style={styles.activeFiltersRow}>
           {seasonFilter !== "All" && (
             <View style={styles.activeChip}>
-              <Ionicons name="calendar-outline" size={12} color={COLORS.primary} />
+              <Ionicons
+                name="calendar-outline"
+                size={12}
+                color={COLORS.primary}
+              />
               <Text style={styles.activeChipText}>{seasonFilter}</Text>
-              <TouchableOpacity onPress={() => setSeasonFilter("All")} data-testid="btn-remove-season-filter">
+              <TouchableOpacity
+                onPress={() => setSeasonFilter("All")}
+                data-testid="btn-remove-season-filter"
+              >
                 <Ionicons name="close" size={14} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
@@ -283,7 +360,10 @@ export default function ShowsScreen() {
           {statusFilter !== "All" && (
             <View style={styles.activeChip}>
               <Text style={styles.activeChipText}>{statusFilter}</Text>
-              <TouchableOpacity onPress={() => setStatusFilter("All")} data-testid="btn-remove-status-filter">
+              <TouchableOpacity
+                onPress={() => setStatusFilter("All")}
+                data-testid="btn-remove-status-filter"
+              >
                 <Ionicons name="close" size={14} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
@@ -291,13 +371,20 @@ export default function ShowsScreen() {
           {typeFilter !== "All" && (
             <View style={styles.activeChip}>
               <Text style={styles.activeChipText}>{typeFilter}</Text>
-              <TouchableOpacity onPress={() => setTypeFilter("All")} data-testid="btn-remove-type-filter">
+              <TouchableOpacity
+                onPress={() => setTypeFilter("All")}
+                data-testid="btn-remove-type-filter"
+              >
                 <Ionicons name="close" size={14} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
           )}
           <TouchableOpacity
-            onPress={() => { setStatusFilter("All"); setTypeFilter("All"); setSeasonFilter("All"); }}
+            onPress={() => {
+              setStatusFilter("All");
+              setTypeFilter("All");
+              setSeasonFilter("All");
+            }}
             data-testid="btn-clear-all-filters"
           >
             <Text style={styles.clearAllText}>Clear all</Text>
@@ -312,13 +399,28 @@ export default function ShowsScreen() {
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.xxl }} data-testid="loading-shows" />
+        <ActivityIndicator
+          size="large"
+          color={COLORS.primary}
+          style={{ marginTop: SPACING.xxl }}
+          data-testid="loading-shows"
+        />
       ) : isError ? (
         <View style={styles.emptyState}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={48}
+            color={COLORS.textMuted}
+          />
           <Text style={styles.emptyTitle}>Failed to load shows</Text>
-          <Text style={styles.emptyDesc}>Could not connect to the server. Please try again.</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
+          <Text style={styles.emptyDesc}>
+            Could not connect to the server. Please try again.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => refetch()}
+            data-testid="btn-retry"
+          >
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -328,19 +430,27 @@ export default function ShowsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
           }
           renderItem={({ item }) => (
-            <ShowListItem
-              show={item}
-              onPress={() => setPreviewShow(item)}
-            />
+            <ShowListItem show={item} onPress={() => setPreviewShow(item)} />
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
+              <Ionicons
+                name="search-outline"
+                size={48}
+                color={COLORS.textMuted}
+              />
               <Text style={styles.emptyTitle}>No shows found</Text>
-              <Text style={styles.emptyDesc}>Try adjusting your search or filters.</Text>
+              <Text style={styles.emptyDesc}>
+                Try adjusting your search or filters.
+              </Text>
             </View>
           }
         />
@@ -350,8 +460,10 @@ export default function ShowsScreen() {
         visible={!!previewShow}
         onClose={() => setPreviewShow(null)}
       >
-          {previewShow && (() => {
-            const statusColor = STATUS_COLORS[previewShow.status] || COLORS.textMuted;
+        {previewShow &&
+          (() => {
+            const statusColor =
+              STATUS_COLORS[previewShow.status] || COLORS.textMuted;
             const dateRange = formatDateRange(previewShow.dates);
             return (
               <View style={styles.modalContent}>
@@ -359,20 +471,50 @@ export default function ShowsScreen() {
                   <View style={styles.previewDateBlock}>
                     {previewShow.dates.length > 0 ? (
                       <>
-                        <Text style={styles.previewDateDay}>{parseInt(previewShow.dates[0].split("-")[2], 10)}</Text>
-                        <Text style={styles.previewDateMonth}>{MONTHS[parseInt(previewShow.dates[0].split("-")[1], 10) - 1]}</Text>
+                        <Text style={styles.previewDateDay}>
+                          {parseInt(previewShow.dates[0].split("-")[2], 10)}
+                        </Text>
+                        <Text style={styles.previewDateMonth}>
+                          {
+                            MONTHS[
+                              parseInt(previewShow.dates[0].split("-")[1], 10) -
+                                1
+                            ]
+                          }
+                        </Text>
                       </>
                     ) : (
                       <Text style={styles.previewDateMonth}>TBA</Text>
                     )}
                   </View>
                   <View style={styles.previewHeadInfo}>
-                    <Text style={styles.previewName} numberOfLines={2}>{previewShow.name}</Text>
-                    <Text style={styles.previewSub}>{previewShow.event_type}</Text>
+                    <Text style={styles.previewName} numberOfLines={2}>
+                      {previewShow.name}
+                    </Text>
+                    <Text style={styles.previewSub}>
+                      {previewShow.event_type}
+                    </Text>
                     <View style={styles.previewBadgeRow}>
-                      <View style={[styles.statusBadge, { backgroundColor: `${statusColor}18` }]}>
-                        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                        <Text style={[styles.statusBadgeText, { color: statusColor }]}>{previewShow.status}</Text>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: `${statusColor}18` },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.statusDot,
+                            { backgroundColor: statusColor },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.statusBadgeText,
+                            { color: statusColor },
+                          ]}
+                        >
+                          {previewShow.status}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -380,16 +522,28 @@ export default function ShowsScreen() {
                 <View style={styles.previewDivider} />
                 <View style={styles.previewGrid}>
                   {[
-                    { label: "Date(s)", value: dateRange !== "TBA" ? dateRange : null },
+                    {
+                      label: "Date(s)",
+                      value: dateRange !== "TBA" ? dateRange : null,
+                    },
                     { label: "Location", value: previewShow.location },
                     { label: "Entries", value: String(previewShow.entryCount) },
-                    { label: "Last Entry", value: previewShow.last_date_of_entry ? formatDate(previewShow.last_date_of_entry) : null },
-                  ].filter(r => r.value).map(r => (
-                    <View key={r.label} style={styles.previewRow}>
-                      <Text style={styles.previewRowLabel}>{r.label}</Text>
-                      <Text style={styles.previewRowValue} numberOfLines={2}>{r.value}</Text>
-                    </View>
-                  ))}
+                    {
+                      label: "Last Entry",
+                      value: previewShow.last_date_of_entry
+                        ? formatDate(previewShow.last_date_of_entry)
+                        : null,
+                    },
+                  ]
+                    .filter((r) => r.value)
+                    .map((r) => (
+                      <View key={r.label} style={styles.previewRow}>
+                        <Text style={styles.previewRowLabel}>{r.label}</Text>
+                        <Text style={styles.previewRowValue} numberOfLines={2}>
+                          {r.value}
+                        </Text>
+                      </View>
+                    ))}
                 </View>
                 {previewShow.judges.length > 0 && (
                   <>
@@ -398,9 +552,17 @@ export default function ShowsScreen() {
                       <View key={judge.id}>
                         <PreviewJudgeRow
                           judge={judge}
-                          onPress={() => { setPreviewShow(null); navigation.push("JudgeDetail", { id: judge.id, backLabel: previewShow.name }); }}
+                          onPress={() => {
+                            setPreviewShow(null);
+                            navigation.push("JudgeDetail", {
+                              id: judge.id,
+                              backLabel: previewShow.name,
+                            });
+                          }}
                         />
-                        {i < previewShow.judges.length - 1 && <View style={styles.judgeRowDivider} />}
+                        {i < previewShow.judges.length - 1 && (
+                          <View style={styles.judgeRowDivider} />
+                        )}
                       </View>
                     ))}
                     <View style={styles.previewDivider} />
@@ -409,10 +571,18 @@ export default function ShowsScreen() {
                 <TouchableOpacity
                   style={styles.viewProfileBtn}
                   activeOpacity={0.8}
-                  onPress={() => { setPreviewShow(null); navigation.navigate("ShowDetail", { id: previewShow.id, name: previewShow.name }); }}
+                  onPress={() => {
+                    setPreviewShow(null);
+                    navigation.navigate("ShowDetail", {
+                      id: previewShow.id,
+                      name: previewShow.name,
+                    });
+                  }}
                 >
                   <Ionicons name="ribbon" size={16} color="#fff" />
-                  <Text style={styles.viewProfileBtnText}>View Show Details</Text>
+                  <Text style={styles.viewProfileBtnText}>
+                    View Show Details
+                  </Text>
                 </TouchableOpacity>
               </View>
             );
@@ -423,84 +593,166 @@ export default function ShowsScreen() {
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
       >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filters</Text>
-              <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
-                <Text style={styles.resetText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.filterSectionTitle}>Season</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
-              <TouchableOpacity
-                style={[styles.filterOption, tempSeason === "All" && styles.filterOptionActive]}
-                onPress={() => setTempSeason("All")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterOptionText, tempSeason === "All" && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {seasons.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.filterOption, tempSeason === opt && styles.filterOptionActive]}
-                  onPress={() => setTempSeason(opt)}
-                  activeOpacity={0.7}
-                  data-testid={`filter-season-${opt.replace(/\s/g, "-")}`}
-                >
-                  <Text style={[styles.filterOptionText, tempSeason === opt && styles.filterOptionTextActive]}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.filterSectionTitle}>Status</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
-              <TouchableOpacity
-                style={[styles.filterOption, tempStatus === "All" && styles.filterOptionActive]}
-                onPress={() => setTempStatus("All")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterOptionText, tempStatus === "All" && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {statuses.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.filterOption, tempStatus === opt && styles.filterOptionActive]}
-                  onPress={() => setTempStatus(opt)}
-                  activeOpacity={0.7}
-                  data-testid={`filter-status-${opt.toLowerCase()}`}
-                >
-                  <Text style={[styles.filterOptionText, tempStatus === opt && styles.filterOptionTextActive]}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.filterSectionTitle}>Event Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
-              <TouchableOpacity
-                style={[styles.filterOption, tempType === "All" && styles.filterOptionActive]}
-                onPress={() => setTempType("All")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterOptionText, tempType === "All" && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {eventTypes.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.filterOption, tempType === opt && styles.filterOptionActive]}
-                  onPress={() => setTempType(opt)}
-                  activeOpacity={0.7}
-                  data-testid={`filter-type-${opt.toLowerCase().replace(/\s/g, "-")}`}
-                >
-                  <Text style={[styles.filterOptionText, tempType === opt && styles.filterOptionTextActive]}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TouchableOpacity style={styles.applyButton} onPress={applyFilters} data-testid="btn-apply-filters">
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Filters</Text>
+            <TouchableOpacity
+              onPress={resetFilters}
+              data-testid="btn-reset-filters"
+            >
+              <Text style={styles.resetText}>Reset</Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={styles.filterSectionTitle}>Season</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterOptionsRow}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterOption,
+                tempSeason === "All" && styles.filterOptionActive,
+              ]}
+              onPress={() => setTempSeason("All")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  tempSeason === "All" && styles.filterOptionTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {seasons.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.filterOption,
+                  tempSeason === opt && styles.filterOptionActive,
+                ]}
+                onPress={() => setTempSeason(opt)}
+                activeOpacity={0.7}
+                data-testid={`filter-season-${opt.replace(/\s/g, "-")}`}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempSeason === opt && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterSectionTitle}>Status</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterOptionsRow}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterOption,
+                tempStatus === "All" && styles.filterOptionActive,
+              ]}
+              onPress={() => setTempStatus("All")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  tempStatus === "All" && styles.filterOptionTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {statuses.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.filterOption,
+                  tempStatus === opt && styles.filterOptionActive,
+                ]}
+                onPress={() => setTempStatus(opt)}
+                activeOpacity={0.7}
+                data-testid={`filter-status-${opt.toLowerCase()}`}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempStatus === opt && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterSectionTitle}>Event Type</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterOptionsRow}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterOption,
+                tempType === "All" && styles.filterOptionActive,
+              ]}
+              onPress={() => setTempType("All")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  tempType === "All" && styles.filterOptionTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {eventTypes.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.filterOption,
+                  tempType === opt && styles.filterOptionActive,
+                ]}
+                onPress={() => setTempType(opt)}
+                activeOpacity={0.7}
+                data-testid={`filter-type-${opt.toLowerCase().replace(/\s/g, "-")}`}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempType === opt && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={applyFilters}
+            data-testid="btn-apply-filters"
+          >
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
       </BottomSheetModal>
     </View>
   );
@@ -696,7 +948,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
   },
   emptyState: {
     alignItems: "center",
@@ -887,7 +1139,11 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   judgeAvatarImg: { width: 48, height: 48, borderRadius: 24 },
-  judgeAvatarInitials: { fontSize: 16, fontWeight: "800", color: COLORS.primary },
+  judgeAvatarInitials: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: COLORS.primary,
+  },
   judgeLabelWrap: {
     width: 38,
     height: 26,
@@ -897,10 +1153,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexShrink: 0,
   },
-  judgeLabel: { fontSize: 10, fontWeight: "800", color: COLORS.primary, letterSpacing: 0.6 },
+  judgeLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: COLORS.primary,
+    letterSpacing: 0.6,
+  },
   judgeName: { fontSize: FONT_SIZES.md, fontWeight: "600", color: COLORS.text },
-  judgeCredentials: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 1 },
-  judgeRowDivider: { height: 1, backgroundColor: COLORS.border, marginHorizontal: 4 },
+  judgeCredentials: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
+  judgeRowDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: 4,
+  },
 
   viewProfileBtn: {
     flexDirection: "row",

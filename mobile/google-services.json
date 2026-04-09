@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "384303481015",
+    "project_id": "gsdcp-52d3a",
+    "storage_bucket": "gsdcp-52d3a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:384303481015:android:5cbcf7c9fca094c37a0d32",
+        "android_client_info": {
+          "package_name": "org.gsdcp.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbL0h-Ncb2QKCnq7nz9CWp26Zj-sfyTgQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

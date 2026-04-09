@@ -41,6 +41,7 @@ import JudgeDetailScreen from "../screens/club/JudgeDetailScreen";
 import TeamMemberDetailScreen from "../screens/club/TeamMemberDetailScreen";
 
 import VirtualBreedingScreen from "../screens/VirtualBreedingScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import CustomTabBar from "./CustomTabBar";
 
 export type DogsStackParamList = {
@@ -71,6 +72,7 @@ export type ShowsStackParamList = {
 export type ProfileStackParamList = {
   ProfileHome: undefined;
   LoginRegister: undefined;
+  ForgotPassword: undefined;
   KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
@@ -96,6 +98,7 @@ export type KennelDirectoryStackParamList = {
   KennelDirectory: undefined;
   KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
+  BreederProfile: { id: string; name?: string; breederData?: any };
   MemberProfile: { id: string; member?: any };
   ShowDetail: { id: string; name?: string };
 };
@@ -225,7 +228,10 @@ function ProfileStackNavigator() {
           <ProfileStack.Screen name="ShowDetail" component={ShowDetailScreen} />
         </>
       ) : (
-        <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+        <>
+          <ProfileStack.Screen name="LoginRegister" component={LoginRegisterScreen} />
+          <ProfileStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        </>
       )}
     </ProfileStack.Navigator>
   );
@@ -260,6 +266,7 @@ function KennelDirectoryStackNavigator() {
       <KennelDirectoryStack.Screen name="KennelDirectory" component={KennelDirectoryScreen} />
       <KennelDirectoryStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <KennelDirectoryStack.Screen name="DogProfile" component={DogProfileScreen} />
+      <KennelDirectoryStack.Screen name="BreederProfile" component={BreederProfileScreen} />
       <KennelDirectoryStack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <KennelDirectoryStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </KennelDirectoryStack.Navigator>

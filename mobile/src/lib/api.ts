@@ -58,22 +58,90 @@ export type DogsPage = {
 
 export async function fetchDogsPage(
   page: number = 1,
-  filters?: { search?: string; gender?: string },
+  filters?: { search?: string; gender?: string; hair?: string },
 ): Promise<DogsPage> {
   const params = new URLSearchParams({ page: String(page) });
   if (filters?.search) params.set("q", filters.search);
   if (filters?.gender && filters.gender !== "All") params.set("gender", filters.gender);
+  if (filters?.hair && filters.hair !== "All") params.set("hair", filters.hair);
   const res = await fetch(`${BASE_URL}/dogs?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch dogs");
   return { data: json.data, pagination: json.pagination };
 }
 
-export async function fetchDog(id: string): Promise<DogDetail> {
-  const res = await fetch(`${BASE_URL}/dogs/${id}`);
+export async function fetchDog(id: string, userId?: number | null): Promise<DogDetail> {
+  const url = userId != null
+    ? `${BASE_URL}/dogs/${id}?user_id=${userId}`
+    : `${BASE_URL}/dogs/${id}`;
+  const res = await fetch(url);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch dog");
   return json.data;
+}
+
+export async function uploadDogPhoto(
+  dogId: string,
+  imageUri: string,
+  token?: string | null,
+  pickerMimeType?: string | null,
+): Promise<void> {
+  const form = new FormData();
+  form.append("dog_id", dogId);
+  if (Platform.OS === "web") {
+    // Fetch the image (may be a blob:// or data: URI from the picker)
+    const resp = await fetch(imageUri);
+    const originalBlob = await resp.blob();
+    // Re-encode through a canvas → guaranteed valid JPEG bytes.
+    // This handles WebP / PNG / HEIC-decoded outputs from the browser picker.
+    let jpegBlob: Blob;
+    try {
+      const bitmap = await (window as any).createImageBitmap(originalBlob);
+      const canvas = document.createElement("canvas");
+      canvas.width  = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      jpegBlob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Canvas export failed")), "image/jpeg", 0.85),
+      );
+    } catch {
+      // Fallback: send the original blob as-is (best effort)
+      jpegBlob = new Blob([await originalBlob.arrayBuffer()], { type: "image/jpeg" });
+    }
+    console.log("[uploadDogPhoto] web blob type:", jpegBlob.type, "size:", jpegBlob.size);
+    form.append("dog_img", jpegBlob, "photo.jpg");
+  } else {
+    // Use the MIME type reported by the picker when available.
+    // iOS can return HEIC URIs — expo converts them when allowsEditing=true
+    // but the mimeType field on the asset is the safest source of truth.
+    // We normalise anything that isn't PNG to JPEG so the server always
+    // receives a format it accepts.
+    let mime = pickerMimeType ?? "image/jpeg";
+    // Reject HEIC/HEIF/WEBP — force to JPEG (expo has already re-encoded the pixels)
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(mime.toLowerCase())) {
+      mime = "image/jpeg";
+    }
+    const ext      = mime === "image/png" ? "png" : "jpg";
+    const filename = `photo.${ext}`;
+    console.log("[uploadDogPhoto] native upload", filename, mime, imageUri.substring(0, 60));
+    form.append("dog_img", { uri: imageUri, name: filename, type: mime } as any);
+  }
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/dogs/change-picture`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+  const raw = await res.text();
+  console.log("[uploadDogPhoto] status:", res.status, "body:", raw.substring(0, 300));
+  if (!res.ok) throw new Error(`Server error (${res.status}). Please try again.`);
+  let json: any = {};
+  try { json = JSON.parse(raw); } catch { /* non-JSON success response is OK */ }
+  if (json.exception)          throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false)  throw new Error(json.error?.message ?? json.message ?? "Photo upload failed.");
 }
 
 export type DogOwner = {
@@ -223,6 +291,7 @@ export type DogDetail = {
   progeny: ProgenyEntry[];
   hd_hereditary?: HereditaryData | null;
   ed_hereditary?: HereditaryData | null;
+  viewer_is_owner?: boolean | null;
 };
 
 export type ShowJudge = {
@@ -233,6 +302,7 @@ export type ShowJudge = {
 };
 
 export type Show = {
+  city: any;
   id: string;
   name: string;
   event_type: string;
@@ -419,6 +489,77 @@ export async function uploadProfilePhoto(
   try { json = JSON.parse(raw); } catch { throw new Error("Invalid response from server."); }
   if (json.exception)       throw new Error(json.message ?? "A server error occurred.");
   if (json.success === false) throw new Error(json.error?.message ?? json.message ?? "Photo upload failed.");
+}
+
+export async function updateKennel(
+  kennelId: string,
+  fields: {
+    phone: string;
+    email: string;
+    address: string;
+    facebook: string;
+    instagram: string;
+    linkedin: string;
+    website: string;
+    description: string;
+  },
+  imageUri?: string | null,
+  pickerMimeType?: string | null,
+  token?: string | null,
+): Promise<void> {
+  const form = new FormData();
+  form.append("kennel_id", kennelId);
+  form.append("phone",       fields.phone);
+  form.append("email",       fields.email);
+  form.append("address",     fields.address);
+  form.append("facebook",    fields.facebook);
+  form.append("instagram",   fields.instagram);
+  form.append("linkedin",    fields.linkedin);
+  form.append("website",     fields.website);
+  form.append("description", fields.description);
+
+  if (imageUri) {
+    if (Platform.OS === "web") {
+      const resp = await fetch(imageUri);
+      const originalBlob = await resp.blob();
+      let jpegBlob: Blob;
+      try {
+        const bitmap = await (window as any).createImageBitmap(originalBlob);
+        const canvas = document.createElement("canvas");
+        canvas.width  = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        jpegBlob = await new Promise<Blob>((resolve, reject) =>
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Canvas export failed")), "image/jpeg", 0.85),
+        );
+      } catch {
+        jpegBlob = new Blob([await originalBlob.arrayBuffer()], { type: "image/jpeg" });
+      }
+      form.append("kennel_image", jpegBlob, "photo.jpg");
+    } else {
+      let mime = pickerMimeType ?? "image/jpeg";
+      if (!["image/jpeg", "image/jpg", "image/png"].includes(mime.toLowerCase())) mime = "image/jpeg";
+      const ext = mime === "image/png" ? "png" : "jpg";
+      form.append("kennel_image", { uri: imageUri, name: `photo.${ext}`, type: mime } as any);
+    }
+  }
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/profile/update-kennel`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+  const raw = await res.text();
+  console.log("[updateKennel] status:", res.status, "body:", raw.substring(0, 300));
+  if (!res.ok) throw new Error(`Server error (${res.status}). Please try again.`);
+  let json: any = {};
+  try { json = JSON.parse(raw); } catch {}
+  if (json.exception)          throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false)  throw new Error(json.error?.message ?? json.message ?? "Update failed.");
 }
 
 export type ProfileShowResult = {
@@ -706,6 +847,7 @@ export type BreederDog = {
   sex: string;
   dateOfBirth: string | null;
   color: string | null;
+  hair: string | null;
   imageUrl: string;
   owner: string | null;
   breeder: string | null;
@@ -715,8 +857,14 @@ export type BreederDog = {
   microchip: string | null;
 };
 
+export type BreederKennel = {
+  phone: string | null;
+  email: string | null;
+};
+
 export type BreederDetail = {
   breeder: Breeder;
+  kennel?: BreederKennel | null;
   dogsBred: BreederDog[];
   dogsOwned: BreederDog[];
 };
@@ -773,18 +921,26 @@ export type RecentMating = {
   mating_date: string;
   city: string | null;
   litter_on_ground?: boolean;
+  line_breeding?: LineBreedingEntry[] | null;
 };
 
-export async function fetchRecentMatings(): Promise<RecentMating[]> {
-  const res = await fetch(`${BASE_URL}/recent-matings`);
+export type MatingsPage = {
+  data: RecentMating[];
+  pagination: PaginationMeta;
+};
+
+export async function fetchRecentMatingsPage(
+  page: number = 1,
+  perPage: number = 15,
+): Promise<MatingsPage> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  const res = await fetch(`${BASE_URL}/recent-matings?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch recent matings");
-  const seen = new Set<string>();
-  return (json.data.upcomingLitters as RecentMating[]).filter((m) => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  });
+  return {
+    data: json.data.upcomingLitters as RecentMating[],
+    pagination: json.pagination as PaginationMeta,
+  };
 }
 
 export type DashboardData = {
@@ -813,7 +969,7 @@ export type Kennel = {
   imageUrl: string;
   activeSince: string;
   description: string | null;
-  owners?: KennelOwner[];
+  breeders?: KennelBreeder[];
 };
 
 export async function fetchKennels(): Promise<Kennel[]> {
@@ -838,7 +994,8 @@ export type KennelMating = {
   puppies: string | null;
 };
 
-export type KennelOwner = {
+export type KennelBreeder = {
+  breeder_id?: string | null;
   name: string;
   phone: string | null;
   email: string | null;
@@ -854,7 +1011,6 @@ export type KennelFull = Kennel & {
 export type KennelDetail = {
   kennels: KennelFull;
   matings: KennelMating[];
-  kennelOwners: KennelOwner[];
 };
 
 export async function fetchKennelDetail(id: string): Promise<KennelDetail> {
@@ -1034,6 +1190,10 @@ export type MemberKennel = {
   imageUrl: string | null;
   description: string | null;
   active_since: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  linkedin: string | null;
+  website: string | null;
 };
 
 export type MemberDetail = {
@@ -1061,6 +1221,37 @@ export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
     ownedDogs: json.data.ownedDogs ?? [],
     kennel: json.data.kennel ?? null,
   };
+}
+
+export async function fetchMyDogs(userId: string, q?: string): Promise<MemberOwnedDog[]> {
+  const params = new URLSearchParams({ user_id: userId });
+  if (q && q.trim()) params.set("q", q.trim());
+  const res = await fetch(`${BASE_URL}/profile/my-dogs?${params.toString()}`);
+  if (!res.ok) throw new Error("Failed to fetch my dogs");
+  const text = await res.text();
+  if (text.trim().startsWith("<")) throw new Error("Server returned HTML");
+  const json = JSON.parse(text);
+  const rows: any[] = json.data ?? json.dogs ?? json ?? [];
+  return Array.isArray(rows)
+    ? rows.map((d: any) => ({
+        id: String(d.id ?? d.dog_id ?? ""),
+        dog_name: d.dog_name ?? d.name ?? "",
+        KP: d.KP ?? d.kp ?? d.reg_no ?? "",
+        foreign_reg_no: d.foreign_reg_no ?? "",
+        breed: d.breed ?? "",
+        hair: d.hair ?? "",
+        sex: d.sex ?? d.gender ?? "",
+        dob: d.dob ?? d.date_of_birth ?? null,
+        color: d.color ?? "",
+        imageUrl: d.imageUrl ?? d.image_url ?? d.photo ?? null,
+        owner: d.owner ?? d.owner_name ?? "",
+        breeder: d.breeder ?? d.breeder_name ?? "",
+        sire: d.sire ?? d.sire_name ?? "",
+        dam: d.dam ?? d.dam_name ?? "",
+        titles: Array.isArray(d.titles) ? d.titles : [],
+        microchip: d.microchip ?? null,
+      }))
+    : [];
 }
 
 export async function fetchMembersPage(
@@ -1556,4 +1747,321 @@ export async function fetchTeamMember(id: string): Promise<TeamMember> {
   if (!res.ok) throw new Error("Failed to fetch team member");
   const json = await res.json();
   return json.data.gsdcp_team;
+}
+
+/* ── HD/ED Registrations ─────────────────────────────── */
+export type HDEDRegistration = {
+  id: string;
+  dog: { id: string; name: string; KP: string; foreign_reg_no: string | null };
+  hd_grade: string | null;
+  ed_grade: string | null;
+  xray_date: string | null;
+  certificate_no: string | null;
+  status: string | null;
+};
+
+export type HDEDRegistrationPayload = {
+  user_id: number;
+  dog_id: number;
+  hd_grade: string;
+  ed_grade: string;
+  xray_date: string;
+  certificate_no?: string;
+  institute?: string;
+  remarks?: string;
+};
+
+export async function fetchHDEDRegistrations(
+  userId: number, page = 1, perPage = 10
+): Promise<{ registrations: HDEDRegistration[]; total: number }> {
+  const res = await fetch(`${BASE_URL}/hd-ed-registrations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ user_id: userId, page, per_page: perPage }),
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED registrations");
+  return {
+    registrations: Array.isArray(json.data?.registrations) ? json.data.registrations : [],
+    total: json.data?.total ?? 0,
+  };
+}
+
+/* ── HD/ED Requests (new) ─────────────────────────────── */
+export type HDEDRequest = {
+  id: string;
+  dog: { id: string; name: string; KP: string | null; foreign_reg_no: string | null; microchip?: string | null; hair?: string | null; imageURL?: string | null; sex?: string | null } | null;
+  detail?: {
+    date_radiographed: string | null;
+    radiographed_by: string | null;
+    hd_result: string | null;
+    ed_result: string | null;
+  } | null;
+  status: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+};
+
+export async function fetchHDEDRequests(
+  userId: number,
+): Promise<HDEDRequest[]> {
+  const res = await fetch(`${BASE_URL}/hded-requests?user_id=${userId}`, {
+    headers: { Accept: "application/json" },
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED requests");
+  return json.data?.requests ?? [];
+}
+
+export async function fetchHDEDRequestDetail(
+  id: string,
+  userId: number,
+): Promise<HDEDRequest> {
+  const res = await fetch(`${BASE_URL}/hded-requests/${id}?user_id=${userId}`, {
+    headers: { Accept: "application/json" },
+  });
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch HD/ED request");
+  const request = json.data?.request;
+  if (!request) throw new Error("Request not found");
+  return request;
+}
+
+export type HDEDDogInfo = {
+  eligible: boolean;
+  message?: string | null;
+  charges?: {
+    DNA_charge: string;
+    HDED_charge: string;
+    GBW_charge: string;
+  } | null;
+};
+
+export async function fetchHDEDDogInfo(userId: number, dogId: number): Promise<HDEDDogInfo> {
+  const res = await fetch(
+    `${BASE_URL}/hded-request/fetch-information?user_id=${userId}&dog_id=${dogId}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const json = await res.json();
+  if (!json.success) {
+    return { eligible: false, message: json.error?.message ?? json.message ?? "This dog cannot be submitted.", charges: null };
+  }
+  return {
+    eligible: true,
+    message: json.data?.message ?? null,
+    charges: json.data ? {
+      DNA_charge: json.data.DNA_charge,
+      HDED_charge: json.data.HDED_charge,
+      GBW_charge: json.data.GBW_charge,
+    } : null,
+  };
+}
+
+export async function submitHDEDRegistration(
+  payload: HDEDRegistrationPayload,
+  token?: string | null,
+): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/new-hd-ed-registration`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    if (res.ok) return;
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
+  }
+}
+
+export async function submitNewHDEDRequest(userId: number, dogId: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/new-hded-request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ user_id: userId, dog_id: dogId }),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = JSON.parse(text);
+  } catch {
+    if (res.ok) return;
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
+  }
+}
+
+/* ── Single Dog Registration ─────────────────────────── */
+export type SingleDogRegistration = {
+  id: string;
+  dog_name: string;
+  status: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+};
+
+export type SDRProofFile = {
+  id: number;
+  name: string;
+  created_at: string | null;
+};
+
+export type SDRRequestDetail = {
+  id: string;
+  dog: {
+    id: string;
+    name: string;
+    hair: string | null;
+    sex: string | null;
+    KP: string | null;
+    foreign_reg_no: string | null;
+    color: string | null;
+    microchip: string | null;
+  };
+  height: string | null;
+  testicles: string | null;
+  neutered: string | null;
+  bite: string | null;
+  dentition_faults: string | null;
+  DNA_status: string | null;
+  status: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+  docs: SDRProofFile[];
+  vids: SDRProofFile[];
+  pics: SDRProofFile[];
+};
+
+export type SDRPickedFile = {
+  uri: string;
+  name: string;
+  mimeType: string;
+};
+
+export type SingleDogRegistrationPayload = {
+  user_id: number;
+  dog_name: string;
+  gender: string;
+  dob: string;
+  hair: string;
+  photos: SDRPickedFile[];
+  videos: SDRPickedFile[];
+  documents?: SDRPickedFile[];
+};
+
+export async function fetchSingleDogRegistrations(
+  userId: number,
+): Promise<SingleDogRegistration[]> {
+  const res = await fetch(
+    `${BASE_URL}/sdr-requests?user_id=${userId}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch registrations");
+  return json.data?.requests ?? [];
+}
+
+export async function fetchSDRRequestDetail(
+  id: string,
+  userId: number,
+): Promise<SDRRequestDetail> {
+  const res = await fetch(
+    `${BASE_URL}/sdr-requests/${id}?user_id=${userId}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message ?? json.message ?? "Failed to fetch request");
+  return {
+    ...(json.data?.request ?? {}),
+    docs: json.data?.docs ?? [],
+    vids: json.data?.vids ?? [],
+    pics: json.data?.pics ?? [],
+  };
+}
+
+/* ── Forgot Password ─────────────────────────────────── */
+export async function forgotPassword(payload: {
+  login_type: "membership" | "email" | "username";
+  membership_no?: string;
+  email?: string;
+  username?: string;
+}): Promise<{ message: string }> {
+  const res = await fetch(`${BASE_URL}/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error("Unexpected response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Request failed. Please try again.");
+  }
+  return { message: json.message ?? "Password reset instructions sent." };
+}
+
+export async function submitSingleDogRegistration(
+  payload: SingleDogRegistrationPayload,
+  token?: string | null,
+): Promise<void> {
+  const fd = new FormData();
+  fd.append("user_id", String(payload.user_id));
+  fd.append("dog_name", payload.dog_name);
+  fd.append("gender", payload.gender);
+  fd.append("dob", payload.dob);
+  fd.append("hair", payload.hair);
+
+  const appendFiles = (key: string, files: SDRPickedFile[]) => {
+    files.forEach((f) => {
+      if (typeof Blob !== "undefined" && f.uri.startsWith("data:")) {
+        const byteStr = atob(f.uri.split(",")[1]);
+        const arr = new Uint8Array(byteStr.length);
+        for (let i = 0; i < byteStr.length; i++) arr[i] = byteStr.charCodeAt(i);
+        fd.append(key, new Blob([arr], { type: f.mimeType }), f.name);
+      } else {
+        fd.append(key, { uri: f.uri, name: f.name, type: f.mimeType } as any);
+      }
+    });
+  };
+
+  appendFiles("photos[]", payload.photos);
+  appendFiles("videos[]", payload.videos);
+  if (payload.documents?.length) appendFiles("documents[]", payload.documents);
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE_URL}/new-sdr-request`, {
+    method: "POST",
+    headers,
+    body: fd,
+  });
+  let json: any = {};
+  try {
+    const text = await res.text();
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    if (res.ok) return;
+    throw new Error("Invalid response from server.");
+  }
+  if (json.exception) throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false) {
+    throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
+  }
 }
