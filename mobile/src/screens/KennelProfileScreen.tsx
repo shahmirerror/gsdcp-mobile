@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -17,7 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
-import { fetchKennelDetail, KennelDetail, KennelMating } from "../lib/api";
+import { fetchKennelDetail, KennelDetail, KennelMating, KennelBreeder } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelProfile">;
@@ -143,7 +144,7 @@ export default function KennelProfileScreen() {
 
   const kennel = data?.kennels;
   const matings = data?.matings || [];
-  const owners = data?.kennelOwners || [];
+  const breeders = data?.breeders || [];
 
   if (isLoading) {
     return (
@@ -181,14 +182,14 @@ export default function KennelProfileScreen() {
     .slice(0, 2)
     .toUpperCase();
 
-  const primaryOwner = owners[0];
+  const primaryBreeder = breeders[0];
   const showPhone =
     kennel.phone && kennel.phone !== "+00-000-000-0000"
       ? kennel.phone
-      : primaryOwner?.phone && primaryOwner.phone !== "+00-000-000-0000"
-        ? primaryOwner.phone
+      : primaryBreeder?.phone && primaryBreeder.phone !== "+00-000-000-0000"
+        ? primaryBreeder.phone
         : null;
-  const showEmail = kennel.email || primaryOwner?.email || null;
+  const showEmail = kennel.email || primaryBreeder?.email || null;
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
@@ -350,30 +351,38 @@ export default function KennelProfileScreen() {
               </View>
             )}
 
-            {owners.length > 0 && (
+            {breeders.length > 0 && (
               <View style={styles.card}>
                 <Text style={styles.cardHeading}>
-                  {owners.length === 1 ? "Owner" : "Owners"}
+                  {breeders.length === 1 ? "Breeder" : "Breeders"}
                 </Text>
                 <View style={styles.detailsGrid}>
-                  {owners.map((owner, i) => {
-                    const canLink = !!owner.member_id;
+                  {breeders.map((breeder, i) => {
+                    const canLink = !!breeder.id;
+                    const hasImg = !!(breeder.imageUrl && !breeder.imageUrl.includes("user-not-found"));
                     const inner = (
                       <>
                         <View style={styles.ownerAvatar}>
-                          <Text style={styles.ownerInitial}>
-                            {owner.name[0]?.toUpperCase()}
-                          </Text>
+                          {hasImg ? (
+                            <Image
+                              source={{ uri: breeder.imageUrl! }}
+                              style={styles.ownerAvatarImg}
+                            />
+                          ) : (
+                            <Text style={styles.ownerInitial}>
+                              {breeder.name[0]?.toUpperCase()}
+                            </Text>
+                          )}
                         </View>
                         <View style={styles.ownerInfo}>
-                          <Text style={styles.ownerName}>{owner.name}</Text>
-                          {owner.membership_no ? (
+                          <Text style={styles.ownerName}>{breeder.name}</Text>
+                          {breeder.membership_no ? (
                             <Text style={styles.ownerMeta}>
-                              Membership: {owner.membership_no}
+                              Membership: {breeder.membership_no}
                             </Text>
                           ) : null}
-                          {owner.phone ? (
-                            <Text style={styles.ownerMeta}>{owner.phone}</Text>
+                          {breeder.phone ? (
+                            <Text style={styles.ownerMeta}>{breeder.phone}</Text>
                           ) : null}
                         </View>
                         {canLink && (
@@ -386,10 +395,10 @@ export default function KennelProfileScreen() {
                         key={i}
                         style={[
                           styles.ownerRow,
-                          i < owners.length - 1 && styles.ownerRowBorder,
+                          i < breeders.length - 1 && styles.ownerRowBorder,
                         ]}
                         onPress={() =>
-                          navigation.navigate("MemberProfile", { id: owner.member_id! })
+                          navigation.navigate("BreederProfile", { id: breeder.id! })
                         }
                         activeOpacity={0.7}
                       >
@@ -400,7 +409,7 @@ export default function KennelProfileScreen() {
                         key={i}
                         style={[
                           styles.ownerRow,
-                          i < owners.length - 1 && styles.ownerRowBorder,
+                          i < breeders.length - 1 && styles.ownerRowBorder,
                         ]}
                       >
                         {inner}
@@ -685,6 +694,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
+  },
+  ownerAvatarImg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   ownerInitial: {
     fontSize: 16,

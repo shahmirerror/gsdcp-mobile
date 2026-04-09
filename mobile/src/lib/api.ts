@@ -840,8 +840,8 @@ export type KennelMating = {
   puppies: string | null;
 };
 
-export type KennelOwner = {
-  member_id?: string | null;
+export type KennelBreeder = {
+  id?: string | null;
   name: string;
   phone: string | null;
   email: string | null;
@@ -857,7 +857,7 @@ export type KennelFull = Kennel & {
 export type KennelDetail = {
   kennels: KennelFull;
   matings: KennelMating[];
-  kennelOwners: KennelOwner[];
+  breeders: KennelBreeder[];
 };
 
 export async function fetchKennelDetail(id: string): Promise<KennelDetail> {

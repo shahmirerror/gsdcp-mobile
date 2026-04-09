@@ -98,6 +98,7 @@ export type KennelDirectoryStackParamList = {
   KennelDirectory: undefined;
   KennelProfile: { id: string; name?: string };
   DogProfile: { id: string; name?: string };
+  BreederProfile: { id: string; name?: string; breederData?: any };
   MemberProfile: { id: string; member?: any };
   ShowDetail: { id: string; name?: string };
 };
@@ -265,6 +266,7 @@ function KennelDirectoryStackNavigator() {
       <KennelDirectoryStack.Screen name="KennelDirectory" component={KennelDirectoryScreen} />
       <KennelDirectoryStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <KennelDirectoryStack.Screen name="DogProfile" component={DogProfileScreen} />
+      <KennelDirectoryStack.Screen name="BreederProfile" component={BreederProfileScreen} />
       <KennelDirectoryStack.Screen name="MemberProfile" component={MemberProfileScreen} />
       <KennelDirectoryStack.Screen name="ShowDetail" component={ShowDetailScreen} />
     </KennelDirectoryStack.Navigator>
