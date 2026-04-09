@@ -294,7 +294,7 @@ export default function DogProfileScreen() {
       setLocalImageUri(uri);
       setPhotoUploading(true);
       try {
-        await uploadDogPhoto(dogId, uri, user.id, user.token);
+        await uploadDogPhoto(dogId, uri, user.token);
         refetch();
       } catch (e: any) {
         setLocalImageUri(null);

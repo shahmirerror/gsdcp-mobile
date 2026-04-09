@@ -82,11 +82,9 @@ export async function fetchDog(id: string, userId?: number | null): Promise<DogD
 export async function uploadDogPhoto(
   dogId: string,
   imageUri: string,
-  userId: number,
   token?: string | null,
 ): Promise<void> {
   const form = new FormData();
-  form.append("user_id", String(userId));
   form.append("dog_id", dogId);
   const filename = imageUri.split("/").pop()?.split("?")[0] ?? "photo.jpg";
   const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -94,13 +92,13 @@ export async function uploadDogPhoto(
   if (Platform.OS === "web") {
     const resp = await fetch(imageUri);
     const blob = await resp.blob();
-    form.append("photo", new File([blob], filename, { type: mime }), filename);
+    form.append("dog_img", new File([blob], filename, { type: mime }), filename);
   } else {
-    form.append("photo", { uri: imageUri, name: filename, type: mime } as any);
+    form.append("dog_img", { uri: imageUri, name: filename, type: mime } as any);
   }
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const res = await fetch(`${BASE_URL}/dogs/${dogId}/update-photo`, {
+  const res = await fetch(`${BASE_URL}/dogs/change-picture`, {
     method: "POST",
     headers,
     body: form,
