@@ -58,6 +58,7 @@ import {
   SireVerification,
   updateProfile,
   uploadProfilePhoto,
+  updateKennel,
   fetchCities,
   City,
   fetchProfileShow,
@@ -964,10 +965,23 @@ const eStyles = StyleSheet.create({
 function KennelTab({
   kennel,
   navigation,
+  refetch,
 }: {
   kennel: MemberKennel | null | undefined;
   navigation: any;
+  refetch: () => void;
 }) {
+  const { user } = useAuth();
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    phone: "", email: "", address: "", facebook: "",
+    instagram: "", linkedin: "", website: "", description: "",
+  });
+  const [editImageUri,  setEditImageUri]  = useState<string | null>(null);
+  const [editImageMime, setEditImageMime] = useState<string | null>(null);
+  const [saving,    setSaving]    = useState(false);
+  const [saveError, setSaveError] = useState("");
+
   if (!kennel) {
     return (
       <View style={styles.emptyState}>
@@ -981,32 +995,191 @@ function KennelTab({
       </View>
     );
   }
+
   const hasImage =
     kennel.imageUrl &&
     !kennel.imageUrl.includes("user-not-found") &&
     !kennel.imageUrl.startsWith("https::");
   const initials = kennel.kennelName
-    .trim()
-    .split(" ")
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const phone =
-    kennel.phone && kennel.phone !== "+00-000-000-0000" ? kennel.phone : null;
+    .trim().split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const phone = kennel.phone && kennel.phone !== "+00-000-000-0000" ? kennel.phone : null;
   const activeSince = kennel.active_since
-    ? new Date(kennel.active_since).getFullYear().toString()
-    : null;
+    ? new Date(kennel.active_since).getFullYear().toString() : null;
+
+  const openEdit = () => {
+    setEditForm({
+      phone:       kennel.phone ?? "",
+      email:       kennel.email ?? "",
+      address:     kennel.location ?? "",
+      facebook:    kennel.facebook ?? "",
+      instagram:   kennel.instagram ?? "",
+      linkedin:    kennel.linkedin ?? "",
+      website:     kennel.website ?? "",
+      description: kennel.description ?? "",
+    });
+    setEditImageUri(null);
+    setEditImageMime(null);
+    setSaveError("");
+    setShowEdit(true);
+  };
+
+  const handlePickImage = async () => {
+    const pickerOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8, exif: false,
+    };
+    const pick = async (uri: string, mimeType?: string | null) => {
+      setEditImageUri(uri);
+      setEditImageMime(mimeType ?? null);
+    };
+    if (Platform.OS === "web") {
+      const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+      if (!result.canceled && result.assets[0])
+        await pick(result.assets[0].uri, result.assets[0].mimeType);
+      return;
+    }
+    Alert.alert("Change Kennel Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
+          const result = await ImagePicker.launchCameraAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    setSaveError("");
+    setSaving(true);
+    try {
+      await updateKennel(kennel.kennel_id, editForm, editImageUri, editImageMime, user.token);
+      await refetch();
+      setShowEdit(false);
+      Alert.alert("Success", "Kennel profile updated.");
+    } catch (e: any) {
+      setSaveError(e?.message ?? "Could not save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const displayImage = editImageUri ?? (hasImage ? kennel.imageUrl! : null);
 
   return (
     <View style={styles.card}>
+      {/* ── Edit Modal ── */}
+      <Modal visible={showEdit} animationType="slide" transparent onRequestClose={() => setShowEdit(false)}>
+        <View style={kStyles.modalOverlay}>
+          <View style={kStyles.modalSheet}>
+            {/* Header */}
+            <View style={kStyles.modalHeader}>
+              <Text style={kStyles.modalTitle}>Edit Kennel</Text>
+              <TouchableOpacity onPress={() => setShowEdit(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={22} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={kStyles.modalBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Image picker */}
+              <TouchableOpacity style={kStyles.imagePicker} activeOpacity={0.8} onPress={handlePickImage}>
+                {displayImage ? (
+                  <Image source={{ uri: displayImage }} style={kStyles.imagePreview} resizeMode="cover" />
+                ) : (
+                  <View style={kStyles.imagePlaceholder}>
+                    <Text style={kStyles.imagePlaceholderInitials}>{initials}</Text>
+                  </View>
+                )}
+                <View style={kStyles.imageCameraBadge}>
+                  <Ionicons name="camera" size={13} color="#fff" />
+                </View>
+              </TouchableOpacity>
+
+              {/* Error banner */}
+              {!!saveError && (
+                <View style={eStyles.errorBanner}>
+                  <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+                  <Text style={{ fontSize: 13, color: "#DC2626", flex: 1 }}>{saveError}</Text>
+                </View>
+              )}
+
+              {/* Fields */}
+              {([
+                { key: "phone",       label: "Phone",       kbd: "phone-pad",     icon: "call-outline" },
+                { key: "email",       label: "Email",       kbd: "email-address", icon: "mail-outline" },
+                { key: "address",     label: "Address",     kbd: "default",       icon: "location-outline" },
+                { key: "website",     label: "Website",     kbd: "url",           icon: "globe-outline" },
+                { key: "facebook",    label: "Facebook",    kbd: "url",           icon: "logo-facebook" },
+                { key: "instagram",   label: "Instagram",   kbd: "url",           icon: "logo-instagram" },
+                { key: "linkedin",    label: "LinkedIn",    kbd: "url",           icon: "logo-linkedin" },
+              ] as const).map(({ key, label, kbd, icon }) => (
+                <View key={key} style={eStyles.fieldGroup}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                    <Ionicons name={icon} size={13} color={COLORS.textMuted} />
+                    <Text style={eStyles.fieldLabel}>{label}</Text>
+                  </View>
+                  <TextInput
+                    style={eStyles.input}
+                    value={editForm[key]}
+                    onChangeText={(v) => setEditForm((f) => ({ ...f, [key]: v }))}
+                    placeholder={label}
+                    keyboardType={kbd as any}
+                    autoCapitalize="none"
+                    placeholderTextColor={COLORS.textMuted}
+                  />
+                </View>
+              ))}
+
+              {/* Description — multiline */}
+              <View style={eStyles.fieldGroup}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                  <Ionicons name="document-text-outline" size={13} color={COLORS.textMuted} />
+                  <Text style={eStyles.fieldLabel}>Description</Text>
+                </View>
+                <TextInput
+                  style={[eStyles.input, eStyles.inputMultiline]}
+                  value={editForm.description}
+                  onChangeText={(v) => setEditForm((f) => ({ ...f, description: v }))}
+                  placeholder="About your kennel..."
+                  multiline
+                  numberOfLines={4}
+                  placeholderTextColor={COLORS.textMuted}
+                />
+              </View>
+
+              {/* Buttons */}
+              <View style={eStyles.btnRow}>
+                <TouchableOpacity style={eStyles.cancelBtn} onPress={() => setShowEdit(false)} activeOpacity={0.7}>
+                  <Text style={eStyles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={eStyles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
+                  {saving
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={eStyles.saveBtnText}>Save Changes</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Card content ── */}
       <View style={styles.kennelHeader}>
         {hasImage ? (
-          <LazyImage
-            source={{ uri: kennel.imageUrl! }}
-            style={styles.kennelAvatar}
-          />
+          <LazyImage source={{ uri: kennel.imageUrl! }} style={styles.kennelAvatar} />
         ) : (
           <View style={[styles.kennelAvatar, styles.kennelAvatarPlaceholder]}>
             <Text style={styles.kennelAvatarInitials}>{initials}</Text>
@@ -1014,80 +1187,108 @@ function KennelTab({
         )}
         <View style={{ flex: 1, marginLeft: 14 }}>
           <Text style={styles.kennelName}>{kennel.kennelName}</Text>
-          {kennel.suffix ? (
-            <Text style={styles.kennelSuffix}>"{kennel.suffix}"</Text>
-          ) : null}
+          {kennel.suffix ? <Text style={styles.kennelSuffix}>"{kennel.suffix}"</Text> : null}
           {kennel.city ? (
-            <Text style={styles.kennelCity}>
-              {kennel.city}
-              {kennel.country ? `, ${kennel.country}` : ""}
-            </Text>
+            <Text style={styles.kennelCity}>{kennel.city}{kennel.country ? `, ${kennel.country}` : ""}</Text>
           ) : null}
         </View>
       </View>
       <View style={styles.divider} />
       <View style={styles.cardHeadingRow}>
         <Text style={styles.cardHeading}>Kennel Details</Text>
-        <TouchableOpacity
-          style={styles.cardEditBtn}
-          activeOpacity={0.7}
-          data-testid="btn-edit-kennel-card"
-        >
+        <TouchableOpacity style={styles.cardEditBtn} activeOpacity={0.7} onPress={openEdit} data-testid="btn-edit-kennel-card">
           <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
           <Text style={styles.cardEditBtnText}>Edit</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.detailsGrid}>
-        {kennel.prefix ? (
-          <DetailItem
-            icon="text-outline"
-            label="Prefix"
-            value={kennel.prefix}
-          />
-        ) : null}
-        {phone ? (
-          <DetailItem icon="call-outline" label="Phone" value={phone} />
-        ) : null}
-        {kennel.email ? (
-          <DetailItem icon="mail-outline" label="Email" value={kennel.email} />
-        ) : null}
-        {kennel.location ? (
-          <DetailItem
-            icon="location-outline"
-            label="Location"
-            value={kennel.location}
-          />
-        ) : null}
-        {activeSince ? (
-          <DetailItem
-            icon="calendar-outline"
-            label="Active Since"
-            value={activeSince}
-          />
-        ) : null}
+        {kennel.prefix   ? <DetailItem icon="text-outline"     label="Prefix"       value={kennel.prefix} /> : null}
+        {phone           ? <DetailItem icon="call-outline"     label="Phone"        value={phone} /> : null}
+        {kennel.email    ? <DetailItem icon="mail-outline"     label="Email"        value={kennel.email} /> : null}
+        {kennel.location ? <DetailItem icon="location-outline" label="Location"     value={kennel.location} /> : null}
+        {activeSince     ? <DetailItem icon="calendar-outline" label="Active Since" value={activeSince} /> : null}
+        {kennel.website  ? <DetailItem icon="globe-outline"    label="Website"      value={kennel.website} /> : null}
+        {kennel.facebook ? <DetailItem icon="logo-facebook"    label="Facebook"     value={kennel.facebook} /> : null}
+        {kennel.instagram? <DetailItem icon="logo-instagram"   label="Instagram"    value={kennel.instagram} /> : null}
+        {kennel.linkedin ? <DetailItem icon="logo-linkedin"    label="LinkedIn"     value={kennel.linkedin} /> : null}
+        {kennel.description ? <DetailItem icon="document-text-outline" label="About" value={kennel.description} /> : null}
       </View>
       <TouchableOpacity
-        style={styles.kennelViewBtn}
-        activeOpacity={0.8}
-        onPress={() =>
-          navigation.push("KennelProfile", {
-            id: kennel.kennel_id,
-            name: kennel.kennelName,
-          })
-        }
+        style={styles.kennelViewBtn} activeOpacity={0.8}
+        onPress={() => navigation.push("KennelProfile", { id: kennel.kennel_id, name: kennel.kennelName })}
         data-testid="btn-view-kennel"
       >
-        <Ionicons
-          name="home"
-          size={16}
-          color="#fff"
-          style={{ marginRight: 6 }}
-        />
+        <Ionicons name="home" size={16} color="#fff" style={{ marginRight: 6 }} />
         <Text style={styles.kennelViewBtnText}>View Full Kennel Profile</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+const kStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "92%",
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  modalTitle: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  modalBody: { padding: 20, gap: 16 },
+  imagePicker: {
+    alignSelf: "center",
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    overflow: "visible",
+    marginBottom: 4,
+  },
+  imagePreview: {
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+  },
+  imagePlaceholder: {
+    width: 88,
+    height: 88,
+    borderRadius: 14,
+    backgroundColor: "rgba(15,92,59,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+  },
+  imagePlaceholderInitials: { fontSize: 28, fontWeight: "800", color: COLORS.primary },
+  imageCameraBadge: {
+    position: "absolute",
+    bottom: -4,
+    right: -4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+});
 
 /* ── Tab: Dogs ──────────────────────────────────────── */
 function DogsTab({
@@ -6170,7 +6371,7 @@ export default function ProfileScreen() {
           />
         );
       case "kennel":
-        return <KennelTab kennel={kennel} navigation={navigation} />;
+        return <KennelTab kennel={kennel} navigation={navigation} refetch={refetch} />;
       case "dogs":
         return (
           <DogsTab

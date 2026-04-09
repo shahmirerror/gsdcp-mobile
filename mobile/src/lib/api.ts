@@ -490,6 +490,77 @@ export async function uploadProfilePhoto(
   if (json.success === false) throw new Error(json.error?.message ?? json.message ?? "Photo upload failed.");
 }
 
+export async function updateKennel(
+  kennelId: string,
+  fields: {
+    phone: string;
+    email: string;
+    address: string;
+    facebook: string;
+    instagram: string;
+    linkedin: string;
+    website: string;
+    description: string;
+  },
+  imageUri?: string | null,
+  pickerMimeType?: string | null,
+  token?: string | null,
+): Promise<void> {
+  const form = new FormData();
+  form.append("kennel_id", kennelId);
+  form.append("phone",       fields.phone);
+  form.append("email",       fields.email);
+  form.append("address",     fields.address);
+  form.append("facebook",    fields.facebook);
+  form.append("instagram",   fields.instagram);
+  form.append("linkedin",    fields.linkedin);
+  form.append("website",     fields.website);
+  form.append("description", fields.description);
+
+  if (imageUri) {
+    if (Platform.OS === "web") {
+      const resp = await fetch(imageUri);
+      const originalBlob = await resp.blob();
+      let jpegBlob: Blob;
+      try {
+        const bitmap = await (window as any).createImageBitmap(originalBlob);
+        const canvas = document.createElement("canvas");
+        canvas.width  = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        jpegBlob = await new Promise<Blob>((resolve, reject) =>
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Canvas export failed")), "image/jpeg", 0.85),
+        );
+      } catch {
+        jpegBlob = new Blob([await originalBlob.arrayBuffer()], { type: "image/jpeg" });
+      }
+      form.append("kennel_image", jpegBlob, "photo.jpg");
+    } else {
+      let mime = pickerMimeType ?? "image/jpeg";
+      if (!["image/jpeg", "image/jpg", "image/png"].includes(mime.toLowerCase())) mime = "image/jpeg";
+      const ext = mime === "image/png" ? "png" : "jpg";
+      form.append("kennel_image", { uri: imageUri, name: `photo.${ext}`, type: mime } as any);
+    }
+  }
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE_URL}/profile/update-kennel`, {
+    method: "POST",
+    headers,
+    body: form,
+  });
+  const raw = await res.text();
+  console.log("[updateKennel] status:", res.status, "body:", raw.substring(0, 300));
+  if (!res.ok) throw new Error(`Server error (${res.status}). Please try again.`);
+  let json: any = {};
+  try { json = JSON.parse(raw); } catch {}
+  if (json.exception)          throw new Error(json.message ?? "A server error occurred.");
+  if (json.success === false)  throw new Error(json.error?.message ?? json.message ?? "Update failed.");
+}
+
 export type ProfileShowResult = {
   id: number;
   first_name: string;
@@ -1118,6 +1189,10 @@ export type MemberKennel = {
   imageUrl: string | null;
   description: string | null;
   active_since: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  linkedin: string | null;
+  website: string | null;
 };
 
 export type MemberDetail = {
