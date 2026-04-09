@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,11 +12,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
-import { fetchRecentMatings, RecentMating } from "../lib/api";
+import { fetchRecentMatingsPage, MatingsPage, RecentMating } from "../lib/api";
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
 
@@ -148,20 +148,39 @@ export default function RecentMatingsScreen() {
     setTempLitter(false);
   };
 
-  const { data: matings, isLoading, isError, refetch, isRefetching } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery<MatingsPage>({
     queryKey: ["/api/mobile/recent-matings"],
-    queryFn: fetchRecentMatings,
+    queryFn: ({ pageParam }) => fetchRecentMatingsPage(pageParam as number, 15),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage?.pagination?.hasMorePages ? lastPage.pagination.currentPage + 1 : undefined,
   });
 
+  const matings = useMemo(() => {
+    if (!data) return [] as RecentMating[];
+    return data.pages.flatMap((p) => p.data);
+  }, [data]);
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const cities = useMemo(() => {
-    if (!matings) return [] as string[];
     const citySet = new Set<string>();
     matings.forEach((m) => { if (m.city) citySet.add(m.city); });
     return [...citySet].sort();
   }, [matings]);
 
   const filtered = useMemo(() => {
-    if (!matings) return [];
     let results = matings;
     const q = search.trim().toLowerCase();
     if (q) {
@@ -275,6 +294,15 @@ export default function RecentMatingsScreen() {
               onPress={() => setPreviewMating(item)}
             />
           )}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator size="small" color={COLORS.primary} style={{ paddingVertical: 20 }} />
+            ) : !hasNextPage && matings.length > 0 ? (
+              <Text style={styles.endText}>All matings loaded</Text>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="heart-outline" size={48} color={COLORS.textMuted} />
@@ -702,6 +730,8 @@ const styles = StyleSheet.create({
   viewProfileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 
   dogName: { fontSize: FONT_SIZES.sm, fontWeight: "500", color: COLORS.text },
+
+  endText: { textAlign: "center", fontSize: 12, color: COLORS.textMuted, paddingVertical: 20 },
 
   lbSection: { paddingVertical: 12, paddingHorizontal: 4, gap: 8 },
   lbSectionTitle: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },

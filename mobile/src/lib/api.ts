@@ -784,16 +784,23 @@ export type RecentMating = {
   line_breeding?: LineBreedingEntry[] | null;
 };
 
-export async function fetchRecentMatings(): Promise<RecentMating[]> {
-  const res = await fetch(`${BASE_URL}/recent-matings`);
+export type MatingsPage = {
+  data: RecentMating[];
+  pagination: PaginationMeta;
+};
+
+export async function fetchRecentMatingsPage(
+  page: number = 1,
+  perPage: number = 15,
+): Promise<MatingsPage> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  const res = await fetch(`${BASE_URL}/recent-matings?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch recent matings");
-  const seen = new Set<string>();
-  return (json.data.upcomingLitters as RecentMating[]).filter((m) => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  });
+  return {
+    data: json.data.upcomingLitters as RecentMating[],
+    pagination: json.pagination as PaginationMeta,
+  };
 }
 
 export type DashboardData = {
