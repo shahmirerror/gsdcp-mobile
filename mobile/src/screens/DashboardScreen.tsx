@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
   Dimensions,
   RefreshControl,
 } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +22,7 @@ import { fetchDashboard, fetchNews, stripHtml, NewsItem, RecentMating } from "..
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
 
+const logo = require("../../assets/logo-square.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 /** Returns the current GSDCP season label, e.g. "2025/2026".
@@ -99,27 +102,37 @@ export default function DashboardScreen() {
         colors={[COLORS.primaryDark, COLORS.primary]}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
-        <View style={styles.headerTop}>
-          <View style={styles.headerTextWrap}>
-            <Text style={styles.headerGreeting}>Welcome to</Text>
-            <Text style={styles.headerTitle}>GSDCP</Text>
+        <View style={styles.headerRow}>
+          {/* Vertical logo banner */}
+          <View style={styles.logoBanner}>
+            <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
-          <TouchableOpacity
-            style={styles.headerAction}
-            onPress={() => navigation.navigate("ProfileTab")}
-            activeOpacity={0.7}
-            data-testid="button-profile-header"
-          >
-            <Ionicons
-              name="person-circle-outline"
-              size={28}
-              color="rgba(255,255,255,0.8)"
-            />
-          </TouchableOpacity>
+
+          {/* Right: text + profile icon */}
+          <View style={styles.headerContent}>
+            <View style={styles.headerTop}>
+              <View style={styles.headerTextWrap}>
+                <Text style={styles.headerGreeting}>Welcome to</Text>
+                <Text style={styles.headerTitle}>GSDCP</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.headerAction}
+                onPress={() => navigation.navigate("ProfileTab")}
+                activeOpacity={0.7}
+                data-testid="button-profile-header"
+              >
+                <Ionicons
+                  name="person-circle-outline"
+                  size={28}
+                  color="rgba(255,255,255,0.8)"
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.headerSubtitle}>
+              German Shepherd Dog Club of Pakistan
+            </Text>
+          </View>
         </View>
-        <Text style={styles.headerSubtitle}>
-          German Shepherd Dog Club of Pakistan
-        </Text>
 
         <TouchableOpacity
           style={styles.searchBar}
@@ -460,6 +473,28 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    marginBottom: 16,
+    gap: 14,
+  },
+  logoBanner: {
+    width: 60,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  logoImg: {
+    width: 42,
+    height: 42,
+  },
+  headerContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
@@ -488,7 +523,7 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 13,
     color: "rgba(255,255,255,0.6)",
-    marginBottom: 16,
+    marginBottom: 0,
   },
   searchBar: {
     flexDirection: "row",
