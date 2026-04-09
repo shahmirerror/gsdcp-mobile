@@ -291,11 +291,12 @@ export default function DogProfileScreen() {
 
   async function handleChangeDogPhoto() {
     if (!user || !dogId) return;
-    const pick = async (uri: string) => {
+
+    const pick = async (uri: string, mimeType?: string | null) => {
       setLocalImageUri(uri);
       setPhotoUploading(true);
       try {
-        await uploadDogPhoto(dogId, uri, user.token);
+        await uploadDogPhoto(dogId, uri, user.token, mimeType);
         console.log("[DogProfile] upload succeeded, invalidating query");
         await queryClient.invalidateQueries({ queryKey: ["dog", dogId] });
         await refetch();
@@ -308,33 +309,53 @@ export default function DogProfileScreen() {
         setPhotoUploading(false);
       }
     };
+
+    const pickerOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+      exif: false,
+    };
+
     if (Platform.OS === "web") {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri);
+      const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        await pick(asset.uri, asset.mimeType);
+      }
       return;
     }
+
     Alert.alert("Change Dog Photo", "Choose a source", [
       {
         text: "Camera",
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
-          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
-          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri);
+          if (!perm.granted) {
+            Alert.alert("Permission required", "Camera access is needed to take a photo.");
+            return;
+          }
+          const result = await ImagePicker.launchCameraAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) {
+            const asset = result.assets[0];
+            await pick(asset.uri, asset.mimeType);
+          }
         },
       },
       {
         text: "Photo Library",
         onPress: async () => {
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
-          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
-          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri);
+          if (!perm.granted) {
+            Alert.alert("Permission required", "Photo library access is needed.");
+            return;
+          }
+          const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) {
+            const asset = result.assets[0];
+            await pick(asset.uri, asset.mimeType);
+          }
         },
       },
       { text: "Cancel", style: "cancel" },

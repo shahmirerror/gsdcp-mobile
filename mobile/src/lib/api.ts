@@ -83,19 +83,48 @@ export async function uploadDogPhoto(
   dogId: string,
   imageUri: string,
   token?: string | null,
+  pickerMimeType?: string | null,
 ): Promise<void> {
   const form = new FormData();
   form.append("dog_id", dogId);
   if (Platform.OS === "web") {
+    // Fetch the image (may be a blob:// or data: URI from the picker)
     const resp = await fetch(imageUri);
-    const blob = await resp.blob();
-    const mime = blob.type && blob.type !== "application/octet-stream" ? blob.type : "image/jpeg";
-    const ext  = mime === "image/png" ? "png" : "jpg";
-    form.append("dog_img", new File([blob], `photo.${ext}`, { type: mime }), `photo.${ext}`);
+    const originalBlob = await resp.blob();
+    // Re-encode through a canvas → guaranteed valid JPEG bytes.
+    // This handles WebP / PNG / HEIC-decoded outputs from the browser picker.
+    let jpegBlob: Blob;
+    try {
+      const bitmap = await (window as any).createImageBitmap(originalBlob);
+      const canvas = document.createElement("canvas");
+      canvas.width  = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      jpegBlob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Canvas export failed")), "image/jpeg", 0.85),
+      );
+    } catch {
+      // Fallback: send the original blob as-is (best effort)
+      jpegBlob = new Blob([await originalBlob.arrayBuffer()], { type: "image/jpeg" });
+    }
+    console.log("[uploadDogPhoto] web blob type:", jpegBlob.type, "size:", jpegBlob.size);
+    form.append("dog_img", jpegBlob, "photo.jpg");
   } else {
-    const filename = imageUri.split("/").pop()?.split("?")[0] ?? "photo.jpg";
-    const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
-    const mime     = ext === "png" ? "image/png" : "image/jpeg";
+    // Use the MIME type reported by the picker when available.
+    // iOS can return HEIC URIs — expo converts them when allowsEditing=true
+    // but the mimeType field on the asset is the safest source of truth.
+    // We normalise anything that isn't PNG to JPEG so the server always
+    // receives a format it accepts.
+    let mime = pickerMimeType ?? "image/jpeg";
+    // Reject HEIC/HEIF/WEBP — force to JPEG (expo has already re-encoded the pixels)
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(mime.toLowerCase())) {
+      mime = "image/jpeg";
+    }
+    const ext      = mime === "image/png" ? "png" : "jpg";
+    const filename = `photo.${ext}`;
+    console.log("[uploadDogPhoto] native upload", filename, mime, imageUri.substring(0, 60));
     form.append("dog_img", { uri: imageUri, name: filename, type: mime } as any);
   }
   const headers: Record<string, string> = { Accept: "application/json" };
