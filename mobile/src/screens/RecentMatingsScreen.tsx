@@ -110,17 +110,6 @@ function MatingRow({ mating, onPress }: {
               <Text style={styles.litterBadgeText}>Litter on Ground</Text>
             </View>
           )}
-          {mating.line_breeding && mating.line_breeding.length > 0 ? (
-            <View style={styles.badge}>
-              <Ionicons name="git-merge-outline" size={10} color={COLORS.textMuted} />
-              <Text style={styles.badgeText}>
-                {mating.line_breeding
-                  .map((e) => e.line_breeding_pattern)
-                  .filter(Boolean)
-                  .join(", ") || "Line Bred"}
-              </Text>
-            </View>
-          ) : null}
         </View>
       </View>
 
@@ -334,17 +323,6 @@ export default function RecentMatingsScreen() {
                         <Text style={styles.previewLitterText}>Litter on Ground</Text>
                       </View>
                     )}
-                    {previewMating.line_breeding && previewMating.line_breeding.length > 0 ? (
-                      <View style={styles.previewCityRow}>
-                        <Ionicons name="git-merge-outline" size={12} color={COLORS.textMuted} />
-                        <Text style={styles.previewCity}>
-                          {"Line Bred: "}
-                          {previewMating.line_breeding
-                            .map((e) => e.line_breeding_pattern ? `${e.dog_name} (${e.line_breeding_pattern})` : e.dog_name)
-                            .join(", ")}
-                        </Text>
-                      </View>
-                    ) : null}
                   </View>
                 </View>
 
@@ -405,6 +383,34 @@ export default function RecentMatingsScreen() {
                   </View>
                   <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
                 </TouchableOpacity>
+
+                {previewMating.line_breeding && previewMating.line_breeding.length > 0 && (
+                  <>
+                    <View style={styles.previewRowDivider} />
+                    <View style={styles.lbSection}>
+                      <Text style={styles.lbSectionTitle}>Line Breeding</Text>
+                      {previewMating.line_breeding.map((entry, idx) => {
+                        const sirePos: string[] = [];
+                        const damPos: string[] = [];
+                        entry.positions.forEach((p, i) => {
+                          if (entry.sides[i] === "father") sirePos.push(p);
+                          else damPos.push(p);
+                        });
+                        const genLabel = [sirePos.join(","), damPos.join(",")].filter(Boolean).join(" - ");
+                        const sideLabel = [sirePos.length > 0 ? "Sire" : "", damPos.length > 0 ? "Dam" : ""].filter(Boolean).join(" - ");
+                        const displayName = entry.type === "litter_pair" || entry.type === "litter_group"
+                          ? `Litter ${entry.litter_letter}${entry.kennel ? ` from ${entry.kennel}` : ""}`
+                          : entry.dog_name;
+                        return (
+                          <View key={idx} style={styles.lbRow}>
+                            <Text style={styles.lbName} numberOfLines={1}>{displayName}</Text>
+                            <Text style={styles.lbMeta}>{genLabel}{sideLabel ? ` (${sideLabel} side)` : ""}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
 
                 <View style={[styles.previewDivider, { marginTop: 16 }]} />
 
@@ -696,4 +702,10 @@ const styles = StyleSheet.create({
   viewProfileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 
   dogName: { fontSize: FONT_SIZES.sm, fontWeight: "500", color: COLORS.text },
+
+  lbSection: { paddingVertical: 12, paddingHorizontal: 4, gap: 8 },
+  lbSectionTitle: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
+  lbRow: { gap: 2 },
+  lbName: { fontSize: 13, fontWeight: "600", color: COLORS.text },
+  lbMeta: { fontSize: 12, color: COLORS.textSecondary },
 });
