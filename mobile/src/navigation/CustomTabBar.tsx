@@ -44,8 +44,8 @@ const TAB_CONFIG: Record<
   DogsTab: { label: "Dogs", icon: "paw-outline", iconFocused: "paw" },
   BreedersTab: {
     label: "Breeders",
-    icon: "people-outline",
-    iconFocused: "people",
+    icon: "ribbon-outline",
+    iconFocused: "ribbon",
   },
   HomeTab: { label: "Home", icon: "home-outline", iconFocused: "home" },
   ShowsTab: { label: "Shows", icon: "trophy-outline", iconFocused: "trophy" },
@@ -227,7 +227,9 @@ export default function CustomTabBar({
           size={24}
           color={isFocused ? COLORS.primary : COLORS.textMuted}
         />
-        <Text style={styles.tabLabelActive}>{cfg.label}</Text>
+        <Text style={isFocused ? styles.tabLabelActive : styles.tabLabelMuted}>
+          {cfg.label}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -430,6 +432,12 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginTop: 1,
   },
+  tabLabelMuted: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+    marginTop: 1,
+  },
   homeBtnWrap: {
     position: "absolute",
     top: -PROTRUDE,
@@ -463,7 +471,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: COLORS.textMuted,
     letterSpacing: 0.2,
-    marginTop: 4,
+    marginTop: 10,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
