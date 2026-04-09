@@ -1328,20 +1328,26 @@ function DogsTab({
   userId: string;
   onDogPress: (d: MemberOwnedDog) => void;
 }) {
-  const { data: dogs = [], isLoading: dogsLoading } = useQuery({
-    queryKey: ["my-dogs", userId],
-    queryFn: () => fetchMyDogs(userId),
-    enabled: !!userId,
-    staleTime: 60_000,
-  });
-
   const [search, setSearch]               = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [genderF, setGenderF]             = useState("All");
   const [hairF,   setHairF]               = useState("All");
   const [tempGender, setTempGender]       = useState("All");
   const [tempHair,   setTempHair]         = useState("All");
   const [showFilters, setShowFilters]     = useState(false);
   const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data: dogs = [], isLoading: dogsLoading } = useQuery({
+    queryKey: ["my-dogs", userId, debouncedSearch],
+    queryFn: () => fetchMyDogs(userId, debouncedSearch),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
 
   const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
 

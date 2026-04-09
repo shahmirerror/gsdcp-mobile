@@ -1223,8 +1223,10 @@ export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
   };
 }
 
-export async function fetchMyDogs(userId: string): Promise<MemberOwnedDog[]> {
-  const res = await fetch(`${BASE_URL}/profile/my-dogs?user_id=${encodeURIComponent(userId)}`);
+export async function fetchMyDogs(userId: string, q?: string): Promise<MemberOwnedDog[]> {
+  const params = new URLSearchParams({ user_id: userId });
+  if (q && q.trim()) params.set("q", q.trim());
+  const res = await fetch(`${BASE_URL}/profile/my-dogs?${params.toString()}`);
   if (!res.ok) throw new Error("Failed to fetch my dogs");
   const text = await res.text();
   if (text.trim().startsWith("<")) throw new Error("Server returned HTML");
