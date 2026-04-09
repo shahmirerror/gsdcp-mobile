@@ -427,8 +427,13 @@ export default function BreederProfileScreen() {
   const resolved = data ?? fallback ?? null;
 
   const breeder = resolved?.breeder;
+  const kennel = resolved?.kennel ?? null;
   const dogsBred = resolved?.dogsBred || [];
   const dogsOwned = resolved?.dogsOwned || [];
+
+  const contactPhone = (breeder?.phone && breeder.phone !== "+00-000-000-0000") ? breeder.phone
+    : (kennel?.phone && kennel.phone !== "+00-000-000-0000") ? kennel.phone : null;
+  const contactEmail = breeder?.email || kennel?.email || null;
 
   if (isLoading) {
     return (
@@ -585,10 +590,10 @@ export default function BreederProfileScreen() {
             <View style={styles.card}>
               <Text style={styles.cardHeading}>Contact</Text>
               <View style={styles.contactRow}>
-                {breeder.phone && breeder.phone !== "+00-000-000-0000" ? (
+                {contactPhone ? (
                   <TouchableOpacity
                     style={styles.contactBtn}
-                    onPress={() => Linking.openURL(`tel:${breeder.phone}`)}
+                    onPress={() => Linking.openURL(`tel:${contactPhone}`)}
                     activeOpacity={0.7}
                     data-testid="btn-call"
                   >
@@ -596,10 +601,10 @@ export default function BreederProfileScreen() {
                     <Text style={styles.contactBtnText}>Call</Text>
                   </TouchableOpacity>
                 ) : null}
-                {breeder.email ? (
+                {contactEmail ? (
                   <TouchableOpacity
                     style={[styles.contactBtn, styles.contactBtnSecondary]}
-                    onPress={() => Linking.openURL(`mailto:${breeder.email}`)}
+                    onPress={() => Linking.openURL(`mailto:${contactEmail}`)}
                     activeOpacity={0.7}
                     data-testid="btn-email"
                   >
@@ -608,14 +613,14 @@ export default function BreederProfileScreen() {
                   </TouchableOpacity>
                 ) : null}
               </View>
-              {breeder.phone && breeder.phone !== "+00-000-000-0000" ? (
+              {contactPhone ? (
                 <View style={styles.detailsGrid}>
-                  <DetailItem icon="call" label="Phone" value={breeder.phone} />
+                  <DetailItem icon="call" label="Phone" value={contactPhone} />
                 </View>
               ) : null}
-              {breeder.email ? (
-                <View style={[styles.detailsGrid, { marginTop: breeder.phone && breeder.phone !== "+00-000-000-0000" ? 20 : 0 }]}>
-                  <DetailItem icon="mail" label="Email" value={breeder.email} />
+              {contactEmail ? (
+                <View style={[styles.detailsGrid, { marginTop: contactPhone ? 20 : 0 }]}>
+                  <DetailItem icon="mail" label="Email" value={contactEmail} />
                 </View>
               ) : null}
             </View>

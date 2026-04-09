@@ -717,8 +717,14 @@ export type BreederDog = {
   microchip: string | null;
 };
 
+export type BreederKennel = {
+  phone: string | null;
+  email: string | null;
+};
+
 export type BreederDetail = {
   breeder: Breeder;
+  kennel?: BreederKennel | null;
   dogsBred: BreederDog[];
   dogsOwned: BreederDog[];
 };
