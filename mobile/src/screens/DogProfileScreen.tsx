@@ -10,7 +10,10 @@ import {
   ActivityIndicator,
   ImageBackground,
   RefreshControl,
+  Platform,
+  Alert,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +22,7 @@ import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import {
   fetchDog,
+  uploadDogPhoto,
   DogDetail,
   Pedigree,
   Dog,
@@ -29,6 +33,7 @@ import {
   HereditaryData,
   HereditaryGrades,
 } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 import LazyImage from "../components/LazyImage";
@@ -265,6 +270,7 @@ export default function DogProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const dogId = route.params?.id;
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("details");
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(
     new Set(),
@@ -272,13 +278,63 @@ export default function DogProfileScreen() {
   const [expandedProgeny, setExpandedProgeny] = useState<Set<number>>(
     new Set(),
   );
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const { data, isLoading, isError, refetch, isRefetching } =
     useQuery<DogDetail>({
-      queryKey: ["dog", dogId],
-      queryFn: () => fetchDog(dogId),
+      queryKey: ["dog", dogId, user?.id ?? null],
+      queryFn: () => fetchDog(dogId, user?.id),
       enabled: !!dogId,
     });
+
+  async function handleChangeDogPhoto() {
+    if (!user || !dogId) return;
+    const pick = async (uri: string) => {
+      setLocalImageUri(uri);
+      setPhotoUploading(true);
+      try {
+        await uploadDogPhoto(dogId, uri, user.id, user.token);
+        refetch();
+      } catch (e: any) {
+        setLocalImageUri(null);
+        Alert.alert("Upload failed", e.message ?? "Could not upload photo.");
+      } finally {
+        setPhotoUploading(false);
+      }
+    };
+    if (Platform.OS === "web") {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri);
+      return;
+    }
+    Alert.alert("Change Dog Photo", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri);
+        },
+      },
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri);
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
 
   if (isLoading) {
     return (
@@ -313,6 +369,7 @@ export default function DogProfileScreen() {
   const siblings = (data.siblings ?? []).filter((s: Dog) => s.id !== dogId);
   const lineBreeding = data.line_breeding ?? [];
   const progeny = data.progeny ?? [];
+  const viewerIsOwner = data.viewer_is_owner === true;
 
   const initials = dog.dog_name
     .split(" ")
@@ -526,10 +583,15 @@ export default function DogProfileScreen() {
       </ImageBackground>
 
       <View style={styles.profileSection}>
-        <View style={styles.avatarOuter}>
-          {dog.imageUrl && dog.imageUrl.length > 0 ? (
+        <TouchableOpacity
+          style={styles.avatarOuter}
+          activeOpacity={viewerIsOwner ? 0.75 : 1}
+          onPress={viewerIsOwner ? handleChangeDogPhoto : undefined}
+          disabled={!viewerIsOwner}
+        >
+          {(localImageUri ?? (dog.imageUrl && dog.imageUrl.length > 0 ? dog.imageUrl : null)) ? (
             <Image
-              source={{ uri: dog.imageUrl }}
+              source={{ uri: localImageUri ?? dog.imageUrl! }}
               style={styles.avatarPhoto}
               resizeMode="cover"
             />
@@ -538,7 +600,16 @@ export default function DogProfileScreen() {
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
           )}
-        </View>
+          {viewerIsOwner && (
+            <View style={styles.avatarEditBadge}>
+              {photoUploading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="camera" size={14} color="#fff" />
+              )}
+            </View>
+          )}
+        </TouchableOpacity>
 
         {(dog.titles.length > 0 || dog.KP) && (
           <View style={styles.badgesRow}>
@@ -1337,6 +1408,19 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: "800",
     color: COLORS.primary,
+  },
+  avatarEditBadge: {
+    position: "absolute",
+    bottom: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   badgesRow: {
     flexDirection: "row",
