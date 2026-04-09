@@ -1223,6 +1223,35 @@ export async function fetchMemberDetail(id: string): Promise<MemberDetail> {
   };
 }
 
+export async function fetchMyDogs(userId: string): Promise<MemberOwnedDog[]> {
+  const res = await fetch(`${BASE_URL}/profile/my-dogs?user_id=${encodeURIComponent(userId)}`);
+  if (!res.ok) throw new Error("Failed to fetch my dogs");
+  const text = await res.text();
+  if (text.trim().startsWith("<")) throw new Error("Server returned HTML");
+  const json = JSON.parse(text);
+  const rows: any[] = json.data ?? json.dogs ?? json ?? [];
+  return Array.isArray(rows)
+    ? rows.map((d: any) => ({
+        id: String(d.id ?? d.dog_id ?? ""),
+        dog_name: d.dog_name ?? d.name ?? "",
+        KP: d.KP ?? d.kp ?? d.reg_no ?? "",
+        foreign_reg_no: d.foreign_reg_no ?? "",
+        breed: d.breed ?? "",
+        hair: d.hair ?? "",
+        sex: d.sex ?? d.gender ?? "",
+        dob: d.dob ?? d.date_of_birth ?? null,
+        color: d.color ?? "",
+        imageUrl: d.imageUrl ?? d.image_url ?? d.photo ?? null,
+        owner: d.owner ?? d.owner_name ?? "",
+        breeder: d.breeder ?? d.breeder_name ?? "",
+        sire: d.sire ?? d.sire_name ?? "",
+        dam: d.dam ?? d.dam_name ?? "",
+        titles: Array.isArray(d.titles) ? d.titles : [],
+        microchip: d.microchip ?? null,
+      }))
+    : [];
+}
+
 export async function fetchMembersPage(
   page: number = 1,
   options?: { q?: string; type?: "Permanent" | "Temporary" },

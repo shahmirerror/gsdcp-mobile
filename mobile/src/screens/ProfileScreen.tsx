@@ -75,6 +75,7 @@ import {
   SDRRequestDetail,
   SDRProofFile,
   SDRPickedFile,
+  fetchMyDogs,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -1321,12 +1322,19 @@ const DOG_GENDER_OPTS = ["All", "Male", "Female"] as const;
 const DOG_HAIR_OPTS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
 
 function DogsTab({
-  dogs,
+  userId,
   onDogPress,
 }: {
-  dogs: MemberOwnedDog[];
+  userId: string;
   onDogPress: (d: MemberOwnedDog) => void;
 }) {
+  const { data: dogs = [], isLoading: dogsLoading } = useQuery({
+    queryKey: ["my-dogs", userId],
+    queryFn: () => fetchMyDogs(userId),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+
   const [search, setSearch]               = useState("");
   const [genderF, setGenderF]             = useState("All");
   const [hairF,   setHairF]               = useState("All");
@@ -1363,6 +1371,14 @@ function DogsTab({
       return true;
     });
   }, [dogs, search, genderF, hairF]);
+
+  if (dogsLoading) {
+    return (
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator size="small" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   if (dogs.length === 0) {
     return (
@@ -6848,7 +6864,7 @@ export default function ProfileScreen() {
       case "dogs":
         return (
           <DogsTab
-            dogs={ownedDogs}
+            userId={String(user.member_id)}
             onDogPress={(dog) =>
               navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })
             }
