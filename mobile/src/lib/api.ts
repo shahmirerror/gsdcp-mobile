@@ -86,14 +86,16 @@ export async function uploadDogPhoto(
 ): Promise<void> {
   const form = new FormData();
   form.append("dog_id", dogId);
-  const filename = imageUri.split("/").pop()?.split("?")[0] ?? "photo.jpg";
-  const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
-  const mime     = ext === "png" ? "image/png" : "image/jpeg";
   if (Platform.OS === "web") {
     const resp = await fetch(imageUri);
     const blob = await resp.blob();
-    form.append("dog_img", new File([blob], filename, { type: mime }), filename);
+    const mime = blob.type && blob.type !== "application/octet-stream" ? blob.type : "image/jpeg";
+    const ext  = mime === "image/png" ? "png" : "jpg";
+    form.append("dog_img", new File([blob], `photo.${ext}`, { type: mime }), `photo.${ext}`);
   } else {
+    const filename = imageUri.split("/").pop()?.split("?")[0] ?? "photo.jpg";
+    const ext      = filename.split(".").pop()?.toLowerCase() ?? "jpg";
+    const mime     = ext === "png" ? "image/png" : "image/jpeg";
     form.append("dog_img", { uri: imageUri, name: filename, type: mime } as any);
   }
   const headers: Record<string, string> = { Accept: "application/json" };
