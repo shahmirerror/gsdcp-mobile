@@ -24,7 +24,12 @@ export default function RulesRegulationsScreen() {
   const insets = useSafeAreaInsets();
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  const { data: rules, isLoading, refetch, isRefetching } = useQuery({
+  const {
+    data: rules,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery({
     queryKey: ["/api/mobile/rules"],
     queryFn: fetchRules,
   });
@@ -43,22 +48,34 @@ export default function RulesRegulationsScreen() {
         />
       }
     >
-      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <LinearGradient
+        colors={["#0F5C3A", "#083A24"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
         <View style={styles.headerRow}>
-          <View style={[styles.logoBanner, { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 }]}>
+          <View
+            style={[
+              styles.logoBanner,
+              { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 },
+            ]}
+          >
             <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
           <View style={styles.headerContent}>
+            <Text style={styles.heroTitle}>Rules & Regulations</Text>
+            <Text style={styles.heroSub}>Club constitution and bylaws</Text>
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => navigation.goBack()}
               data-testid="button-back"
             >
-              <Ionicons name="chevron-back" size={16} color="rgba(255,255,255,0.75)" />
+              <Ionicons
+                name="chevron-back"
+                size={16}
+                color="rgba(255,255,255,0.75)"
+              />
               <Text style={styles.backText}>The Club</Text>
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>Rules & Regulations</Text>
-            <Text style={styles.heroSub}>Club constitution and bylaws</Text>
           </View>
         </View>
       </LinearGradient>
@@ -72,7 +89,11 @@ export default function RulesRegulationsScreen() {
       ) : (
         <>
           <View style={styles.noteCard}>
-            <Ionicons name="information-circle-outline" size={18} color="#3B82F6" />
+            <Ionicons
+              name="information-circle-outline"
+              size={18}
+              color="#3B82F6"
+            />
             <Text style={styles.noteText}>
               Tap any section to expand its full content.
             </Text>
@@ -93,7 +114,10 @@ export default function RulesRegulationsScreen() {
                     <View style={styles.chapterNumWrap}>
                       <Text style={styles.chapterNum}>{index + 1}</Text>
                     </View>
-                    <Text style={styles.chapterTitle} numberOfLines={isOpen ? undefined : 1}>
+                    <Text
+                      style={styles.chapterTitle}
+                      numberOfLines={isOpen ? undefined : 1}
+                    >
                       {rule.rule_name}
                     </Text>
                     <Ionicons
@@ -111,7 +135,10 @@ export default function RulesRegulationsScreen() {
                         .map((para, i, arr) => (
                           <Text
                             key={i}
-                            style={[styles.chapterBodyText, i < arr.length - 1 && styles.chapterBodyPara]}
+                            style={[
+                              styles.chapterBodyText,
+                              i < arr.length - 1 && styles.chapterBodyPara,
+                            ]}
                           >
                             {para}
                           </Text>
@@ -130,20 +157,37 @@ export default function RulesRegulationsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
   headerRow: { flexDirection: "row", alignItems: "stretch", gap: 14 },
   logoBanner: {
     width: 60,
-    borderTopLeftRadius: 0, borderTopRightRadius: 0,
-    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    justifyContent: "center", alignItems: "center",
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    backgroundColor: "rgba(255,255,255,255)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingBottom: 12,
   },
   logoImg: { width: 42, height: 42 },
   headerContent: { flex: 1, justifyContent: "center" },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
-  backText: { fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600" },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+  },
+  backText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "600",
+  },
   heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
   heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   noteCard: {
@@ -158,7 +202,12 @@ const styles = StyleSheet.create({
     borderColor: "rgba(59,130,246,0.15)",
     alignItems: "flex-start",
   },
-  noteText: { flex: 1, fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
+  noteText: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
   chaptersWrap: { paddingHorizontal: 16, marginTop: 16, gap: 8 },
   chapterCard: {
     backgroundColor: "#fff",
@@ -172,19 +221,31 @@ const styles = StyleSheet.create({
   },
   chapterHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   chapterNumWrap: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: "rgba(15,92,58,0.08)",
-    justifyContent: "center", alignItems: "center",
+    justifyContent: "center",
+    alignItems: "center",
     flexShrink: 0,
   },
   chapterNum: { fontSize: 12, fontWeight: "800", color: COLORS.primary },
-  chapterTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: COLORS.text },
+  chapterTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
   chapterBody: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
-  chapterBodyText: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 21 },
+  chapterBodyText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 21,
+  },
   chapterBodyPara: { marginBottom: 10 },
 });

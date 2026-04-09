@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  badgeText: { fontSize: 11, color: COLORS.textMuted, fontWeight: "500" },
+  badgeText: { fontSize: 11, color: COLORS.text, fontWeight: "500" },
 
   footerLoader: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 20 },
   footerLoaderText: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   filterChipActive: { borderColor: COLORS.primary, backgroundColor: "rgba(15,92,59,0.08)" },
-  filterChipText: { fontSize: 13, fontWeight: "500", color: COLORS.textMuted },
+  filterChipText: { fontSize: 13, fontWeight: "500", color: COLORS.text },
   filterChipTextActive: { color: COLORS.primary, fontWeight: "700" },
 
   applyBtn: {

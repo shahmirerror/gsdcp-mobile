@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: FONT_SIZES.xs,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
   },
   badgeTier: {
     backgroundColor: "#FEF3C7",

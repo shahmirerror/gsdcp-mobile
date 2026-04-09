@@ -47,22 +47,36 @@ export default function AboutGSDCPScreen() {
         />
       }
     >
-      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <LinearGradient
+        colors={["#0F5C3A", "#083A24"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
         <View style={styles.headerRow}>
-          <View style={[styles.logoBanner, { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 }]}>
+          <View
+            style={[
+              styles.logoBanner,
+              { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 },
+            ]}
+          >
             <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
           <View style={styles.headerContent}>
+            <Text style={styles.heroTitle}>About GSDCP</Text>
+            <Text style={styles.heroSub}>
+              Our history, mission and objectives
+            </Text>
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => navigation.goBack()}
               data-testid="button-back"
             >
-              <Ionicons name="chevron-back" size={16} color="rgba(255,255,255,0.75)" />
+              <Ionicons
+                name="chevron-back"
+                size={16}
+                color="rgba(255,255,255,0.75)"
+              />
               <Text style={styles.backText}>The Club</Text>
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>About GSDCP</Text>
-            <Text style={styles.heroSub}>Our history, mission and objectives</Text>
           </View>
         </View>
       </LinearGradient>
@@ -84,20 +98,37 @@ export default function AboutGSDCPScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
   headerRow: { flexDirection: "row", alignItems: "stretch", gap: 14 },
   logoBanner: {
     width: 60,
-    borderTopLeftRadius: 0, borderTopRightRadius: 0,
-    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    justifyContent: "center", alignItems: "center",
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    backgroundColor: "rgba(255,255,255,255)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingBottom: 12,
   },
   logoImg: { width: 42, height: 42 },
   headerContent: { flex: 1, justifyContent: "center" },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
-  backText: { fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600" },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+  },
+  backText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "600",
+  },
   heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
   heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   section: {

@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  badgeText: { fontSize: 11, color: COLORS.textMuted, fontWeight: "500" },
+  badgeText: { fontSize: 11, color: COLORS.text, fontWeight: "500" },
   litterBadge: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   litterBadgeText: { fontSize: 11, fontWeight: "700", color: "#fff" },
 

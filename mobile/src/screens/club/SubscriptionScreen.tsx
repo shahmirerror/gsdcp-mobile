@@ -21,7 +21,12 @@ import { fetchFees, FeeItem } from "../../lib/api";
 
 const logo = require("../../../assets/logo-square.png");
 
-const FEE_CATEGORIES: { key: string; label: string; icon: string; names: string[] }[] = [
+const FEE_CATEGORIES: {
+  key: string;
+  label: string;
+  icon: string;
+  names: string[];
+}[] = [
   {
     key: "membership",
     label: "Membership Fee",
@@ -70,7 +75,12 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const [popupText, setPopupText] = useState<string | null>(null);
 
-  const { data: fees, isLoading, refetch, isRefetching } = useQuery({
+  const {
+    data: fees,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery({
     queryKey: ["/api/mobile/fees"],
     queryFn: fetchFees,
   });
@@ -90,22 +100,40 @@ export default function SubscriptionScreen() {
           />
         }
       >
-        <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <LinearGradient
+          colors={["#0F5C3A", "#083A24"]}
+          style={[styles.header, { paddingTop: insets.top + 16 }]}
+        >
           <View style={styles.headerRow}>
-            <View style={[styles.logoBanner, { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 }]}>
-              <Image source={logo} style={styles.logoImg} resizeMode="contain" />
+            <View
+              style={[
+                styles.logoBanner,
+                { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 },
+              ]}
+            >
+              <Image
+                source={logo}
+                style={styles.logoImg}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.headerContent}>
+              <Text style={styles.heroTitle}>Subscription & Fees</Text>
+              <Text style={styles.heroSub}>
+                Membership types and fee structure
+              </Text>
               <TouchableOpacity
                 style={styles.backBtn}
                 onPress={() => navigation.goBack()}
                 data-testid="button-back"
               >
-                <Ionicons name="chevron-back" size={16} color="rgba(255,255,255,0.75)" />
+                <Ionicons
+                  name="chevron-back"
+                  size={16}
+                  color="rgba(255,255,255,0.75)"
+                />
                 <Text style={styles.backText}>The Club</Text>
               </TouchableOpacity>
-              <Text style={styles.heroTitle}>Subscription & Fees</Text>
-              <Text style={styles.heroSub}>Membership types and fee structure</Text>
             </View>
           </View>
         </LinearGradient>
@@ -115,25 +143,36 @@ export default function SubscriptionScreen() {
         </View>
 
         {isLoading ? (
-          <ActivityIndicator style={{ marginVertical: 24 }} size="small" color={COLORS.primary} />
+          <ActivityIndicator
+            style={{ marginVertical: 24 }}
+            size="small"
+            color={COLORS.primary}
+          />
         ) : (
           <View style={styles.categoriesWrap}>
             {FEE_CATEGORIES.map((cat) => {
               const catFees = (fees ?? []).filter((f: FeeItem) =>
-                cat.names.includes(f.option_name)
+                cat.names.includes(f.option_name),
               );
               if (catFees.length === 0) return null;
               return (
                 <View key={cat.key} style={styles.categoryBlock}>
                   <View style={styles.categoryHeader}>
-                    <Ionicons name={cat.icon as any} size={15} color={COLORS.primary} />
+                    <Ionicons
+                      name={cat.icon as any}
+                      size={15}
+                      color={COLORS.primary}
+                    />
                     <Text style={styles.categoryLabel}>{cat.label}</Text>
                   </View>
                   <View style={styles.feesCard}>
                     {catFees.map((fee: FeeItem, i: number) => (
                       <View
                         key={fee.id}
-                        style={[styles.feeRow, i < catFees.length - 1 && styles.feeRowBorder]}
+                        style={[
+                          styles.feeRow,
+                          i < catFees.length - 1 && styles.feeRowBorder,
+                        ]}
                         data-testid={`row-fee-${fee.id}`}
                       >
                         <View style={styles.feeLabelRow}>
@@ -154,7 +193,9 @@ export default function SubscriptionScreen() {
                             </TouchableOpacity>
                           ) : null}
                         </View>
-                        <Text style={styles.feeAmount}>{formatAmount(fee.option_value)}</Text>
+                        <Text style={styles.feeAmount}>
+                          {formatAmount(fee.option_value)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -165,7 +206,11 @@ export default function SubscriptionScreen() {
         )}
 
         <View style={styles.noteCard}>
-          <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+          <Ionicons
+            name="information-circle-outline"
+            size={18}
+            color={COLORS.primary}
+          />
           <Text style={styles.noteText}>
             All fees are subject to revision by the executive committee. Contact
             the GSDCP office for the most current rates.
@@ -179,10 +224,17 @@ export default function SubscriptionScreen() {
         animationType="fade"
         onRequestClose={() => setPopupText(null)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setPopupText(null)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setPopupText(null)}
+        >
           <Pressable style={styles.modalBox} onPress={() => {}}>
             <View style={styles.modalIconRow}>
-              <Ionicons name="information-circle" size={22} color={COLORS.primary} />
+              <Ionicons
+                name="information-circle"
+                size={22}
+                color={COLORS.primary}
+              />
               <Text style={styles.modalTitle}>Note</Text>
             </View>
             <Text style={styles.modalBody}>{popupText}</Text>
@@ -202,20 +254,37 @@ export default function SubscriptionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
   headerRow: { flexDirection: "row", alignItems: "stretch", gap: 14 },
   logoBanner: {
     width: 60,
-    borderTopLeftRadius: 0, borderTopRightRadius: 0,
-    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    justifyContent: "center", alignItems: "center",
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    backgroundColor: "rgba(255,255,255,255)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingBottom: 12,
   },
   logoImg: { width: 42, height: 42 },
   headerContent: { flex: 1, justifyContent: "center" },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
-  backText: { fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600" },
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+  },
+  backText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "600",
+  },
   heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
   heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   sectionHeader: { paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
@@ -260,7 +329,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   feeLabel: { fontSize: 14, color: COLORS.text, flexShrink: 1 },
-  feeAmount: { fontSize: 14, fontWeight: "700", color: COLORS.primaryDark, flexShrink: 0 },
+  feeAmount: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.primaryDark,
+    flexShrink: 0,
+  },
   noteCard: {
     marginHorizontal: 16,
     marginTop: 20,
@@ -273,7 +347,12 @@ const styles = StyleSheet.create({
     borderColor: "rgba(15,92,58,0.15)",
     alignItems: "flex-start",
   },
-  noteText: { flex: 1, fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
+  noteText: {
+    flex: 1,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",

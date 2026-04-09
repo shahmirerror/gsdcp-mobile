@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   chipActiveGold: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  chipText: { fontSize: 12, fontWeight: "600", color: COLORS.textSecondary },
+  chipText: { fontSize: 12, fontWeight: "600", color: COLORS.text },
   chipTextActive: { color: "#fff" },
 
   resultRow: {

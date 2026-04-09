@@ -25,16 +25,28 @@ const logo = require("../../../assets/logo-square.png");
 type Nav = NativeStackNavigationProp<TheClubStackParamList>;
 
 function committeeAccent(name: string): { color: string; bg: string } {
-  if (name.includes("Managing")) return { color: COLORS.primary, bg: "rgba(15,92,58,0.1)" };
-  if (name.includes("Breed Council")) return { color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" };
-  if (name.includes("Show Committee")) return { color: "#3B82F6", bg: "rgba(59,130,246,0.08)" };
-  if (name.includes("Group Breed")) return { color: COLORS.accent, bg: "rgba(199,164,92,0.12)" };
-  if (name.includes("Show Team")) return { color: "#F59E0B", bg: "rgba(245,158,11,0.08)" };
-  if (name.includes("Breed Warden")) return { color: "#0891B2", bg: "rgba(8,145,178,0.08)" };
+  if (name.includes("Managing"))
+    return { color: COLORS.primary, bg: "rgba(15,92,58,0.1)" };
+  if (name.includes("Breed Council"))
+    return { color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" };
+  if (name.includes("Show Committee"))
+    return { color: "#3B82F6", bg: "rgba(59,130,246,0.08)" };
+  if (name.includes("Group Breed"))
+    return { color: COLORS.accent, bg: "rgba(199,164,92,0.12)" };
+  if (name.includes("Show Team"))
+    return { color: "#F59E0B", bg: "rgba(245,158,11,0.08)" };
+  if (name.includes("Breed Warden"))
+    return { color: "#0891B2", bg: "rgba(8,145,178,0.08)" };
   return { color: COLORS.textSecondary, bg: "rgba(107,114,128,0.08)" };
 }
 
-function MemberCard({ member, onPress }: { member: TeamMember; onPress?: () => void }) {
+function MemberCard({
+  member,
+  onPress,
+}: {
+  member: TeamMember;
+  onPress?: () => void;
+}) {
   const [imgError, setImgError] = useState(false);
   const initials = member.full_name
     .split(" ")
@@ -55,7 +67,9 @@ function MemberCard({ member, onPress }: { member: TeamMember; onPress?: () => v
             onError={() => setImgError(true)}
           />
         ) : (
-          <Text style={[styles.avatarInitials, { color: accent.color }]}>{initials}</Text>
+          <Text style={[styles.avatarInitials, { color: accent.color }]}>
+            {initials}
+          </Text>
         )}
       </View>
       <View style={styles.cardBody}>
@@ -66,13 +80,19 @@ function MemberCard({ member, onPress }: { member: TeamMember; onPress?: () => v
           </Text>
         </View>
       </View>
-      {hasProfile && <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />}
+      {hasProfile && (
+        <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+      )}
     </>
   );
 
   if (hasProfile) {
     return (
-      <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={onPress}
+        activeOpacity={0.75}
+      >
         {inner}
       </TouchableOpacity>
     );
@@ -84,7 +104,12 @@ export default function TheTeamScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
 
-  const { data: members, isLoading, refetch, isRefetching } = useQuery({
+  const {
+    data: members,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery({
     queryKey: ["/api/mobile/team"],
     queryFn: fetchTeam,
   });
@@ -110,7 +135,7 @@ export default function TheTeamScreen() {
       };
       const dr = rank(a.position_name) - rank(b.position_name);
       return dr !== 0 ? dr : a.position_name.localeCompare(b.position_name);
-    })
+    }),
   );
 
   return (
@@ -127,28 +152,44 @@ export default function TheTeamScreen() {
         />
       }
     >
-      <LinearGradient colors={["#0F5C3A", "#083A24"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <LinearGradient
+        colors={["#0F5C3A", "#083A24"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
         <View style={styles.headerRow}>
-          <View style={[styles.logoBanner, { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 }]}>
+          <View
+            style={[
+              styles.logoBanner,
+              { marginTop: -(insets.top + 16), paddingTop: insets.top + 16 },
+            ]}
+          >
             <Image source={logo} style={styles.logoImg} resizeMode="contain" />
           </View>
           <View style={styles.headerContent}>
+            <Text style={styles.heroTitle}>The GSDCP Team</Text>
+            <Text style={styles.heroSub}>Executive committee & officials</Text>
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => navigation.goBack()}
               data-testid="button-back"
             >
-              <Ionicons name="chevron-back" size={16} color="rgba(255,255,255,0.75)" />
+              <Ionicons
+                name="chevron-back"
+                size={16}
+                color="rgba(255,255,255,0.75)"
+              />
               <Text style={styles.backText}>The Club</Text>
             </TouchableOpacity>
-            <Text style={styles.heroTitle}>The GSDCP Team</Text>
-            <Text style={styles.heroSub}>Executive committee & officials</Text>
           </View>
         </View>
       </LinearGradient>
 
       {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 48 }} size="large" color={COLORS.primary} />
+        <ActivityIndicator
+          style={{ marginTop: 48 }}
+          size="large"
+          color={COLORS.primary}
+        />
       ) : (
         <View style={styles.content}>
           {orderedKeys.map((committee) => {
@@ -156,7 +197,12 @@ export default function TheTeamScreen() {
             return (
               <View key={committee} style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <View style={[styles.sectionDot, { backgroundColor: accent.color }]} />
+                  <View
+                    style={[
+                      styles.sectionDot,
+                      { backgroundColor: accent.color },
+                    ]}
+                  />
                   <Text style={styles.sectionTitle}>{committee}</Text>
                 </View>
                 <View style={styles.cardsWrap}>
@@ -164,7 +210,14 @@ export default function TheTeamScreen() {
                     <MemberCard
                       key={`${member.team_id ?? member.full_name}-${member.position_name}`}
                       member={member}
-                      onPress={member.team_id ? () => navigation.navigate("TeamMemberDetail", { id: member.team_id! }) : undefined}
+                      onPress={
+                        member.team_id
+                          ? () =>
+                              navigation.navigate("TeamMemberDetail", {
+                                id: member.team_id!,
+                              })
+                          : undefined
+                      }
                     />
                   ))}
                 </View>
@@ -179,27 +232,50 @@ export default function TheTeamScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { paddingHorizontal: 20, paddingBottom: 24, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
   headerRow: { flexDirection: "row", alignItems: "stretch", gap: 14 },
   logoBanner: {
     width: 60,
-    borderTopLeftRadius: 0, borderTopRightRadius: 0,
-    borderBottomLeftRadius: 22, borderBottomRightRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    justifyContent: "center", alignItems: "center",
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    backgroundColor: "rgba(255,255,255,255)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingBottom: 12,
   },
   logoImg: { width: 42, height: 42 },
   headerContent: { flex: 1, justifyContent: "center" },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 8 },
-  backText: { fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "600" },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
+  backText: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "600",
+  },
   heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
   heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   content: { paddingHorizontal: 16, marginTop: 20, gap: 24 },
   section: { gap: 10 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 2 },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
   sectionDot: { width: 8, height: 8, borderRadius: 4 },
-  sectionTitle: { fontSize: 13, fontWeight: "700", color: COLORS.textSecondary, textTransform: "uppercase", letterSpacing: 0.5 },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   cardsWrap: { gap: 8 },
   card: {
     flexDirection: "row",
@@ -212,8 +288,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatarWrap: {
-    width: 52, height: 52, borderRadius: 14,
-    justifyContent: "center", alignItems: "center",
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
     overflow: "hidden",
   },
   avatar: { width: 52, height: 52 },
@@ -222,7 +301,8 @@ const styles = StyleSheet.create({
   memberName: { fontSize: 15, fontWeight: "700", color: COLORS.text },
   positionBadge: {
     alignSelf: "flex-start",
-    paddingHorizontal: 8, paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   positionText: { fontSize: 11, fontWeight: "600" },

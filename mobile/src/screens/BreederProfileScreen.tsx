@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     fontWeight: "600",
-    color: COLORS.textSecondary,
+    color: COLORS.text,
   },
   chipTextActive: {
     color: "#fff",
