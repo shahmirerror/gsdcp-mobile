@@ -17,7 +17,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -966,12 +966,15 @@ function KennelTab({
   kennel,
   navigation,
   refetch,
+  memberId,
 }: {
   kennel: MemberKennel | null | undefined;
   navigation: any;
-  refetch: () => void;
+  refetch: () => Promise<any>;
+  memberId: string;
 }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({
     phone: "", email: "", address: "", facebook: "",
@@ -1066,9 +1069,31 @@ function KennelTab({
     setSaving(true);
     try {
       await updateKennel(kennel.kennel_id, editForm, editImageUri, editImageMime, user.token);
-      await refetch();
+
+      queryClient.setQueryData<MemberDetail>(["member-detail", memberId], (old) => {
+        if (!old?.kennel) return old;
+        return {
+          ...old,
+          kennel: {
+            ...old.kennel,
+            phone:       editForm.phone       || null,
+            email:       editForm.email       || null,
+            location:    editForm.address     || null,
+            facebook:    editForm.facebook    || null,
+            instagram:   editForm.instagram   || null,
+            linkedin:    editForm.linkedin    || null,
+            website:     editForm.website     || null,
+            description: editForm.description || null,
+          },
+        };
+      });
+
       setShowEdit(false);
+      setEditImageUri(null);
+      setEditImageMime(null);
       Alert.alert("Success", "Kennel profile updated.");
+
+      refetch();
     } catch (e: any) {
       setSaveError(e?.message ?? "Could not save. Please try again.");
     } finally {
@@ -6371,7 +6396,7 @@ export default function ProfileScreen() {
           />
         );
       case "kennel":
-        return <KennelTab kennel={kennel} navigation={navigation} refetch={refetch} />;
+        return <KennelTab kennel={kennel} navigation={navigation} refetch={refetch} memberId={user.member_id} />;
       case "dogs":
         return (
           <DogsTab
