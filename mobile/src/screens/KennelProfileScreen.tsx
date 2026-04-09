@@ -144,7 +144,7 @@ export default function KennelProfileScreen() {
 
   const kennel = data?.kennels;
   const matings = data?.matings || [];
-  const breeders = data?.breeders || [];
+  const breeders = data?.kennels?.breeders || [];
 
   if (isLoading) {
     return (

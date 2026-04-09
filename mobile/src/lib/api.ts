@@ -857,7 +857,6 @@ export type KennelFull = Kennel & {
 export type KennelDetail = {
   kennels: KennelFull;
   matings: KennelMating[];
-  breeders: KennelBreeder[];
 };
 
 export async function fetchKennelDetail(id: string): Promise<KennelDetail> {
