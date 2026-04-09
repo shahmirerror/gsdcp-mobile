@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
@@ -271,6 +271,7 @@ export default function DogProfileScreen() {
   const navigation = useNavigation<any>();
   const dogId = route.params?.id;
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>("details");
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(
     new Set(),
@@ -295,10 +296,14 @@ export default function DogProfileScreen() {
       setPhotoUploading(true);
       try {
         await uploadDogPhoto(dogId, uri, user.token);
-        refetch();
+        console.log("[DogProfile] upload succeeded, invalidating query");
+        await queryClient.invalidateQueries({ queryKey: ["dog", dogId] });
+        await refetch();
+        Alert.alert("Success", "Dog photo updated.");
       } catch (e: any) {
+        console.error("[DogProfile] upload error:", e?.message, e);
         setLocalImageUri(null);
-        Alert.alert("Upload failed", e.message ?? "Could not upload photo.");
+        Alert.alert("Upload failed", e?.message ?? "Could not upload photo. Please try again.");
       } finally {
         setPhotoUploading(false);
       }

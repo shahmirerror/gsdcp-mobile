@@ -104,9 +104,11 @@ export async function uploadDogPhoto(
     body: form,
   });
   const raw = await res.text();
+  console.log("[uploadDogPhoto] status:", res.status, "body:", raw.substring(0, 300));
+  if (!res.ok) throw new Error(`Server error (${res.status}). Please try again.`);
   let json: any = {};
-  try { json = JSON.parse(raw); } catch { throw new Error("Invalid response from server."); }
-  if (json.exception)         throw new Error(json.message ?? "A server error occurred.");
+  try { json = JSON.parse(raw); } catch { /* non-JSON success response is OK */ }
+  if (json.exception)          throw new Error(json.message ?? "A server error occurred.");
   if (json.success === false)  throw new Error(json.error?.message ?? json.message ?? "Photo upload failed.");
 }
 
