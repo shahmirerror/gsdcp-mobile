@@ -12,7 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/contexts/AuthContext";
 
-const gsdcpLogo = require("./assets/logo-square.png");
+const splashLogo = require("./assets/splash-logo.png");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,84 +23,83 @@ const queryClient = new QueryClient({
   },
 });
 
-type SplashPhase = "gsdcp" | "inspedium" | "done";
+function SplashSequence({ onDone }: { onDone: () => void }) {
+  const wrapperOpacity  = useRef(new Animated.Value(1)).current;
+  const gsdcpOpacity    = useRef(new Animated.Value(1)).current;
+  const inspediumOpacity = useRef(new Animated.Value(0)).current;
 
-function GSDCPSplash() {
-  const scale = useRef(new Animated.Value(0.88)).current;
+  const logoScale  = useRef(new Animated.Value(0.88)).current;
+  const textFadeY  = useRef(new Animated.Value(14)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.spring(scale, {
+    Animated.spring(logoScale, {
       toValue: 1,
       friction: 6,
       tension: 60,
       useNativeDriver: true,
     }).start();
+
+    const crossAt  = 2400;
+    const crossDur = 500;
+    const holdDur  = 2200;
+    const fadeDur  = 400;
+
+    const t1 = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(gsdcpOpacity,     { toValue: 0, duration: crossDur, useNativeDriver: true }),
+        Animated.timing(inspediumOpacity,  { toValue: 1, duration: crossDur, useNativeDriver: true }),
+        Animated.timing(textOpacity,       { toValue: 1, duration: crossDur, useNativeDriver: true }),
+        Animated.timing(textFadeY,         { toValue: 0, duration: crossDur, useNativeDriver: true }),
+      ]).start();
+    }, crossAt);
+
+    const t2 = setTimeout(() => {
+      Animated.timing(wrapperOpacity, {
+        toValue: 0,
+        duration: fadeDur,
+        useNativeDriver: true,
+      }).start(onDone);
+    }, crossAt + crossDur + holdDur);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   return (
-    <View style={[splash.container, { backgroundColor: "#0F5C3A" }]}>
-      <Animated.View style={{ transform: [{ scale }], alignItems: "center" }}>
-        <Image source={gsdcpLogo} style={splash.gsdcpLogo} resizeMode="contain" />
-      </Animated.View>
-    </View>
-  );
-}
+    <Animated.View style={[StyleSheet.absoluteFill, { opacity: wrapperOpacity }]} pointerEvents="none">
 
-function InspediumSplash() {
-  const fadeText = useRef(new Animated.Value(0)).current;
-  const slideY = useRef(new Animated.Value(16)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeText, { toValue: 1, duration: 350, useNativeDriver: true }),
-      Animated.timing(slideY, { toValue: 0, duration: 350, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  return (
-    <View style={[splash.container, { backgroundColor: "#FFFFFF" }]}>
-      <Animated.View
-        style={{ alignItems: "center", opacity: fadeText, transform: [{ translateY: slideY }] }}
-      >
-        <View style={splash.inspediumBadge}>
-          <Text style={splash.inspediumBadgeText}>CCMS</Text>
+      {/* Screen 2 — Inspedium (underneath) */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: inspediumOpacity }]}>
+        <View style={[s.screen, { backgroundColor: "#FFFFFF" }]}>
+          <Animated.View style={{ alignItems: "center", opacity: textOpacity, transform: [{ translateY: textFadeY }] }}>
+            <View style={s.badge}>
+              <Text style={s.badgeText}>CCMS</Text>
+            </View>
+            <Text style={s.cmsTitle}>Canine Club{"\n"}Management System</Text>
+            <View style={s.divider} />
+            <Text style={s.byLine}>by</Text>
+            <Text style={s.inspediumName}>Inspedium Corporation</Text>
+          </Animated.View>
         </View>
-        <Text style={splash.cmsTitle}>Canine Club{"\n"}Management System</Text>
-        <View style={splash.divider} />
-        <Text style={splash.byLine}>by</Text>
-        <Text style={splash.inspediumName}>Inspedium Corporation</Text>
       </Animated.View>
-    </View>
+
+      {/* Screen 1 — GSDCP (on top, fades out) */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: gsdcpOpacity }]}>
+        <View style={[s.screen, { backgroundColor: "#FFFFFF" }]}>
+          <Animated.Image
+            source={splashLogo}
+            style={[s.logo, { transform: [{ scale: logoScale }] }]}
+            resizeMode="contain"
+          />
+        </View>
+      </Animated.View>
+
+    </Animated.View>
   );
 }
 
 export default function App() {
-  const [splashPhase, setSplashPhase] = useState<SplashPhase>("gsdcp");
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (splashPhase === "done") return;
-
-    const holdMs = 2300;
-    const fadeMs = 400;
-
-    const timeout = setTimeout(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: fadeMs,
-        useNativeDriver: true,
-      }).start(() => {
-        if (splashPhase === "gsdcp") {
-          fadeAnim.setValue(1);
-          setSplashPhase("inspedium");
-        } else {
-          setSplashPhase("done");
-        }
-      });
-    }, holdMs);
-
-    return () => clearTimeout(timeout);
-  }, [splashPhase]);
+  const [splashDone, setSplashDone] = useState(false);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -108,13 +107,8 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <AppNavigator />
-            {splashPhase !== "done" && (
-              <Animated.View
-                style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}
-                pointerEvents="none"
-              >
-                {splashPhase === "gsdcp" ? <GSDCPSplash /> : <InspediumSplash />}
-              </Animated.View>
+            {!splashDone && (
+              <SplashSequence onDone={() => setSplashDone(true)} />
             )}
           </AuthProvider>
         </QueryClientProvider>
@@ -123,17 +117,17 @@ export default function App() {
   );
 }
 
-const splash = StyleSheet.create({
-  container: {
+const s = StyleSheet.create({
+  screen: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  gsdcpLogo: {
-    width: 220,
-    height: 220,
+  logo: {
+    width: 240,
+    height: 240,
   },
-  inspediumBadge: {
+  badge: {
     width: 72,
     height: 72,
     borderRadius: 16,
@@ -142,7 +136,7 @@ const splash = StyleSheet.create({
     alignItems: "center",
     marginBottom: 24,
   },
-  inspediumBadgeText: {
+  badgeText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "800",
