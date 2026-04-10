@@ -22,6 +22,8 @@ import { TheClubStackParamList } from "../../navigation/AppNavigator";
 
 const heroBg = require("../../../assets/hero-bg.png");
 
+const openLink = (url: string) => Linking.openURL(url).catch(() => {});
+
 function committeeColor(name: string): string {
   if (name.includes("Managing")) return COLORS.primary;
   if (name.includes("Breed Council")) return "#8B5CF6";
@@ -128,7 +130,7 @@ export default function TeamMemberDetailScreen() {
                   <TouchableOpacity
                     key={s.key}
                     style={[styles.socialBtn, { backgroundColor: `${s.color}12`, borderColor: `${s.color}30` }]}
-                    onPress={() => Linking.openURL(member[s.key] as string)}
+                    onPress={() => openLink(member[s.key] as string)}
                     activeOpacity={0.7}
                   >
                     <Ionicons name={s.icon} size={20} color={s.color} />

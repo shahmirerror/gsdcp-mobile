@@ -312,7 +312,7 @@ export default function DogProfileScreen() {
 
     const pickerOptions: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"],
-      allowsEditing: Platform.OS !== "android",
+      allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
       exif: false,

@@ -619,7 +619,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
                 <TouchableOpacity
                   key={dog.id || i}
                   style={[styles.dropdownItem, i < filteredDogs.length - 1 && styles.dropdownItemBorder]}
-                  onPress={() => addDog(dog)}
+                  onPressIn={() => addDog(dog)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.dropdownItemAvatar}>
@@ -931,6 +931,7 @@ export default function ShowDetailScreen() {
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         bounces={true}
         overScrollMode="always"
         refreshControl={

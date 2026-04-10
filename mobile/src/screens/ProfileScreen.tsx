@@ -1030,7 +1030,7 @@ function KennelTab({
 
   const handlePickImage = async () => {
     const pickerOptions: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"], allowsEditing: Platform.OS !== "android", aspect: [1, 1], quality: 0.8, exif: false,
+      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8, exif: false,
     };
     const pick = async (uri: string, mimeType?: string | null) => {
       setEditImageUri(uri);
@@ -6787,7 +6787,7 @@ export default function ProfileScreen() {
       // Alert.alert is a no-op on web — open the file picker directly
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsEditing: Platform.OS !== "android",
+        allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
@@ -6809,7 +6809,7 @@ export default function ProfileScreen() {
           }
           const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ["images"],
-            allowsEditing: Platform.OS !== "android",
+            allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
           });
@@ -6830,7 +6830,7 @@ export default function ProfileScreen() {
           }
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ["images"],
-            allowsEditing: Platform.OS !== "android",
+            allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
           });
@@ -6940,6 +6940,7 @@ export default function ProfileScreen() {
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}

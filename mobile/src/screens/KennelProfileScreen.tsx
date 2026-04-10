@@ -25,6 +25,8 @@ type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelProfi
 
 const heroBg = require("../../assets/hero-bg.png");
 
+const openLink = (url: string) => Linking.openURL(url).catch(() => {});
+
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const year = new Date(dateStr).getFullYear();
@@ -313,7 +315,7 @@ export default function KennelProfileScreen() {
                   {showPhone ? (
                     <TouchableOpacity
                       style={styles.contactBtn}
-                      onPress={() => Linking.openURL(`tel:${showPhone}`)}
+                      onPress={() => openLink(`tel:${showPhone}`)}
                       activeOpacity={0.7}
                       data-testid="btn-call"
                     >
@@ -324,7 +326,7 @@ export default function KennelProfileScreen() {
                   {showEmail ? (
                     <TouchableOpacity
                       style={[styles.contactBtn, styles.contactBtnSecondary]}
-                      onPress={() => Linking.openURL(`mailto:${showEmail}`)}
+                      onPress={() => openLink(`mailto:${showEmail}`)}
                       activeOpacity={0.7}
                       data-testid="btn-email"
                     >

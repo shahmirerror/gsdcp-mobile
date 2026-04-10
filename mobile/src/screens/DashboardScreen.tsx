@@ -32,6 +32,8 @@ import LazyImage from "../components/LazyImage";
 const logo = require("../../assets/splash-logo.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+const openLink = (url: string) => Linking.openURL(url).catch(() => {});
+
 /** Returns the current GSDCP season label, e.g. "2025/2026".
  *  The new season starts in August — so Aug 1 2026 → "2026/2027". */
 function getCurrentSeason(): string {
@@ -831,7 +833,7 @@ export default function DashboardScreen() {
             Telephone:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("tel:+923102000244")}
+              onPress={() => openLink("tel:+923102000244")}
             >
               +92 310 200 0244
             </Text>
@@ -839,7 +841,7 @@ export default function DashboardScreen() {
             Email:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("mailto:info@gsdcp.org")}
+              onPress={() => openLink("mailto:info@gsdcp.org")}
             >
               info@gsdcp.org
             </Text>
@@ -847,7 +849,7 @@ export default function DashboardScreen() {
             Website:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("https://gsdcp.org")}
+              onPress={() => openLink("https://gsdcp.org")}
             >
               gsdcp.org
             </Text>
@@ -855,7 +857,7 @@ export default function DashboardScreen() {
             App Support:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("mailto:info@gsdcp.org")}
+              onPress={() => openLink("mailto:info@gsdcp.org")}
             >
               info@gsdcp.org
             </Text>
@@ -885,7 +887,7 @@ export default function DashboardScreen() {
             Email:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("mailto:info@gsdcp.org")}
+              onPress={() => openLink("mailto:info@gsdcp.org")}
             >
               info@gsdcp.org
             </Text>
@@ -928,7 +930,7 @@ export default function DashboardScreen() {
             Legal Email:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("mailto:legal@inspedium.com")}
+              onPress={() => openLink("mailto:legal@inspedium.com")}
             >
               legal@inspedium.com
             </Text>
@@ -936,7 +938,7 @@ export default function DashboardScreen() {
             General Contact:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("mailto:info@inspedium.com")}
+              onPress={() => openLink("mailto:info@inspedium.com")}
             >
               info@inspedium.com
             </Text>
@@ -944,7 +946,7 @@ export default function DashboardScreen() {
             Website:{" "}
             <Text
               style={lStyles.link}
-              onPress={() => Linking.openURL("https://inspedium.com")}
+              onPress={() => openLink("https://inspedium.com")}
             >
               inspedium.com
             </Text>
