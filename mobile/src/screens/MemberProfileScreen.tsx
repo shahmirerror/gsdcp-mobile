@@ -22,7 +22,7 @@ import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import LazyImage from "../components/LazyImage";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 type TabId = "detail" | "kennel" | "dogs";
 

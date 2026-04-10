@@ -27,7 +27,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { useAuth } from "../contexts/AuthContext";
 
 const logo = require("../../assets/logo-square.png");
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 type SignInMode = "membership" | "username" | "otp";
 

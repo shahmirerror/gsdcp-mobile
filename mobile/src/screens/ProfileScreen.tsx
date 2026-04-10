@@ -83,7 +83,7 @@ import { Switch } from "react-native";
 import LazyImage from "../components/LazyImage";
 import BottomSheetModal from "../components/BottomSheetModal";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 type TabId =
   | "detail"

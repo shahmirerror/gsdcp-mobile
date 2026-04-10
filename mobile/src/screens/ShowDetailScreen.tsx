@@ -23,7 +23,7 @@ import BottomSheetModal from "../components/BottomSheetModal";
 import { formatDate } from "../lib/dateUtils";
 import LazyImage from "../components/LazyImage";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 
 const EVENT_TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {

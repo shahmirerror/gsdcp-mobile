@@ -23,7 +23,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeder, BreederDetail, BreederDog, Breeder } from "../lib/api";
 import LazyImage from "../components/LazyImage";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;

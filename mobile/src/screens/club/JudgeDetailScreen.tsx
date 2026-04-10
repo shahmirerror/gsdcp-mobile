@@ -21,7 +21,7 @@ import { TheClubStackParamList } from "../../navigation/AppNavigator";
 import { formatDate } from "../../lib/dateUtils";
 import LazyImage from "../../components/LazyImage";
 
-const heroBg = require("../../../assets/hero-bg.jpg");
+const heroBg = require("../../../assets/hero-bg.png");
 
 function getShortBadge(credentials: string): string {
   const c = credentials.toLowerCase();

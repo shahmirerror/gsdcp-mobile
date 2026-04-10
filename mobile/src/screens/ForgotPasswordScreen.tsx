@@ -20,7 +20,7 @@ import { forgotPassword } from "../lib/api";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 
 const logo  = require("../../assets/logo-square.png");
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 type ResetMethod = "membership" | "email" | "username";
 

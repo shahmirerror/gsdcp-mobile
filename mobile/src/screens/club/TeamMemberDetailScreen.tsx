@@ -20,7 +20,7 @@ import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchTeamMember, stripHtml, TeamMember } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 
-const heroBg = require("../../../assets/hero-bg.jpg");
+const heroBg = require("../../../assets/hero-bg.png");
 
 function committeeColor(name: string): string {
   if (name.includes("Managing")) return COLORS.primary;
