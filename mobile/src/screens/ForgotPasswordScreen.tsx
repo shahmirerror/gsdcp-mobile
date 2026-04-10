@@ -148,8 +148,7 @@ export default function ForgotPasswordScreen() {
         <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
           <LinearGradient
             colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-            style={styles.heroGradient}
-            pointerEvents="none"
+            style={[styles.heroGradient, { pointerEvents: "none" }]}
           />
           <TouchableOpacity
             style={[styles.backButton, { top: insets.top + 12 }]}

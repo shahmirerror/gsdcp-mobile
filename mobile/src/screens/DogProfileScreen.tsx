@@ -14,6 +14,7 @@ import {
   Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { centerCropToSquare } from "../utils/imageCrop";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -312,10 +313,16 @@ export default function DogProfileScreen() {
 
     const pickerOptions: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"],
-      allowsEditing: true,
+      allowsEditing: Platform.OS !== "android",
       aspect: [1, 1],
       quality: 0.8,
       exif: false,
+    };
+    const pickWithCrop = async (asset: ImagePicker.ImagePickerAsset) => {
+      const uri = Platform.OS === "android" && asset.width && asset.height
+        ? await centerCropToSquare(asset.uri, asset.width, asset.height)
+        : asset.uri;
+      await pick(uri, asset.mimeType);
     };
 
     if (Platform.OS === "web") {
@@ -338,8 +345,7 @@ export default function DogProfileScreen() {
           }
           const result = await ImagePicker.launchCameraAsync(pickerOptions);
           if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            await pick(asset.uri, asset.mimeType);
+            await pickWithCrop(result.assets[0]);
           }
         },
       },
@@ -353,8 +359,7 @@ export default function DogProfileScreen() {
           }
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
           if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            await pick(asset.uri, asset.mimeType);
+            await pickWithCrop(result.assets[0]);
           }
         },
       },
@@ -589,8 +594,7 @@ export default function DogProfileScreen() {
       >
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={styles.backButton}

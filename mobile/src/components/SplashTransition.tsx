@@ -33,7 +33,7 @@ export function SplashTransition({ visible }: { visible: boolean }) {
   if (!show) return null;
 
   return (
-    <Animated.View style={[styles.overlay, { opacity }]} pointerEvents="none">
+    <Animated.View style={[styles.overlay, { opacity, pointerEvents: "none" as const }]}>
       <Animated.View style={{ transform: [{ scale }] }}>
         <Image source={logoSquare} style={styles.logo} resizeMode="contain" />
       </Animated.View>

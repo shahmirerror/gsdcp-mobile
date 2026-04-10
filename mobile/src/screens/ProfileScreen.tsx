@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import { centerCropToSquare } from "../utils/imageCrop";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -1030,16 +1031,19 @@ function KennelTab({
 
   const handlePickImage = async () => {
     const pickerOptions: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8, exif: false,
+      mediaTypes: ["images"], allowsEditing: Platform.OS !== "android", aspect: [1, 1], quality: 0.8, exif: false,
     };
-    const pick = async (uri: string, mimeType?: string | null) => {
-      setEditImageUri(uri);
+    const pick = async (uri: string, mimeType?: string | null, w?: number, h?: number) => {
+      const finalUri = Platform.OS === "android" && w && h ? await centerCropToSquare(uri, w, h) : uri;
+      setEditImageUri(finalUri);
       setEditImageMime(mimeType ?? null);
     };
     if (Platform.OS === "web") {
       const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-      if (!result.canceled && result.assets[0])
-        await pick(result.assets[0].uri, result.assets[0].mimeType);
+      if (!result.canceled && result.assets[0]) {
+        const a = result.assets[0];
+        await pick(a.uri, a.mimeType, a.width, a.height);
+      }
       return;
     }
     Alert.alert("Change Kennel Photo", "Choose a source", [
@@ -1049,7 +1053,7 @@ function KennelTab({
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
           const result = await ImagePicker.launchCameraAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+          if (!result.canceled && result.assets[0]) { const a = result.assets[0]; await pick(a.uri, a.mimeType, a.width, a.height); }
         },
       },
       {
@@ -1058,7 +1062,7 @@ function KennelTab({
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+          if (!result.canceled && result.assets[0]) { const a = result.assets[0]; await pick(a.uri, a.mimeType, a.width, a.height); }
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -6795,6 +6799,15 @@ export default function ProfileScreen() {
         await doUpload(result.assets[0].uri);
       return;
     }
+    const photoOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["images"],
+      allowsEditing: false,
+      quality: 0.8,
+    };
+    const pickAndUpload = async (uri: string, w?: number, h?: number) => {
+      const finalUri = w && h ? await centerCropToSquare(uri, w, h) : uri;
+      await doUpload(finalUri);
+    };
     Alert.alert("Change Profile Photo", "Choose a source", [
       {
         text: "Camera",
@@ -6807,14 +6820,11 @@ export default function ProfileScreen() {
             );
             return;
           }
-          const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ["images"],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          });
-          if (!result.canceled && result.assets[0])
-            await doUpload(result.assets[0].uri);
+          const result = await ImagePicker.launchCameraAsync(photoOptions);
+          if (!result.canceled && result.assets[0]) {
+            const a = result.assets[0];
+            await pickAndUpload(a.uri, a.width, a.height);
+          }
         },
       },
       {
@@ -6828,14 +6838,11 @@ export default function ProfileScreen() {
             );
             return;
           }
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ["images"],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          });
-          if (!result.canceled && result.assets[0])
-            await doUpload(result.assets[0].uri);
+          const result = await ImagePicker.launchImageLibraryAsync(photoOptions);
+          if (!result.canceled && result.assets[0]) {
+            const a = result.assets[0];
+            await pickAndUpload(a.uri, a.width, a.height);
+          }
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -6958,8 +6965,7 @@ export default function ProfileScreen() {
       >
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
       </ImageBackground>
 

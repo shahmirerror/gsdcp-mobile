@@ -61,7 +61,7 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
   }, []);
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, s.wrapper, { opacity: wrapperOpacity }]} pointerEvents="none">
+    <Animated.View style={[StyleSheet.absoluteFill, s.wrapper, { opacity: wrapperOpacity, pointerEvents: "none" as const }]}>
 
       {/* Screen 2 — CCMS logo (underneath) */}
       <Animated.View style={[StyleSheet.absoluteFill, s.screen, { opacity: inspediumOpacity }]}>
