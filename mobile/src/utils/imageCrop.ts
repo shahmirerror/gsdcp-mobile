@@ -9,3 +9,18 @@ export async function centerCropToSquare(uri: string, w: number, h: number): Pro
   );
   return result.uri;
 }
+
+export async function cropRect(
+  uri: string,
+  originX: number,
+  originY: number,
+  width: number,
+  height: number,
+): Promise<string> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ crop: { originX, originY, width, height } }],
+    { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  return result.uri;
+}

@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import { centerCropToSquare } from "../utils/imageCrop";
+import ImageCropModal from "../components/ImageCropModal";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -987,6 +987,9 @@ function KennelTab({
   const [editImageMime, setEditImageMime] = useState<string | null>(null);
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [kennelCropState, setKennelCropState] = useState<{
+    uri: string; width: number; height: number; mimeType?: string | null;
+  } | null>(null);
 
   if (!kennel) {
     return (
@@ -1031,19 +1034,14 @@ function KennelTab({
 
   const handlePickImage = async () => {
     const pickerOptions: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"], allowsEditing: Platform.OS !== "android", aspect: [1, 1], quality: 0.8, exif: false,
+      mediaTypes: ["images"], allowsEditing: false, quality: 1, exif: false,
     };
-    const pick = async (uri: string, mimeType?: string | null, w?: number, h?: number) => {
-      const finalUri = Platform.OS === "android" && w && h ? await centerCropToSquare(uri, w, h) : uri;
-      setEditImageUri(finalUri);
-      setEditImageMime(mimeType ?? null);
+    const openCrop = (asset: ImagePicker.ImagePickerAsset) => {
+      setKennelCropState({ uri: asset.uri, width: asset.width ?? 1000, height: asset.height ?? 1000, mimeType: asset.mimeType });
     };
     if (Platform.OS === "web") {
       const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-      if (!result.canceled && result.assets[0]) {
-        const a = result.assets[0];
-        await pick(a.uri, a.mimeType, a.width, a.height);
-      }
+      if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
       return;
     }
     Alert.alert("Change Kennel Photo", "Choose a source", [
@@ -1053,7 +1051,7 @@ function KennelTab({
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
           const result = await ImagePicker.launchCameraAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) { const a = result.assets[0]; await pick(a.uri, a.mimeType, a.width, a.height); }
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       {
@@ -1062,7 +1060,7 @@ function KennelTab({
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) { const a = result.assets[0]; await pick(a.uri, a.mimeType, a.width, a.height); }
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -1110,6 +1108,21 @@ function KennelTab({
   const displayImage = editImageUri ?? (hasImage ? kennel.imageUrl! : null);
 
   return (
+    <>
+      {kennelCropState && (
+        <ImageCropModal
+          visible={!!kennelCropState}
+          uri={kennelCropState.uri}
+          imageWidth={kennelCropState.width}
+          imageHeight={kennelCropState.height}
+          onCancel={() => setKennelCropState(null)}
+          onCrop={(croppedUri) => {
+            setEditImageUri(croppedUri);
+            setEditImageMime(kennelCropState.mimeType ?? null);
+            setKennelCropState(null);
+          }}
+        />
+      )}
     <View style={styles.card}>
       {/* ── Edit Modal ── */}
       <Modal visible={showEdit} animationType="slide" transparent onRequestClose={() => setShowEdit(false)}>
@@ -1253,6 +1266,7 @@ function KennelTab({
         <Text style={styles.kennelViewBtnText}>View Full Kennel Profile</Text>
       </TouchableOpacity>
     </View>
+    </>
   );
 }
 
@@ -6773,6 +6787,10 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabId>("detail");
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(() => Date.now());
+  const [cropState, setCropState] = useState<{
+    uri: string; width: number; height: number;
+    onCrop: (croppedUri: string) => void;
+  } | null>(null);
 
   const {
     data: detail,
@@ -6787,62 +6805,39 @@ export default function ProfileScreen() {
   });
 
   async function handleChangePhoto() {
-    if (Platform.OS === "web") {
-      // Alert.alert is a no-op on web — open the file picker directly
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+    const pickerOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["images"], allowsEditing: false, quality: 1,
+    };
+    const openCrop = (asset: ImagePicker.ImagePickerAsset) => {
+      setCropState({
+        uri: asset.uri,
+        width: asset.width ?? 1000,
+        height: asset.height ?? 1000,
+        onCrop: (croppedUri) => doUpload(croppedUri),
       });
-      if (!result.canceled && result.assets[0])
-        await doUpload(result.assets[0].uri);
+    };
+    if (Platform.OS === "web") {
+      const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+      if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
       return;
     }
-    const photoOptions: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"],
-      allowsEditing: false,
-      quality: 0.8,
-    };
-    const pickAndUpload = async (uri: string, w?: number, h?: number) => {
-      const finalUri = w && h ? await centerCropToSquare(uri, w, h) : uri;
-      await doUpload(finalUri);
-    };
     Alert.alert("Change Profile Photo", "Choose a source", [
       {
         text: "Camera",
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) {
-            Alert.alert(
-              "Permission required",
-              "Camera access is needed to take a photo.",
-            );
-            return;
-          }
-          const result = await ImagePicker.launchCameraAsync(photoOptions);
-          if (!result.canceled && result.assets[0]) {
-            const a = result.assets[0];
-            await pickAndUpload(a.uri, a.width, a.height);
-          }
+          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
+          const result = await ImagePicker.launchCameraAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       {
         text: "Photo Library",
         onPress: async () => {
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) {
-            Alert.alert(
-              "Permission required",
-              "Photo library access is needed to pick a photo.",
-            );
-            return;
-          }
-          const result = await ImagePicker.launchImageLibraryAsync(photoOptions);
-          if (!result.canceled && result.assets[0]) {
-            const a = result.assets[0];
-            await pickAndUpload(a.uri, a.width, a.height);
-          }
+          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -6944,6 +6939,21 @@ export default function ProfileScreen() {
   }
 
   return (
+    <>
+      {cropState && (
+        <ImageCropModal
+          visible={!!cropState}
+          uri={cropState.uri}
+          imageWidth={cropState.width}
+          imageHeight={cropState.height}
+          onCancel={() => setCropState(null)}
+          onCrop={(croppedUri) => {
+            const cb = cropState.onCrop;
+            setCropState(null);
+            cb(croppedUri);
+          }}
+        />
+      )}
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
@@ -7066,6 +7076,7 @@ export default function ProfileScreen() {
 
       <View style={{ height: 48 }} />
     </ScrollView>
+    </>
   );
 }
 
