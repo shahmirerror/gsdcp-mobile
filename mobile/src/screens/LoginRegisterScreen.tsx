@@ -27,7 +27,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { useAuth } from "../contexts/AuthContext";
 
 const logo = require("../../assets/logo-square.png");
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 type SignInMode = "membership" | "username" | "otp";
 
@@ -301,8 +301,7 @@ export default function LoginRegisterScreen() {
         >
           <LinearGradient
             colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-            style={styles.heroGradient}
-            pointerEvents="none"
+            style={[styles.heroGradient, { pointerEvents: "none" }]}
           />
           {navigation.canGoBack() && (
             <TouchableOpacity

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { gradeIndex } from "../lib/gradeUtils";
 import {
   View,
@@ -14,6 +14,7 @@ import {
   Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import ImageCropModal from "../components/ImageCropModal";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,7 +39,7 @@ import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 import LazyImage from "../components/LazyImage";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 
 function DetailItem({
@@ -281,6 +282,10 @@ export default function DogProfileScreen() {
   );
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [cropState, setCropState] = useState<{
+    uri: string; width: number; height: number; mimeType?: string | null;
+  } | null>(null);
+  const pendingMimeRef = useRef<string | null | undefined>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } =
     useQuery<DogDetail>({
@@ -289,41 +294,41 @@ export default function DogProfileScreen() {
       enabled: !!dogId,
     });
 
+  const doUploadDogPhoto = async (uri: string, mimeType?: string | null) => {
+    if (!user || !dogId) return;
+    setLocalImageUri(uri);
+    setPhotoUploading(true);
+    try {
+      await uploadDogPhoto(dogId, uri, user.token, mimeType);
+      await queryClient.invalidateQueries({ queryKey: ["dog", dogId] });
+      await refetch();
+      Alert.alert("Success", "Dog photo updated.");
+    } catch (e: any) {
+      setLocalImageUri(null);
+      Alert.alert("Upload failed", e?.message ?? "Could not upload photo. Please try again.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
   async function handleChangeDogPhoto() {
     if (!user || !dogId) return;
 
-    const pick = async (uri: string, mimeType?: string | null) => {
-      setLocalImageUri(uri);
-      setPhotoUploading(true);
-      try {
-        await uploadDogPhoto(dogId, uri, user.token, mimeType);
-        console.log("[DogProfile] upload succeeded, invalidating query");
-        await queryClient.invalidateQueries({ queryKey: ["dog", dogId] });
-        await refetch();
-        Alert.alert("Success", "Dog photo updated.");
-      } catch (e: any) {
-        console.error("[DogProfile] upload error:", e?.message, e);
-        setLocalImageUri(null);
-        Alert.alert("Upload failed", e?.message ?? "Could not upload photo. Please try again.");
-      } finally {
-        setPhotoUploading(false);
-      }
-    };
-
     const pickerOptions: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
       exif: false,
+    };
+
+    const openCrop = (asset: ImagePicker.ImagePickerAsset) => {
+      pendingMimeRef.current = asset.mimeType;
+      setCropState({ uri: asset.uri, width: asset.width ?? 1000, height: asset.height ?? 1000, mimeType: asset.mimeType });
     };
 
     if (Platform.OS === "web") {
       const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        await pick(asset.uri, asset.mimeType);
-      }
+      if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
       return;
     }
 
@@ -332,30 +337,18 @@ export default function DogProfileScreen() {
         text: "Camera",
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) {
-            Alert.alert("Permission required", "Camera access is needed to take a photo.");
-            return;
-          }
+          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
           const result = await ImagePicker.launchCameraAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            await pick(asset.uri, asset.mimeType);
-          }
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       {
         text: "Photo Library",
         onPress: async () => {
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) {
-            Alert.alert("Permission required", "Photo library access is needed.");
-            return;
-          }
+          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) {
-            const asset = result.assets[0];
-            await pick(asset.uri, asset.mimeType);
-          }
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -567,6 +560,20 @@ export default function DogProfileScreen() {
   };
 
   return (
+    <>
+      {cropState && (
+        <ImageCropModal
+          visible={!!cropState}
+          uri={cropState.uri}
+          imageWidth={cropState.width}
+          imageHeight={cropState.height}
+          onCancel={() => setCropState(null)}
+          onCrop={(croppedUri) => {
+            setCropState(null);
+            doUploadDogPhoto(croppedUri, pendingMimeRef.current);
+          }}
+        />
+      )}
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
@@ -589,8 +596,7 @@ export default function DogProfileScreen() {
       >
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={styles.backButton}
@@ -1354,6 +1360,7 @@ export default function DogProfileScreen() {
 
       <View style={{ height: 32 }} />
     </ScrollView>
+    </>
   );
 }
 

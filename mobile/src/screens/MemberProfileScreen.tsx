@@ -22,7 +22,7 @@ import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import LazyImage from "../components/LazyImage";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 type TabId = "detail" | "kennel" | "dogs";
 
@@ -459,8 +459,7 @@ export default function MemberProfileScreen() {
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={styles.backButton}

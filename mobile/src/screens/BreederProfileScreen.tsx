@@ -23,7 +23,9 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeder, BreederDetail, BreederDog, Breeder } from "../lib/api";
 import LazyImage from "../components/LazyImage";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
+
+const openLink = (url: string) => Linking.openURL(url).catch(() => {});
 
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
@@ -491,8 +493,7 @@ export default function BreederProfileScreen() {
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={styles.backButton}
@@ -597,7 +598,7 @@ export default function BreederProfileScreen() {
                 {contactPhone ? (
                   <TouchableOpacity
                     style={styles.contactBtn}
-                    onPress={() => Linking.openURL(`tel:${contactPhone}`)}
+                    onPress={() => openLink(`tel:${contactPhone}`)}
                     activeOpacity={0.7}
                     data-testid="btn-call"
                   >
@@ -608,7 +609,7 @@ export default function BreederProfileScreen() {
                 {contactEmail ? (
                   <TouchableOpacity
                     style={[styles.contactBtn, styles.contactBtnSecondary]}
-                    onPress={() => Linking.openURL(`mailto:${contactEmail}`)}
+                    onPress={() => openLink(`mailto:${contactEmail}`)}
                     activeOpacity={0.7}
                     data-testid="btn-email"
                   >

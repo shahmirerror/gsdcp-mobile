@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchRules, stripHtml, RuleItem } from "../../lib/api";
 
-const logo = require("../../../assets/logo-square.png");
+const logo = require("../../../assets/splash-logo.png");
 
 export default function RulesRegulationsScreen() {
   const navigation = useNavigation();
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 12,
   },
-  logoImg: { width: 42, height: 42 },
+  logoImg: { width: 55, height: 55 },
   headerContent: { flex: 1, justifyContent: "center" },
   backBtn: {
     flexDirection: "row",

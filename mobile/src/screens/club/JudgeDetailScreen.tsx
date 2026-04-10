@@ -21,7 +21,7 @@ import { TheClubStackParamList } from "../../navigation/AppNavigator";
 import { formatDate } from "../../lib/dateUtils";
 import LazyImage from "../../components/LazyImage";
 
-const heroBg = require("../../../assets/hero-bg.jpg");
+const heroBg = require("../../../assets/hero-bg.png");
 
 function getShortBadge(credentials: string): string {
   const c = credentials.toLowerCase();
@@ -78,8 +78,7 @@ export default function JudgeDetailScreen() {
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={[styles.backButton, { top: insets.top + 12 }]}

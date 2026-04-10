@@ -312,9 +312,9 @@ export default function CustomTabBar({
                 inputRange: [0, 1],
                 outputRange: [0, 0.6],
               }),
+              pointerEvents: "none" as const,
             },
           ]}
-          pointerEvents="none"
         />
         <Pressable style={StyleSheet.absoluteFill} onPress={closeMenu} />
 
@@ -347,9 +347,9 @@ export default function CustomTabBar({
                   left: homeCenterX - 30,
                   opacity,
                   transform: [{ translateX }, { translateY }, { scale }],
+                  pointerEvents: "box-none" as const,
                 },
               ]}
-              pointerEvents="box-none"
             >
               <TouchableOpacity
                 style={[

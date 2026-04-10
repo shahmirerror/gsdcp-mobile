@@ -20,7 +20,9 @@ import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchTeamMember, stripHtml, TeamMember } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 
-const heroBg = require("../../../assets/hero-bg.jpg");
+const heroBg = require("../../../assets/hero-bg.png");
+
+const openLink = (url: string) => Linking.openURL(url).catch(() => {});
 
 function committeeColor(name: string): string {
   if (name.includes("Managing")) return COLORS.primary;
@@ -82,8 +84,7 @@ export default function TeamMemberDetailScreen() {
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={[styles.backButton, { top: insets.top + 12 }]}
@@ -128,7 +129,7 @@ export default function TeamMemberDetailScreen() {
                   <TouchableOpacity
                     key={s.key}
                     style={[styles.socialBtn, { backgroundColor: `${s.color}12`, borderColor: `${s.color}30` }]}
-                    onPress={() => Linking.openURL(member[s.key] as string)}
+                    onPress={() => openLink(member[s.key] as string)}
                     activeOpacity={0.7}
                   >
                     <Ionicons name={s.icon} size={20} color={s.color} />

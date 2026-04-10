@@ -23,7 +23,7 @@ import BottomSheetModal from "../components/BottomSheetModal";
 import { formatDate } from "../lib/dateUtils";
 import LazyImage from "../components/LazyImage";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 
 const EVENT_TYPE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -619,7 +619,7 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
                 <TouchableOpacity
                   key={dog.id || i}
                   style={[styles.dropdownItem, i < filteredDogs.length - 1 && styles.dropdownItemBorder]}
-                  onPress={() => addDog(dog)}
+                  onPressIn={() => addDog(dog)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.dropdownItemAvatar}>
@@ -875,8 +875,7 @@ export default function ShowDetailScreen() {
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={styles.backButton}
@@ -931,6 +930,7 @@ export default function ShowDetailScreen() {
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         bounces={true}
         overScrollMode="always"
         refreshControl={

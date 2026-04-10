@@ -18,7 +18,7 @@ import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchNews, stripHtml, NewsItem } from "../../lib/api";
 import type { TheClubStackParamList } from "../../navigation/AppNavigator";
 
-const logo = require("../../../assets/logo-square.png");
+const logo = require("../../../assets/splash-logo.png");
 
 type Nav = NativeStackNavigationProp<TheClubStackParamList>;
 
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 12,
   },
-  logoImg: { width: 42, height: 42 },
+  logoImg: { width: 55, height: 55 },
   headerContent: { flex: 1, justifyContent: "center" },
   backBtn: {
     flexDirection: "row",

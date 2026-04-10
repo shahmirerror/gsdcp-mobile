@@ -23,7 +23,9 @@ import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelProfile">;
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
+
+const openLink = (url: string) => Linking.openURL(url).catch(() => {});
 
 function formatYear(dateStr: string | null): string | null {
   if (!dateStr) return null;
@@ -213,8 +215,7 @@ export default function KennelProfileScreen() {
       <ImageBackground source={heroBg} style={styles.heroBanner} resizeMode="cover">
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
         <TouchableOpacity
           style={styles.backButton}
@@ -313,7 +314,7 @@ export default function KennelProfileScreen() {
                   {showPhone ? (
                     <TouchableOpacity
                       style={styles.contactBtn}
-                      onPress={() => Linking.openURL(`tel:${showPhone}`)}
+                      onPress={() => openLink(`tel:${showPhone}`)}
                       activeOpacity={0.7}
                       data-testid="btn-call"
                     >
@@ -324,7 +325,7 @@ export default function KennelProfileScreen() {
                   {showEmail ? (
                     <TouchableOpacity
                       style={[styles.contactBtn, styles.contactBtnSecondary]}
-                      onPress={() => Linking.openURL(`mailto:${showEmail}`)}
+                      onPress={() => openLink(`mailto:${showEmail}`)}
                       activeOpacity={0.7}
                       data-testid="btn-email"
                     >

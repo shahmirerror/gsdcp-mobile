@@ -16,8 +16,9 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
+import ImageCropModal from "../components/ImageCropModal";
 import { useNavigation } from "@react-navigation/native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -83,7 +84,7 @@ import { Switch } from "react-native";
 import LazyImage from "../components/LazyImage";
 import BottomSheetModal from "../components/BottomSheetModal";
 
-const heroBg = require("../../assets/hero-bg.jpg");
+const heroBg = require("../../assets/hero-bg.png");
 
 type TabId =
   | "detail"
@@ -986,6 +987,9 @@ function KennelTab({
   const [editImageMime, setEditImageMime] = useState<string | null>(null);
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [kennelCropState, setKennelCropState] = useState<{
+    uri: string; width: number; height: number; mimeType?: string | null;
+  } | null>(null);
 
   if (!kennel) {
     return (
@@ -1030,16 +1034,14 @@ function KennelTab({
 
   const handlePickImage = async () => {
     const pickerOptions: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8, exif: false,
+      mediaTypes: ["images"], allowsEditing: false, quality: 1, exif: false,
     };
-    const pick = async (uri: string, mimeType?: string | null) => {
-      setEditImageUri(uri);
-      setEditImageMime(mimeType ?? null);
+    const openCrop = (asset: ImagePicker.ImagePickerAsset) => {
+      setKennelCropState({ uri: asset.uri, width: asset.width ?? 1000, height: asset.height ?? 1000, mimeType: asset.mimeType });
     };
     if (Platform.OS === "web") {
       const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-      if (!result.canceled && result.assets[0])
-        await pick(result.assets[0].uri, result.assets[0].mimeType);
+      if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
       return;
     }
     Alert.alert("Change Kennel Photo", "Choose a source", [
@@ -1049,7 +1051,7 @@ function KennelTab({
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
           const result = await ImagePicker.launchCameraAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       {
@@ -1058,7 +1060,7 @@ function KennelTab({
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) await pick(result.assets[0].uri, result.assets[0].mimeType);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -1106,6 +1108,21 @@ function KennelTab({
   const displayImage = editImageUri ?? (hasImage ? kennel.imageUrl! : null);
 
   return (
+    <>
+      {kennelCropState && (
+        <ImageCropModal
+          visible={!!kennelCropState}
+          uri={kennelCropState.uri}
+          imageWidth={kennelCropState.width}
+          imageHeight={kennelCropState.height}
+          onCancel={() => setKennelCropState(null)}
+          onCrop={(croppedUri) => {
+            setEditImageUri(croppedUri);
+            setEditImageMime(kennelCropState.mimeType ?? null);
+            setKennelCropState(null);
+          }}
+        />
+      )}
     <View style={styles.card}>
       {/* ── Edit Modal ── */}
       <Modal visible={showEdit} animationType="slide" transparent onRequestClose={() => setShowEdit(false)}>
@@ -1249,6 +1266,7 @@ function KennelTab({
         <Text style={styles.kennelViewBtnText}>View Full Kennel Profile</Text>
       </TouchableOpacity>
     </View>
+    </>
   );
 }
 
@@ -1342,12 +1360,24 @@ function DogsTab({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: dogs = [], isLoading: dogsLoading } = useQuery({
+  const {
+    data,
+    isLoading: dogsLoading,
+    isFetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["my-dogs", userId, debouncedSearch],
-    queryFn: () => fetchMyDogs(userId, debouncedSearch),
+    queryFn: ({ pageParam }) => fetchMyDogs(userId, debouncedSearch, pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => lastPage.hasMore ? allPages.length + 1 : undefined,
     enabled: !!userId,
     staleTime: 60_000,
   });
+
+  const dogs = data?.pages.flatMap((p) => p.dogs) ?? [];
+  const isSearching = isFetching && !isFetchingNextPage && !!data;
 
   const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
 
@@ -1377,28 +1407,6 @@ function DogsTab({
       return true;
     });
   }, [dogs, search, genderF, hairF]);
-
-  if (dogsLoading) {
-    return (
-      <View style={styles.loadingWrap}>
-        <ActivityIndicator size="small" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  if (dogs.length === 0) {
-    return (
-      <View style={styles.emptyState}>
-        <View style={styles.emptyIconWrap}>
-          <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
-        </View>
-        <Text style={styles.emptyTitle}>No Dogs Registered</Text>
-        <Text style={styles.emptyDesc}>
-          You have no dogs registered under your account yet.
-        </Text>
-      </View>
-    );
-  }
 
   const initials = (name: string) =>
     name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
@@ -1467,26 +1475,63 @@ function DogsTab({
         </View>
       )}
 
-      {/* Count */}
-      <Text style={dStyles.countText}>
-        {filtered.length} of {dogs.length} {dogs.length === 1 ? "dog" : "dogs"}
-      </Text>
+      {/* Count + inline search spinner */}
+      <View style={dStyles.countRow}>
+        {dogsLoading ? (
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        ) : (
+          <Text style={dStyles.countText}>
+            {filtered.length} {filtered.length !== dogs.length ? `of ${dogs.length} ` : ""}
+            {dogs.length === 1 ? "dog" : "dogs"}
+            {hasNextPage ? "+" : ""}
+          </Text>
+        )}
+        {isSearching && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 8 }} />}
+      </View>
 
       {/* List */}
-      {filtered.length === 0 ? (
+      {dogsLoading ? null : filtered.length === 0 ? (
         <View style={[styles.emptyState, { paddingTop: 32 }]}>
-          <Ionicons name="search-outline" size={36} color={COLORS.textMuted} />
-          <Text style={styles.emptyTitle}>No matches</Text>
-          <Text style={styles.emptyDesc}>Try a different search or filter.</Text>
+          {dogs.length === 0 ? (
+            <>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Dogs Registered</Text>
+              <Text style={styles.emptyDesc}>You have no dogs registered under your account yet.</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="search-outline" size={36} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>No matches</Text>
+              <Text style={styles.emptyDesc}>Try a different search or filter.</Text>
+            </>
+          )}
         </View>
       ) : (
-        filtered.map((dog) => (
-          <DogListItem
-            key={dog.id}
-            dog={toListDog(dog)}
-            onPress={() => setPreviewDog(dog)}
-          />
-        ))
+        <>
+          {filtered.map((dog) => (
+            <DogListItem
+              key={dog.id}
+              dog={toListDog(dog)}
+              onPress={() => setPreviewDog(dog)}
+            />
+          ))}
+          {hasNextPage && (
+            <TouchableOpacity
+              style={dStyles.loadMoreButton}
+              onPress={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              activeOpacity={0.7}
+            >
+              {isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text style={dStyles.loadMoreText}>Load more</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </>
       )}
 
       {/* Filter modal */}
@@ -1694,11 +1739,31 @@ const dStyles = StyleSheet.create({
   },
   activeChipText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.primary },
   clearAllText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.textMuted, marginLeft: 2 },
-  countText: {
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xs,
+    minHeight: 20,
+  },
+  countText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
+  },
+  loadMoreButton: {
+    marginHorizontal: SPACING.lg,
+    marginVertical: SPACING.md,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+  },
+  loadMoreText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.primary,
   },
   filterModalContent: { paddingHorizontal: 24 },
   filterModalHeader: {
@@ -2382,7 +2447,7 @@ function DogDropdown({
     setOpen(true);
   };
   const handleBlur = () => {
-    blurTimerRef.current = setTimeout(() => setOpen(false), 180);
+    blurTimerRef.current = setTimeout(() => setOpen(false), 500);
   };
   const handleSelect = (dog: DogOption) => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
@@ -2615,7 +2680,7 @@ function DogDropdown({
             results.map((dog, i) => (
               <TouchableOpacity
                 key={dog.id}
-                onPress={() => handleSelect(dog)}
+                onPressIn={() => handleSelect(dog)}
                 activeOpacity={0.65}
                 style={[
                   {
@@ -6722,6 +6787,10 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabId>("detail");
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(() => Date.now());
+  const [cropState, setCropState] = useState<{
+    uri: string; width: number; height: number;
+    onCrop: (croppedUri: string) => void;
+  } | null>(null);
 
   const {
     data: detail,
@@ -6736,16 +6805,20 @@ export default function ProfileScreen() {
   });
 
   async function handleChangePhoto() {
-    if (Platform.OS === "web") {
-      // Alert.alert is a no-op on web — open the file picker directly
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+    const pickerOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: ["images"], allowsEditing: false, quality: 1,
+    };
+    const openCrop = (asset: ImagePicker.ImagePickerAsset) => {
+      setCropState({
+        uri: asset.uri,
+        width: asset.width ?? 1000,
+        height: asset.height ?? 1000,
+        onCrop: (croppedUri) => doUpload(croppedUri),
       });
-      if (!result.canceled && result.assets[0])
-        await doUpload(result.assets[0].uri);
+    };
+    if (Platform.OS === "web") {
+      const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+      if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
       return;
     }
     Alert.alert("Change Profile Photo", "Choose a source", [
@@ -6753,42 +6826,18 @@ export default function ProfileScreen() {
         text: "Camera",
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) {
-            Alert.alert(
-              "Permission required",
-              "Camera access is needed to take a photo.",
-            );
-            return;
-          }
-          const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ["images"],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          });
-          if (!result.canceled && result.assets[0])
-            await doUpload(result.assets[0].uri);
+          if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
+          const result = await ImagePicker.launchCameraAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       {
         text: "Photo Library",
         onPress: async () => {
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) {
-            Alert.alert(
-              "Permission required",
-              "Photo library access is needed to pick a photo.",
-            );
-            return;
-          }
-          const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ["images"],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.8,
-          });
-          if (!result.canceled && result.assets[0])
-            await doUpload(result.assets[0].uri);
+          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -6890,9 +6939,25 @@ export default function ProfileScreen() {
   }
 
   return (
+    <>
+      {cropState && (
+        <ImageCropModal
+          visible={!!cropState}
+          uri={cropState.uri}
+          imageWidth={cropState.width}
+          imageHeight={cropState.height}
+          onCancel={() => setCropState(null)}
+          onCrop={(croppedUri) => {
+            const cb = cropState.onCrop;
+            setCropState(null);
+            cb(croppedUri);
+          }}
+        />
+      )}
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
@@ -6910,8 +6975,7 @@ export default function ProfileScreen() {
       >
         <LinearGradient
           colors={["rgba(246,248,247,0)", "rgba(246,248,247,0.6)", "#f6f8f7"]}
-          style={styles.heroGradient}
-          pointerEvents="none"
+          style={[styles.heroGradient, { pointerEvents: "none" }]}
         />
       </ImageBackground>
 
@@ -7012,6 +7076,7 @@ export default function ProfileScreen() {
 
       <View style={{ height: 48 }} />
     </ScrollView>
+    </>
   );
 }
 
