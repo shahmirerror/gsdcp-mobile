@@ -20,7 +20,7 @@ import { fetchJudges, JudgeItem } from "../../lib/api";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 import LazyImage from "../../components/LazyImage";
 
-const logo = require("../../../assets/logo-square.png");
+const logo = require("../../../assets/splash-logo.png");
 
 function credentialColor(credentials: string): { bg: string; text: string } {
   if (credentials.toLowerCase().includes("fci"))
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 12,
   },
-  logoImg: { width: 42, height: 42 },
+  logoImg: { width: 55, height: 55 },
   headerContent: { flex: 1, justifyContent: "center" },
   backBtn: {
     flexDirection: "row",

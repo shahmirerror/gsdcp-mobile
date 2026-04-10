@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import type { TheClubStackParamList } from "../../navigation/AppNavigator";
 
-const logo = require("../../../assets/logo-square.png");
+const logo = require("../../../assets/splash-logo.png");
 
 type Nav = NativeStackNavigationProp<TheClubStackParamList, "TheClubHome">;
 
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 12,
   },
-  logoImg: { width: 42, height: 42 },
+  logoImg: { width: 55, height: 55 },
   headerContent: { flex: 1, justifyContent: "center" },
   heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
   heroSub: { fontSize: 14, color: "rgba(255,255,255,0.7)", marginTop: 6 },

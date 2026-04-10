@@ -29,7 +29,7 @@ import {
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
 
-const logo = require("../../assets/logo-square.png");
+const logo = require("../../assets/splash-logo.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 /** Returns the current GSDCP season label, e.g. "2025/2026".
@@ -80,7 +80,9 @@ export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
-  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
+  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(
+    new Set(),
+  );
   const [showLegal, setShowLegal] = useState(false);
 
   const {
@@ -441,7 +443,10 @@ export default function DashboardScreen() {
       {/* Mating preview modal */}
       <BottomSheetModal
         visible={!!previewMating}
-        onClose={() => { setPreviewMating(null); setExpandedLitters(new Set()); }}
+        onClose={() => {
+          setPreviewMating(null);
+          setExpandedLitters(new Set());
+        }}
       >
         {previewMating &&
           (() => {
@@ -629,92 +634,144 @@ export default function DashboardScreen() {
                   />
                 </TouchableOpacity>
 
-                {previewMating.line_breeding && previewMating.line_breeding.length > 0 && (
-                  <>
-                    <View style={styles.previewRowDivider} />
-                    <View style={styles.lbSection}>
-                      <Text style={styles.lbSectionTitle}>Line Breeding</Text>
-                      {previewMating.line_breeding.map((entry, idx) => {
-                        const sirePos: string[] = [];
-                        const damPos: string[] = [];
-                        entry.positions.forEach((p, i) => {
-                          if (entry.sides[i] === "father") sirePos.push(p);
-                          else damPos.push(p);
-                        });
-                        const genLabel = [sirePos.join(","), damPos.join(",")]
-                          .filter(Boolean).join(" - ");
+                {previewMating.line_breeding &&
+                  previewMating.line_breeding.length > 0 && (
+                    <>
+                      <View style={styles.previewRowDivider} />
+                      <View style={styles.lbSection}>
+                        <Text style={styles.lbSectionTitle}>Line Breeding</Text>
+                        {previewMating.line_breeding.map((entry, idx) => {
+                          const sirePos: string[] = [];
+                          const damPos: string[] = [];
+                          entry.positions.forEach((p, i) => {
+                            if (entry.sides[i] === "father") sirePos.push(p);
+                            else damPos.push(p);
+                          });
+                          const genLabel = [sirePos.join(","), damPos.join(",")]
+                            .filter(Boolean)
+                            .join(" - ");
 
-                        if (
-                          (entry.type === "litter_pair" || entry.type === "litter_group") &&
-                          entry.dogs && entry.dogs.length > 0
-                        ) {
-                          const isExpanded = expandedLitters.has(idx);
-                          const toggleExpand = () => {
-                            setExpandedLitters((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(idx)) next.delete(idx); else next.add(idx);
-                              return next;
-                            });
-                          };
-                          return (
-                            <View key={`litter-${idx}`}>
-                              <TouchableOpacity style={styles.lbRow} activeOpacity={0.7} onPress={toggleExpand}>
-                                <View style={styles.lbInfo}>
-                                  <Text style={styles.lbName} numberOfLines={1}>
-                                    Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}
-                                  </Text>
-                                  <Text style={styles.lbMeta}>{genLabel}</Text>
-                                </View>
-                                <Ionicons name={isExpanded ? "chevron-down" : "chevron-forward"} size={18} color="#94A3B8" />
-                              </TouchableOpacity>
-                              {isExpanded && (
-                                <View style={styles.lbDropdown}>
-                                  {entry.dogs.map((d) => (
-                                    <TouchableOpacity
-                                      key={d.id}
-                                      style={styles.lbDogRow}
-                                      activeOpacity={0.7}
-                                      onPress={() => {
-                                        setPreviewMating(null);
-                                        setExpandedLitters(new Set());
-                                        navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: d.id } });
-                                      }}
+                          if (
+                            (entry.type === "litter_pair" ||
+                              entry.type === "litter_group") &&
+                            entry.dogs &&
+                            entry.dogs.length > 0
+                          ) {
+                            const isExpanded = expandedLitters.has(idx);
+                            const toggleExpand = () => {
+                              setExpandedLitters((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(idx)) next.delete(idx);
+                                else next.add(idx);
+                                return next;
+                              });
+                            };
+                            return (
+                              <View key={`litter-${idx}`}>
+                                <TouchableOpacity
+                                  style={styles.lbRow}
+                                  activeOpacity={0.7}
+                                  onPress={toggleExpand}
+                                >
+                                  <View style={styles.lbInfo}>
+                                    <Text
+                                      style={styles.lbName}
+                                      numberOfLines={1}
                                     >
-                                      <Ionicons name="paw" size={14} color={COLORS.primary} />
-                                      <Text style={styles.lbDogName} numberOfLines={1}>{d.dog_name}</Text>
-                                      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
-                              )}
-                            </View>
-                          );
-                        }
+                                      Litter {entry.litter_letter}
+                                      {entry.kennel
+                                        ? ` from ${entry.kennel}`
+                                        : ""}
+                                    </Text>
+                                    <Text style={styles.lbMeta}>
+                                      {genLabel}
+                                    </Text>
+                                  </View>
+                                  <Ionicons
+                                    name={
+                                      isExpanded
+                                        ? "chevron-down"
+                                        : "chevron-forward"
+                                    }
+                                    size={18}
+                                    color="#94A3B8"
+                                  />
+                                </TouchableOpacity>
+                                {isExpanded && (
+                                  <View style={styles.lbDropdown}>
+                                    {entry.dogs.map((d) => (
+                                      <TouchableOpacity
+                                        key={d.id}
+                                        style={styles.lbDogRow}
+                                        activeOpacity={0.7}
+                                        onPress={() => {
+                                          setPreviewMating(null);
+                                          setExpandedLitters(new Set());
+                                          navigation.navigate("DogsTab", {
+                                            screen: "DogProfile",
+                                            params: { id: d.id },
+                                          });
+                                        }}
+                                      >
+                                        <Ionicons
+                                          name="paw"
+                                          size={14}
+                                          color={COLORS.primary}
+                                        />
+                                        <Text
+                                          style={styles.lbDogName}
+                                          numberOfLines={1}
+                                        >
+                                          {d.dog_name}
+                                        </Text>
+                                        <Ionicons
+                                          name="chevron-forward"
+                                          size={16}
+                                          color="#94A3B8"
+                                        />
+                                      </TouchableOpacity>
+                                    ))}
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          }
 
-                        return (
-                          <TouchableOpacity
-                            key={`${entry.id}-${idx}`}
-                            style={styles.lbRow}
-                            activeOpacity={0.7}
-                            onPress={() => {
-                              if (entry.id) {
-                                setPreviewMating(null);
-                                setExpandedLitters(new Set());
-                                navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: entry.id } });
-                              }
-                            }}
-                          >
-                            <View style={styles.lbInfo}>
-                              <Text style={styles.lbName} numberOfLines={1}>{entry.dog_name}</Text>
-                              <Text style={styles.lbMeta}>{genLabel}</Text>
-                            </View>
-                            {entry.id && <Ionicons name="chevron-forward" size={18} color="#94A3B8" />}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </>
-                )}
+                          return (
+                            <TouchableOpacity
+                              key={`${entry.id}-${idx}`}
+                              style={styles.lbRow}
+                              activeOpacity={0.7}
+                              onPress={() => {
+                                if (entry.id) {
+                                  setPreviewMating(null);
+                                  setExpandedLitters(new Set());
+                                  navigation.navigate("DogsTab", {
+                                    screen: "DogProfile",
+                                    params: { id: entry.id },
+                                  });
+                                }
+                              }}
+                            >
+                              <View style={styles.lbInfo}>
+                                <Text style={styles.lbName} numberOfLines={1}>
+                                  {entry.dog_name}
+                                </Text>
+                                <Text style={styles.lbMeta}>{genLabel}</Text>
+                              </View>
+                              {entry.id && (
+                                <Ionicons
+                                  name="chevron-forward"
+                                  size={18}
+                                  color="#94A3B8"
+                                />
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </>
+                  )}
 
                 <View style={[styles.previewDivider, { marginTop: 16 }]} />
 
@@ -755,8 +812,12 @@ export default function DashboardScreen() {
           <Text style={lStyles.sectionHead}>Operator and Service Provider</Text>
           <Text style={lStyles.body}>
             <Text style={lStyles.bold}>G. S. D. C. P (PVT.) LIMITED{"\n"}</Text>
-            Doing business as <Text style={lStyles.bold}>GSDCP, German Shepherd Dog Club of Pakistan{"\n"}</Text>
-            601 – 604, Alfiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi 75300{"\n"}Pakistan
+            Doing business as{" "}
+            <Text style={lStyles.bold}>
+              GSDCP, German Shepherd Dog Club of Pakistan{"\n"}
+            </Text>
+            601 – 604, Alfiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi
+            75300{"\n"}Pakistan
           </Text>
 
           <Text style={lStyles.sectionHead}>Represented By</Text>
@@ -768,69 +829,158 @@ export default function DashboardScreen() {
           <Text style={lStyles.sectionHead}>Contact</Text>
           <Text style={lStyles.body}>
             Telephone:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("tel:+923102000244")}>+92 310 200 0244</Text>{"\n"}
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("tel:+923102000244")}
+            >
+              +92 310 200 0244
+            </Text>
+            {"\n"}
             Email:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@gsdcp.org")}>info@gsdcp.org</Text>{"\n"}
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("mailto:info@gsdcp.org")}
+            >
+              info@gsdcp.org
+            </Text>
+            {"\n"}
             Website:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("https://gsdcp.org")}>gsdcp.org</Text>{"\n"}
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("https://gsdcp.org")}
+            >
+              gsdcp.org
+            </Text>
+            {"\n"}
             App Support:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@gsdcp.org")}>info@gsdcp.org</Text>
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("mailto:info@gsdcp.org")}
+            >
+              info@gsdcp.org
+            </Text>
           </Text>
 
           <Text style={lStyles.sectionHead}>Registration and Tax Details</Text>
           <Text style={lStyles.body}>
-            Company / Incorporation Number: <Text style={lStyles.bold}>0094953</Text>{"\n"}
+            Company / Incorporation Number:{" "}
+            <Text style={lStyles.bold}>0094953</Text>
+            {"\n"}
             NTN: <Text style={lStyles.bold}>7220452-4</Text>
           </Text>
 
           <Text style={lStyles.sectionHead}>Responsible for Content</Text>
           <Text style={lStyles.body}>
-            G. S. D. C. P (PVT.) LIMITED is responsible for the content of this website and the official GSDCP mobile application, except where content is expressly identified as originating from third parties.
+            G. S. D. C. P (PVT.) LIMITED is responsible for the content of this
+            website and the official GSDCP mobile application, except where
+            content is expressly identified as originating from third parties.
           </Text>
 
           <Text style={lStyles.sectionHead}>Editorial Responsibility</Text>
           <Text style={lStyles.body}>
             <Text style={lStyles.bold}>Zahid Sindhu{"\n"}</Text>
             General Secretary{"\n"}G. S. D. C. P (PVT.) LIMITED{"\n"}
-            601 – 604, Alfiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi 75300{"\n"}Pakistan{"\n"}
+            601 – 604, Alfiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi
+            75300{"\n"}Pakistan{"\n"}
             Email:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@gsdcp.org")}>info@gsdcp.org</Text>
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("mailto:info@gsdcp.org")}
+            >
+              info@gsdcp.org
+            </Text>
           </Text>
 
-          <Text style={lStyles.sectionHead}>Software Platform and Licence Disclosure</Text>
+          <Text style={lStyles.sectionHead}>
+            Software Platform and Licence Disclosure
+          </Text>
           <Text style={lStyles.body}>
             The GSDCP website and official mobile application operate using{" "}
-            <Text style={lStyles.bold}>Inspedium's Canine Club Management System</Text>.{"\n\n"}
-            This platform is proprietary to <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text> and licensed to <Text style={lStyles.bold}>G. S. D. C. P (PVT.) LIMITED</Text> for authorised use in connection with club administration, member services, dog records, registrations, event-related workflows, and mobile application services.{"\n\n"}
-            All rights, title, and interest in and to <Text style={lStyles.bold}>Inspedium's Canine Club Management System</Text>, including all related intellectual property rights, remain exclusively vested in <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text>.
+            <Text style={lStyles.bold}>
+              Inspedium's Canine Club Management System
+            </Text>
+            .{"\n\n"}
+            This platform is proprietary to{" "}
+            <Text style={lStyles.bold}>
+              Inspedium Corp. (SMC Pvt) Limited
+            </Text>{" "}
+            and licensed to{" "}
+            <Text style={lStyles.bold}>G. S. D. C. P (PVT.) LIMITED</Text> for
+            authorised use in connection with club administration, member
+            services, dog records, registrations, event-related workflows, and
+            mobile application services.{"\n\n"}
+            All rights, title, and interest in and to{" "}
+            <Text style={lStyles.bold}>
+              Inspedium's Canine Club Management System
+            </Text>
+            , including all related intellectual property rights, remain
+            exclusively vested in{" "}
+            <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text>.
           </Text>
 
           <Text style={lStyles.sectionHead}>Software Provider / Licensor</Text>
           <Text style={lStyles.body}>
-            <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited{"\n"}</Text>
-            Offices 601 – 604, Al-Fiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi 75300{"\n"}Pakistan{"\n"}
+            <Text style={lStyles.bold}>
+              Inspedium Corp. (SMC Pvt) Limited{"\n"}
+            </Text>
+            Offices 601 – 604, Al-Fiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}
+            Karachi 75300{"\n"}Pakistan{"\n"}
             Legal Email:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:legal@inspedium.com")}>legal@inspedium.com</Text>{"\n"}
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("mailto:legal@inspedium.com")}
+            >
+              legal@inspedium.com
+            </Text>
+            {"\n"}
             General Contact:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@inspedium.com")}>info@inspedium.com</Text>{"\n"}
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("mailto:info@inspedium.com")}
+            >
+              info@inspedium.com
+            </Text>
+            {"\n"}
             Website:{" "}
-            <Text style={lStyles.link} onPress={() => Linking.openURL("https://inspedium.com")}>inspedium.com</Text>
+            <Text
+              style={lStyles.link}
+              onPress={() => Linking.openURL("https://inspedium.com")}
+            >
+              inspedium.com
+            </Text>
           </Text>
 
-          <Text style={lStyles.sectionHead}>Copyright and Intellectual Property</Text>
+          <Text style={lStyles.sectionHead}>
+            Copyright and Intellectual Property
+          </Text>
           <Text style={lStyles.body}>
-            Unless stated otherwise, the text, graphics, logos, records, documents, media, and other content published by G. S. D. C. P (PVT.) LIMITED are owned by, licensed to, or used with permission by G. S. D. C. P (PVT.) LIMITED or their respective rights holders.{"\n\n"}
-            The underlying software platform, system design, database structure, application logic, and related intellectual property forming part of <Text style={lStyles.bold}>Inspedium's Canine Club Management System</Text> remain the exclusive property of <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text>.
+            Unless stated otherwise, the text, graphics, logos, records,
+            documents, media, and other content published by G. S. D. C. P
+            (PVT.) LIMITED are owned by, licensed to, or used with permission by
+            G. S. D. C. P (PVT.) LIMITED or their respective rights holders.
+            {"\n\n"}
+            The underlying software platform, system design, database structure,
+            application logic, and related intellectual property forming part of{" "}
+            <Text style={lStyles.bold}>
+              Inspedium's Canine Club Management System
+            </Text>{" "}
+            remain the exclusive property of{" "}
+            <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text>.
           </Text>
 
           <Text style={lStyles.sectionHead}>External Links</Text>
           <Text style={lStyles.body}>
-            This website and mobile application may contain links to third-party websites, services, or resources. Responsibility for the content of such third-party services rests solely with their respective operators.
+            This website and mobile application may contain links to third-party
+            websites, services, or resources. Responsibility for the content of
+            such third-party services rests solely with their respective
+            operators.
           </Text>
 
           <Text style={lStyles.sectionHead}>Scope of This Disclosure</Text>
           <Text style={lStyles.body}>
-            This Legal Disclosure applies to the GSDCP website, all related web services operated by or for G. S. D. C. P (PVT.) LIMITED, and the official GSDCP mobile application.
+            This Legal Disclosure applies to the GSDCP website, all related web
+            services operated by or for G. S. D. C. P (PVT.) LIMITED, and the
+            official GSDCP mobile application.
           </Text>
         </ScrollView>
       </BottomSheetModal>
@@ -898,8 +1048,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   logoImg: {
-    width: 42,
-    height: 42,
+    width: 55,
+    height: 55,
   },
   headerContent: {
     flex: 1,
