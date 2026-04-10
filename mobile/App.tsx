@@ -3,8 +3,6 @@ import {
   Animated,
   Image,
   StyleSheet,
-  Text,
-  View,
 } from "react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -12,7 +10,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/contexts/AuthContext";
 
-const splashLogo = require("./assets/splash-logo.png");
+const splashLogo  = require("./assets/splash-logo.png");
+const ccmsLogo    = require("./assets/ccms-logo.jpg");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,9 +27,7 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
   const gsdcpOpacity    = useRef(new Animated.Value(1)).current;
   const inspediumOpacity = useRef(new Animated.Value(0)).current;
 
-  const logoScale  = useRef(new Animated.Value(0.88)).current;
-  const textFadeY  = useRef(new Animated.Value(14)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.88)).current;
 
   useEffect(() => {
     Animated.spring(logoScale, {
@@ -47,10 +44,8 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
 
     const t1 = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(gsdcpOpacity,     { toValue: 0, duration: crossDur, useNativeDriver: true }),
-        Animated.timing(inspediumOpacity,  { toValue: 1, duration: crossDur, useNativeDriver: true }),
-        Animated.timing(textOpacity,       { toValue: 1, duration: crossDur, useNativeDriver: true }),
-        Animated.timing(textFadeY,         { toValue: 0, duration: crossDur, useNativeDriver: true }),
+        Animated.timing(gsdcpOpacity,    { toValue: 0, duration: crossDur, useNativeDriver: true }),
+        Animated.timing(inspediumOpacity, { toValue: 1, duration: crossDur, useNativeDriver: true }),
       ]).start();
     }, crossAt);
 
@@ -68,17 +63,13 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
   return (
     <Animated.View style={[StyleSheet.absoluteFill, s.wrapper, { opacity: wrapperOpacity }]} pointerEvents="none">
 
-      {/* Screen 2 — Inspedium content (underneath) */}
+      {/* Screen 2 — CCMS logo (underneath) */}
       <Animated.View style={[StyleSheet.absoluteFill, s.screen, { opacity: inspediumOpacity }]}>
-        <Animated.View style={{ alignItems: "center", opacity: textOpacity, transform: [{ translateY: textFadeY }] }}>
-          <View style={s.badge}>
-            <Text style={s.badgeText}>CCMS</Text>
-          </View>
-          <Text style={s.cmsTitle}>Canine Club{"\n"}Management System</Text>
-          <View style={s.divider} />
-          <Text style={s.byLine}>by</Text>
-          <Text style={s.inspediumName}>Inspedium Corporation</Text>
-        </Animated.View>
+        <Image
+          source={ccmsLogo}
+          style={s.logo}
+          resizeMode="contain"
+        />
       </Animated.View>
 
       {/* Screen 1 — GSDCP content (on top, fades out) */}
@@ -125,46 +116,5 @@ const s = StyleSheet.create({
   logo: {
     width: 240,
     height: 240,
-  },
-  badge: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    backgroundColor: "#0F5C3A",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  cmsTitle: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#1A1A1A",
-    textAlign: "center",
-    lineHeight: 34,
-  },
-  divider: {
-    width: 48,
-    height: 2,
-    backgroundColor: "#C7A45C",
-    borderRadius: 1,
-    marginVertical: 16,
-  },
-  byLine: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  inspediumName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F5C3A",
-    letterSpacing: 0.3,
   },
 });
