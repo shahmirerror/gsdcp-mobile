@@ -40,9 +40,9 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
       useNativeDriver: true,
     }).start();
 
-    const crossAt  = 2400;
-    const crossDur = 500;
-    const holdDur  = 2200;
+    const crossAt  = 3000;
+    const crossDur = 0;
+    const holdDur  = 3000;
     const fadeDur  = 400;
 
     const t1 = setTimeout(() => {
