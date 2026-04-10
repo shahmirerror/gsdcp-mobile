@@ -1030,7 +1030,7 @@ function KennelTab({
 
   const handlePickImage = async () => {
     const pickerOptions: ImagePicker.ImagePickerOptions = {
-      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8, exif: false,
+      mediaTypes: ["images"], allowsEditing: Platform.OS !== "android", aspect: [1, 1], quality: 0.8, exif: false,
     };
     const pick = async (uri: string, mimeType?: string | null) => {
       setEditImageUri(uri);
@@ -2429,7 +2429,7 @@ function DogDropdown({
     setOpen(true);
   };
   const handleBlur = () => {
-    blurTimerRef.current = setTimeout(() => setOpen(false), 180);
+    blurTimerRef.current = setTimeout(() => setOpen(false), 500);
   };
   const handleSelect = (dog: DogOption) => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
@@ -2662,7 +2662,7 @@ function DogDropdown({
             results.map((dog, i) => (
               <TouchableOpacity
                 key={dog.id}
-                onPress={() => handleSelect(dog)}
+                onPressIn={() => handleSelect(dog)}
                 activeOpacity={0.65}
                 style={[
                   {
@@ -6787,7 +6787,7 @@ export default function ProfileScreen() {
       // Alert.alert is a no-op on web — open the file picker directly
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsEditing: true,
+        allowsEditing: Platform.OS !== "android",
         aspect: [1, 1],
         quality: 0.8,
       });
@@ -6809,7 +6809,7 @@ export default function ProfileScreen() {
           }
           const result = await ImagePicker.launchCameraAsync({
             mediaTypes: ["images"],
-            allowsEditing: true,
+            allowsEditing: Platform.OS !== "android",
             aspect: [1, 1],
             quality: 0.8,
           });
@@ -6830,7 +6830,7 @@ export default function ProfileScreen() {
           }
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ["images"],
-            allowsEditing: true,
+            allowsEditing: Platform.OS !== "android",
             aspect: [1, 1],
             quality: 0.8,
           });
