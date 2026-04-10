@@ -17,7 +17,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { useNavigation } from "@react-navigation/native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -1342,12 +1342,24 @@ function DogsTab({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: dogs = [], isLoading: dogsLoading } = useQuery({
+  const {
+    data,
+    isLoading: dogsLoading,
+    isFetching,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["my-dogs", userId, debouncedSearch],
-    queryFn: () => fetchMyDogs(userId, debouncedSearch),
+    queryFn: ({ pageParam }) => fetchMyDogs(userId, debouncedSearch, pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => lastPage.hasMore ? allPages.length + 1 : undefined,
     enabled: !!userId,
     staleTime: 60_000,
   });
+
+  const dogs = data?.pages.flatMap((p) => p.dogs) ?? [];
+  const isSearching = isFetching && !isFetchingNextPage && !!data;
 
   const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
 
@@ -1377,28 +1389,6 @@ function DogsTab({
       return true;
     });
   }, [dogs, search, genderF, hairF]);
-
-  if (dogsLoading) {
-    return (
-      <View style={styles.loadingWrap}>
-        <ActivityIndicator size="small" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  if (dogs.length === 0) {
-    return (
-      <View style={styles.emptyState}>
-        <View style={styles.emptyIconWrap}>
-          <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
-        </View>
-        <Text style={styles.emptyTitle}>No Dogs Registered</Text>
-        <Text style={styles.emptyDesc}>
-          You have no dogs registered under your account yet.
-        </Text>
-      </View>
-    );
-  }
 
   const initials = (name: string) =>
     name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
@@ -1467,26 +1457,63 @@ function DogsTab({
         </View>
       )}
 
-      {/* Count */}
-      <Text style={dStyles.countText}>
-        {filtered.length} of {dogs.length} {dogs.length === 1 ? "dog" : "dogs"}
-      </Text>
+      {/* Count + inline search spinner */}
+      <View style={dStyles.countRow}>
+        {dogsLoading ? (
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        ) : (
+          <Text style={dStyles.countText}>
+            {filtered.length} {filtered.length !== dogs.length ? `of ${dogs.length} ` : ""}
+            {dogs.length === 1 ? "dog" : "dogs"}
+            {hasNextPage ? "+" : ""}
+          </Text>
+        )}
+        {isSearching && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 8 }} />}
+      </View>
 
       {/* List */}
-      {filtered.length === 0 ? (
+      {dogsLoading ? null : filtered.length === 0 ? (
         <View style={[styles.emptyState, { paddingTop: 32 }]}>
-          <Ionicons name="search-outline" size={36} color={COLORS.textMuted} />
-          <Text style={styles.emptyTitle}>No matches</Text>
-          <Text style={styles.emptyDesc}>Try a different search or filter.</Text>
+          {dogs.length === 0 ? (
+            <>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="paw-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Dogs Registered</Text>
+              <Text style={styles.emptyDesc}>You have no dogs registered under your account yet.</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="search-outline" size={36} color={COLORS.textMuted} />
+              <Text style={styles.emptyTitle}>No matches</Text>
+              <Text style={styles.emptyDesc}>Try a different search or filter.</Text>
+            </>
+          )}
         </View>
       ) : (
-        filtered.map((dog) => (
-          <DogListItem
-            key={dog.id}
-            dog={toListDog(dog)}
-            onPress={() => setPreviewDog(dog)}
-          />
-        ))
+        <>
+          {filtered.map((dog) => (
+            <DogListItem
+              key={dog.id}
+              dog={toListDog(dog)}
+              onPress={() => setPreviewDog(dog)}
+            />
+          ))}
+          {hasNextPage && (
+            <TouchableOpacity
+              style={dStyles.loadMoreButton}
+              onPress={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              activeOpacity={0.7}
+            >
+              {isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Text style={dStyles.loadMoreText}>Load more</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </>
       )}
 
       {/* Filter modal */}
@@ -1694,11 +1721,31 @@ const dStyles = StyleSheet.create({
   },
   activeChipText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.primary },
   clearAllText: { fontSize: FONT_SIZES.xs, fontWeight: "600", color: COLORS.textMuted, marginLeft: 2 },
-  countText: {
+  countRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.xs,
+    minHeight: 20,
+  },
+  countText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textMuted,
+  },
+  loadMoreButton: {
+    marginHorizontal: SPACING.lg,
+    marginVertical: SPACING.md,
+    paddingVertical: 12,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+  },
+  loadMoreText: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.primary,
   },
   filterModalContent: { paddingHorizontal: 24 },
   filterModalHeader: {
