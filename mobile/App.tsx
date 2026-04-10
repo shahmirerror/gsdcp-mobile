@@ -66,32 +66,28 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
   }, []);
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { opacity: wrapperOpacity }]} pointerEvents="none">
+    <Animated.View style={[StyleSheet.absoluteFill, s.wrapper, { opacity: wrapperOpacity }]} pointerEvents="none">
 
-      {/* Screen 2 — Inspedium (underneath) */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: inspediumOpacity }]}>
-        <View style={[s.screen, { backgroundColor: "#FFFFFF" }]}>
-          <Animated.View style={{ alignItems: "center", opacity: textOpacity, transform: [{ translateY: textFadeY }] }}>
-            <View style={s.badge}>
-              <Text style={s.badgeText}>CCMS</Text>
-            </View>
-            <Text style={s.cmsTitle}>Canine Club{"\n"}Management System</Text>
-            <View style={s.divider} />
-            <Text style={s.byLine}>by</Text>
-            <Text style={s.inspediumName}>Inspedium Corporation</Text>
-          </Animated.View>
-        </View>
+      {/* Screen 2 — Inspedium content (underneath) */}
+      <Animated.View style={[StyleSheet.absoluteFill, s.screen, { opacity: inspediumOpacity }]}>
+        <Animated.View style={{ alignItems: "center", opacity: textOpacity, transform: [{ translateY: textFadeY }] }}>
+          <View style={s.badge}>
+            <Text style={s.badgeText}>CCMS</Text>
+          </View>
+          <Text style={s.cmsTitle}>Canine Club{"\n"}Management System</Text>
+          <View style={s.divider} />
+          <Text style={s.byLine}>by</Text>
+          <Text style={s.inspediumName}>Inspedium Corporation</Text>
+        </Animated.View>
       </Animated.View>
 
-      {/* Screen 1 — GSDCP (on top, fades out) */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: gsdcpOpacity }]}>
-        <View style={[s.screen, { backgroundColor: "#FFFFFF" }]}>
-          <Animated.Image
-            source={splashLogo}
-            style={[s.logo, { transform: [{ scale: logoScale }] }]}
-            resizeMode="contain"
-          />
-        </View>
+      {/* Screen 1 — GSDCP content (on top, fades out) */}
+      <Animated.View style={[StyleSheet.absoluteFill, s.screen, { opacity: gsdcpOpacity }]}>
+        <Animated.Image
+          source={splashLogo}
+          style={[s.logo, { transform: [{ scale: logoScale }] }]}
+          resizeMode="contain"
+        />
       </Animated.View>
 
     </Animated.View>
@@ -118,6 +114,9 @@ export default function App() {
 }
 
 const s = StyleSheet.create({
+  wrapper: {
+    backgroundColor: "#FFFFFF",
+  },
   screen: {
     flex: 1,
     justifyContent: "center",
