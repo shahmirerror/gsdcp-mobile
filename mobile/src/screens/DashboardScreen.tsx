@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Dimensions,
   RefreshControl,
+  Linking,
 } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -80,6 +81,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
+  const [showLegal, setShowLegal] = useState(false);
 
   const {
     data: dashboard,
@@ -163,6 +165,17 @@ export default function DashboardScreen() {
                   <Text style={styles.headerGreeting}>Welcome to</Text>
                   <Text style={styles.headerTitle}>GSDCP</Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.headerAction}
+                  onPress={() => setShowLegal(true)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="information-circle-outline"
+                    size={26}
+                    color="rgba(255,255,255,0.75)"
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.headerAction}
                   onPress={() => navigation.navigate("ProfileTab")}
@@ -729,9 +742,132 @@ export default function DashboardScreen() {
             );
           })()}
       </BottomSheetModal>
+
+      {/* Legal Disclosure Modal */}
+      <BottomSheetModal visible={showLegal} onClose={() => setShowLegal(false)}>
+        <ScrollView
+          style={{ maxHeight: 520 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32 }}
+        >
+          <Text style={lStyles.title}>Legal Disclosure</Text>
+
+          <Text style={lStyles.sectionHead}>Operator and Service Provider</Text>
+          <Text style={lStyles.body}>
+            <Text style={lStyles.bold}>G. S. D. C. P (PVT.) LIMITED{"\n"}</Text>
+            Doing business as <Text style={lStyles.bold}>GSDCP, German Shepherd Dog Club of Pakistan{"\n"}</Text>
+            601 – 604, Alfiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi 75300{"\n"}Pakistan
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Represented By</Text>
+          <Text style={lStyles.body}>
+            <Text style={lStyles.bold}>Imran Husain</Text>, President{"\n"}
+            <Text style={lStyles.bold}>Zahid Sindhu</Text>, General Secretary
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Contact</Text>
+          <Text style={lStyles.body}>
+            Telephone:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("tel:+923102000244")}>+92 310 200 0244</Text>{"\n"}
+            Email:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@gsdcp.org")}>info@gsdcp.org</Text>{"\n"}
+            Website:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("https://gsdcp.org")}>gsdcp.org</Text>{"\n"}
+            App Support:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@gsdcp.org")}>info@gsdcp.org</Text>
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Registration and Tax Details</Text>
+          <Text style={lStyles.body}>
+            Company / Incorporation Number: <Text style={lStyles.bold}>0094953</Text>{"\n"}
+            NTN: <Text style={lStyles.bold}>7220452-4</Text>
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Responsible for Content</Text>
+          <Text style={lStyles.body}>
+            G. S. D. C. P (PVT.) LIMITED is responsible for the content of this website and the official GSDCP mobile application, except where content is expressly identified as originating from third parties.
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Editorial Responsibility</Text>
+          <Text style={lStyles.body}>
+            <Text style={lStyles.bold}>Zahid Sindhu{"\n"}</Text>
+            General Secretary{"\n"}G. S. D. C. P (PVT.) LIMITED{"\n"}
+            601 – 604, Alfiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi 75300{"\n"}Pakistan{"\n"}
+            Email:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@gsdcp.org")}>info@gsdcp.org</Text>
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Software Platform and Licence Disclosure</Text>
+          <Text style={lStyles.body}>
+            The GSDCP website and official mobile application operate using{" "}
+            <Text style={lStyles.bold}>Inspedium's Canine Club Management System</Text>.{"\n\n"}
+            This platform is proprietary to <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text> and licensed to <Text style={lStyles.bold}>G. S. D. C. P (PVT.) LIMITED</Text> for authorised use in connection with club administration, member services, dog records, registrations, event-related workflows, and mobile application services.{"\n\n"}
+            All rights, title, and interest in and to <Text style={lStyles.bold}>Inspedium's Canine Club Management System</Text>, including all related intellectual property rights, remain exclusively vested in <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text>.
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Software Provider / Licensor</Text>
+          <Text style={lStyles.body}>
+            <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited{"\n"}</Text>
+            Offices 601 – 604, Al-Fiza Glass Tower{"\n"}Rashid Minhas Road{"\n"}Karachi 75300{"\n"}Pakistan{"\n"}
+            Legal Email:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:legal@inspedium.com")}>legal@inspedium.com</Text>{"\n"}
+            General Contact:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("mailto:info@inspedium.com")}>info@inspedium.com</Text>{"\n"}
+            Website:{" "}
+            <Text style={lStyles.link} onPress={() => Linking.openURL("https://inspedium.com")}>inspedium.com</Text>
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Copyright and Intellectual Property</Text>
+          <Text style={lStyles.body}>
+            Unless stated otherwise, the text, graphics, logos, records, documents, media, and other content published by G. S. D. C. P (PVT.) LIMITED are owned by, licensed to, or used with permission by G. S. D. C. P (PVT.) LIMITED or their respective rights holders.{"\n\n"}
+            The underlying software platform, system design, database structure, application logic, and related intellectual property forming part of <Text style={lStyles.bold}>Inspedium's Canine Club Management System</Text> remain the exclusive property of <Text style={lStyles.bold}>Inspedium Corp. (SMC Pvt) Limited</Text>.
+          </Text>
+
+          <Text style={lStyles.sectionHead}>External Links</Text>
+          <Text style={lStyles.body}>
+            This website and mobile application may contain links to third-party websites, services, or resources. Responsibility for the content of such third-party services rests solely with their respective operators.
+          </Text>
+
+          <Text style={lStyles.sectionHead}>Scope of This Disclosure</Text>
+          <Text style={lStyles.body}>
+            This Legal Disclosure applies to the GSDCP website, all related web services operated by or for G. S. D. C. P (PVT.) LIMITED, and the official GSDCP mobile application.
+          </Text>
+        </ScrollView>
+      </BottomSheetModal>
     </View>
   );
 }
+
+const lStyles = StyleSheet.create({
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 20,
+  },
+  sectionHead: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginTop: 20,
+    marginBottom: 6,
+  },
+  body: {
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 22,
+  },
+  bold: {
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  link: {
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
