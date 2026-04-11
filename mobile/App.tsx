@@ -97,7 +97,7 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
       <Animated.View
         style={[StyleSheet.absoluteFill, s.screen, { opacity: gsdcpOpacity }]}
       >
-        <Animated.Image
+        <Image
           source={splashLogo}
           style={[s.logo, { transform: [{ scale: logoScale }] }]}
           resizeMode="contain"
