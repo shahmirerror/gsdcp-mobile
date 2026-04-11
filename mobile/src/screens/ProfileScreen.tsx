@@ -1334,7 +1334,6 @@ function DogsTab({
   const [tempGender, setTempGender]       = useState("All");
   const [tempHair,   setTempHair]         = useState("All");
   const [showFilters, setShowFilters]     = useState(false);
-  const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -1388,9 +1387,6 @@ function DogsTab({
       return true;
     });
   }, [dogs, search, genderF, hairF]);
-
-  const initials = (name: string) =>
-    name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
 
   return (
     <View>
@@ -1495,7 +1491,7 @@ function DogsTab({
             <DogListItem
               key={dog.id}
               dog={toListDog(dog)}
-              onPress={() => setPreviewDog(dog)}
+              onPress={() => onDogPress(dog)}
             />
           ))}
           {hasNextPage && (
@@ -1566,83 +1562,6 @@ function DogsTab({
         </View>
       </BottomSheetModal>
 
-      {/* Preview popup */}
-      <BottomSheetModal
-        visible={!!previewDog}
-        onClose={() => setPreviewDog(null)}
-      >
-        {previewDog && (
-          <View style={dStyles.modalContent}>
-            {/* Header: avatar + name */}
-            <View style={dStyles.previewHeader}>
-              {previewDog.imageUrl ? (
-                <LazyImage
-                  source={{ uri: previewDog.imageUrl }}
-                  style={dStyles.previewImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={dStyles.previewAvatar}>
-                  <Text style={dStyles.previewAvatarText}>{initials(previewDog.dog_name)}</Text>
-                </View>
-              )}
-              <View style={dStyles.previewHeadInfo}>
-                <Text style={dStyles.previewName} numberOfLines={2}>{previewDog.dog_name}</Text>
-                <Text style={dStyles.previewKP}>
-                  {previewDog.KP && previewDog.KP !== "0"
-                    ? `KP ${previewDog.KP}`
-                    : previewDog.foreign_reg_no || "—"}
-                </Text>
-                {previewDog.titles && previewDog.titles.length > 0 && (
-                  <View style={dStyles.titlesRow}>
-                    {previewDog.titles.slice(0, 3).map((t) => (
-                      <View key={t} style={dStyles.titleBadge}>
-                        <Text style={dStyles.titleBadgeText}>{t}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </View>
-
-            <View style={dStyles.divider} />
-
-            {/* Info grid */}
-            <View style={dStyles.infoGrid}>
-              {[
-                { label: "Sex",           value: previewDog.sex },
-                { label: "Color",         value: previewDog.color },
-                { label: "Hair",          value: previewDog.hair },
-                { label: "Date of Birth", value: formatDate(previewDog.dob) },
-                { label: "Sire",          value: previewDog.sire },
-                { label: "Dam",           value: previewDog.dam },
-                { label: "Breeder",       value: previewDog.breeder },
-              ]
-                .filter((r) => r.value)
-                .map((r) => (
-                  <View key={r.label} style={dStyles.infoRow}>
-                    <Text style={dStyles.infoLabel}>{r.label}</Text>
-                    <Text style={dStyles.infoValue} numberOfLines={2}>{r.value}</Text>
-                  </View>
-                ))}
-            </View>
-
-            {/* View Full Profile button */}
-            <TouchableOpacity
-              style={dStyles.profileBtn}
-              activeOpacity={0.8}
-              onPress={() => {
-                const dog = previewDog;
-                setPreviewDog(null);
-                onDogPress(dog);
-              }}
-            >
-              <Ionicons name="paw" size={16} color="#fff" />
-              <Text style={dStyles.profileBtnText}>View Full Profile</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </BottomSheetModal>
     </View>
   );
 }
