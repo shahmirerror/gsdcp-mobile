@@ -11,7 +11,7 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/contexts/AuthContext";
 
 const splashLogo  = require("./assets/splash-logo.png");
-const ccmsLogo    = require("./assets/ccms-logo.jpg");
+const ccmsLogo    = require("./assets/ccms-logo.png");
 
 const queryClient = new QueryClient({
   defaultOptions: {
