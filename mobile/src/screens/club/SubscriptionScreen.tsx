@@ -126,10 +126,6 @@ export default function SubscriptionScreen() {
           </View>
         </LinearGradient>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Service Fees</Text>
-        </View>
-
         {isLoading ? (
           <ActivityIndicator
             style={{ marginVertical: 24 }}
