@@ -278,6 +278,7 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 16,
     paddingLeft: 20,
+    marginBottom: 16,
   },
   backText: {
     fontSize: 13,
