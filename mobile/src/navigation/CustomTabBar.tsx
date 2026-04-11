@@ -33,6 +33,13 @@ const TAB_ROOT_SCREENS: Record<string, string> = {
   ProfileTab: "ProfileHome",
 };
 
+const MENU_TAB_ROOT_SCREENS: Record<string, string> = {
+  TheClubTab: "TheClubHome",
+  KennelDirectoryTab: "KennelDirectory",
+  MemberDirectoryTab: "MemberDirectory",
+  RecentMatingsTab: "RecentMatingsList",
+};
+
 const TAB_CONFIG: Record<
   string,
   {
@@ -167,7 +174,14 @@ export default function CustomTabBar({
 
   const handleMenuItemPress = (route: string) => {
     closeMenu();
-    setTimeout(() => navigation.navigate(route as any), 220);
+    setTimeout(() => {
+      const rootScreen = MENU_TAB_ROOT_SCREENS[route];
+      if (rootScreen) {
+        navigation.navigate(route as any, { screen: rootScreen });
+      } else {
+        navigation.navigate(route as any);
+      }
+    }, 220);
   };
 
   const visibleRoutes = state.routes.filter((r) =>
