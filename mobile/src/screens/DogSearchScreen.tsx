@@ -18,6 +18,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import { fetchDogsPage, Dog, DogsPage } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
+import ErrorView from "../components/ErrorView";
 import type { DogsStackParamList } from "../navigation/AppNavigator";
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
@@ -183,13 +184,11 @@ export default function DogSearchScreen() {
           style={{ marginTop: SPACING.xxl }}
         />
       ) : isError ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
-          <Text style={styles.emptyTitle}>Failed to load dogs</Text>
-          <Text style={styles.emptyDesc}>
-            Could not connect to the server. Please try again.
-          </Text>
-        </View>
+        <ErrorView
+          message="Could not load dogs."
+          onRetry={refetch}
+          style={{ marginTop: SPACING.xxl }}
+        />
       ) : (
         <FlatList
           data={allDogs}

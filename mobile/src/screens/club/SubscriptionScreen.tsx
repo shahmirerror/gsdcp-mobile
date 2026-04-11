@@ -15,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import ErrorView from "../../components/ErrorView";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchFees, FeeItem } from "../../lib/api";
@@ -78,6 +79,7 @@ export default function SubscriptionScreen() {
   const {
     data: fees,
     isLoading,
+    isError,
     refetch,
     isRefetching,
   } = useQuery({
@@ -132,6 +134,8 @@ export default function SubscriptionScreen() {
             size="small"
             color={COLORS.primary}
           />
+        ) : isError ? (
+          <ErrorView message="Could not load fees." onRetry={refetch} style={{ marginTop: 48 }} />
         ) : (
           <>
             <TouchableOpacity

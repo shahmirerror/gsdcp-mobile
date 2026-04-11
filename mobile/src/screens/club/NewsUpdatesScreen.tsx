@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import ErrorView from "../../components/ErrorView";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchNews, stripHtml, NewsItem } from "../../lib/api";
@@ -29,6 +30,7 @@ export default function NewsUpdatesScreen() {
   const {
     data: news,
     isLoading,
+    isError,
     refetch,
     isRefetching,
   } = useQuery({
@@ -76,6 +78,8 @@ export default function NewsUpdatesScreen() {
           size="large"
           color={COLORS.primary}
         />
+      ) : isError ? (
+        <ErrorView message="Could not load news." onRetry={refetch} style={{ marginTop: 48 }} />
       ) : (
         <>
           <TouchableOpacity

@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudges, JudgeItem } from "../../lib/api";
+import ErrorView from "../../components/ErrorView";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 import LazyImage from "../../components/LazyImage";
 
@@ -87,6 +88,7 @@ export default function GSDCPJudgesScreen() {
   const {
     data: judges,
     isLoading,
+    isError,
     refetch,
     isRefetching,
   } = useQuery({
@@ -160,6 +162,8 @@ export default function GSDCPJudgesScreen() {
           size="large"
           color={COLORS.primary}
         />
+      ) : isError ? (
+        <ErrorView message="Could not load judges." onRetry={refetch} style={{ marginTop: 48 }} />
       ) : (
         <View style={styles.cardsWrap}>
           {(judges ?? []).map((judge: JudgeItem) => (

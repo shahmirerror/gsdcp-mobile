@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import ErrorView from "../../components/ErrorView";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 
@@ -24,7 +25,7 @@ export default function AboutGSDCPScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/about"],
     queryFn: fetchAbout,
   });
@@ -75,6 +76,8 @@ export default function AboutGSDCPScreen() {
           size="large"
           color={COLORS.primary}
         />
+      ) : isError ? (
+        <ErrorView message="Could not load content." onRetry={refetch} style={{ marginTop: 48 }} />
       ) : (
         <>
           <TouchableOpacity

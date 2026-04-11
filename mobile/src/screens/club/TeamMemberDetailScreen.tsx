@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchTeamMember, stripHtml, TeamMember } from "../../lib/api";
+import ErrorView from "../../components/ErrorView";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 
 const heroBg = require("../../../assets/hero-bg.png");
@@ -56,7 +57,7 @@ export default function TeamMemberDetailScreen() {
 
   const [imgError, setImgError] = useState(false);
 
-  const { data: member, isLoading, refetch, isRefetching } = useQuery({
+  const { data: member, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/team", id],
     queryFn: () => fetchTeamMember(id),
   });
@@ -97,7 +98,13 @@ export default function TeamMemberDetailScreen() {
 
       {isLoading ? (
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
-      ) : member ? (
+      ) : isError || !member ? (
+        <ErrorView
+          message={isError ? "Could not load member details." : "Member not found."}
+          onRetry={isError ? refetch : undefined}
+          style={{ marginTop: 40 }}
+        />
+      ) : (
         <>
           <View style={styles.profileSection}>
             <View style={[styles.avatarOuter, { borderColor: accentColor }]}>
@@ -160,7 +167,7 @@ export default function TeamMemberDetailScreen() {
             </View>
           )}
         </>
-      ) : null}
+      )}
     </ScrollView>
   );
 }

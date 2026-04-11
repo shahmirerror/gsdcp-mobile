@@ -21,6 +21,7 @@ import { fetchMemberDetail, Member, MemberDetail, MemberOwnedDog, MemberKennel, 
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import LazyImage from "../components/LazyImage";
+import ErrorView from "../components/ErrorView";
 
 const heroBg = require("../../assets/hero-bg.png");
 
@@ -412,7 +413,7 @@ export default function MemberProfileScreen() {
 
   const { id, member: passedMember } = route.params as { id: string; member?: Member };
 
-  const { data: detail, isLoading, refetch, isRefetching } = useQuery<MemberDetail>({
+  const { data: detail, isLoading, isError, refetch, isRefetching } = useQuery<MemberDetail>({
     queryKey: ["member-detail", id],
     queryFn: () => fetchMemberDetail(id),
     retry: 1,
@@ -432,8 +433,10 @@ export default function MemberProfileScreen() {
   if (!member) {
     return (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
-        <Ionicons name="person-outline" size={48} color={COLORS.textMuted} />
-        <Text style={styles.errorText}>Member not found</Text>
+        <ErrorView
+          message={isError ? "Could not load member details." : "Member not found."}
+          onRetry={isError ? refetch : undefined}
+        />
         <TouchableOpacity style={styles.goBackBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.goBackBtnText}>Go back</Text>
         </TouchableOpacity>

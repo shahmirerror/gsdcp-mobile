@@ -19,6 +19,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
+import ErrorView from "../components/ErrorView";
 import { formatDate } from "../lib/dateUtils";
 import {
   fetchDog,
@@ -359,14 +360,10 @@ export default function DogProfileScreen() {
   if (isError || !data?.dog) {
     return (
       <View style={styles.centered}>
-        <Ionicons
-          name="alert-circle-outline"
-          size={48}
-          color={COLORS.textMuted}
+        <ErrorView
+          message={isError ? "Failed to load dog details." : "Dog not found."}
+          onRetry={isError ? refetch : undefined}
         />
-        <Text style={styles.errorText}>
-          {isError ? "Failed to load dog details." : "Dog not found."}
-        </Text>
       </View>
     );
   }

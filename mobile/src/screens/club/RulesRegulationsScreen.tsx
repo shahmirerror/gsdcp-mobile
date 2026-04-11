@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
+import ErrorView from "../../components/ErrorView";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchRules, stripHtml, RuleItem } from "../../lib/api";
@@ -27,6 +28,7 @@ export default function RulesRegulationsScreen() {
   const {
     data: rules,
     isLoading,
+    isError,
     refetch,
     isRefetching,
   } = useQuery({
@@ -74,6 +76,8 @@ export default function RulesRegulationsScreen() {
           size="large"
           color={COLORS.primary}
         />
+      ) : isError ? (
+        <ErrorView message="Could not load rules." onRetry={refetch} style={{ marginTop: 48 }} />
       ) : (
         <>
           <TouchableOpacity

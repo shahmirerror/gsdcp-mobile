@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchTeam, TeamMember } from "../../lib/api";
+import ErrorView from "../../components/ErrorView";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 
 const logo = require("../../../assets/splash-logo.png");
@@ -107,6 +108,7 @@ export default function TheTeamScreen() {
   const {
     data: members,
     isLoading,
+    isError,
     refetch,
     isRefetching,
   } = useQuery({
@@ -178,6 +180,8 @@ export default function TheTeamScreen() {
           size="large"
           color={COLORS.primary}
         />
+      ) : isError ? (
+        <ErrorView message="Could not load team." onRetry={refetch} style={{ marginTop: 48 }} />
       ) : (
         <>
           <TouchableOpacity

@@ -17,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
 import { fetchJudgeDetail, stripHtml, JudgeShow } from "../../lib/api";
+import ErrorView from "../../components/ErrorView";
 import { TheClubStackParamList } from "../../navigation/AppNavigator";
 import { formatDate } from "../../lib/dateUtils";
 import LazyImage from "../../components/LazyImage";
@@ -52,7 +53,7 @@ export default function JudgeDetailScreen() {
 
   const [imgError, setImgError] = useState(false);
 
-  const { data: judge, isLoading, refetch, isRefetching } = useQuery({
+  const { data: judge, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ["/api/mobile/all-judges", id],
     queryFn: () => fetchJudgeDetail(id),
   });
@@ -93,7 +94,13 @@ export default function JudgeDetailScreen() {
       {/* Profile section */}
       {isLoading ? (
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
-      ) : judge ? (
+      ) : isError || !judge ? (
+        <ErrorView
+          message={isError ? "Could not load judge details." : "Judge not found."}
+          onRetry={isError ? refetch : undefined}
+          style={{ marginTop: 40 }}
+        />
+      ) : (
         <>
           <View style={styles.profileSection}>
             {/* Avatar with gold ring + credential badge */}
@@ -206,7 +213,7 @@ export default function JudgeDetailScreen() {
             </View>
           )}
         </>
-      ) : null}
+      )}
     </ScrollView>
   );
 }
