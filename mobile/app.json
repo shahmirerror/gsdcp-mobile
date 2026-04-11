@@ -20,7 +20,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take a new profile photo.",
         "NSPhotoLibraryUsageDescription": "Used to select a profile photo from your library.",
-        "NSPhotoLibraryAddUsageDescription": "Used to save photos to your library."
+        "NSPhotoLibraryAddUsageDescription": "Used to save photos to your library.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -37,7 +38,8 @@
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -51,6 +53,7 @@
       }
     },
     "plugins": [
+      "expo-dev-client",
       "expo-font",
       [
         "expo-image-picker",

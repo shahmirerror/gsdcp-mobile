@@ -124,21 +124,22 @@ export default function GSDCPJudgesScreen() {
           <View style={styles.headerContent}>
             <Text style={styles.heroTitle}>GSDCP Judges</Text>
             <Text style={styles.heroSub}>Certified local breed judges</Text>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => navigation.goBack()}
-              data-testid="button-back"
-            >
-              <Ionicons
-                name="chevron-back"
-                size={16}
-                color="rgba(255,255,255,0.75)"
-              />
-              <Text style={styles.backText}>The Club</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
+      
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => navigation.goBack()}
+        data-testid="button-back"
+      >
+        <Ionicons
+          name="chevron-back"
+          size={16}
+          color="rgba(0,0,0,0)"
+        />
+        <Text style={styles.backText}>The Club</Text>
+      </TouchableOpacity>
 
       <View style={styles.infoCard}>
         <Ionicons
@@ -205,15 +206,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 8,
+    marginTop: 16,
+    paddingLeft: 20,
   },
   backText: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(0,0,0,0)",
     fontWeight: "600",
   },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   infoCard: {
     marginHorizontal: 16,
     marginTop: 20,

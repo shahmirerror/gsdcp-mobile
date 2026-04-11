@@ -66,18 +66,6 @@ export default function NewsUpdatesScreen() {
           <View style={styles.headerContent}>
             <Text style={styles.heroTitle}>News & Updates</Text>
             <Text style={styles.heroSub}>Latest announcements from GSDCP</Text>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => navigation.goBack()}
-              data-testid="button-back"
-            >
-              <Ionicons
-                name="chevron-back"
-                size={16}
-                color="rgba(255,255,255,0.75)"
-              />
-              <Text style={styles.backText}>The Club</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
@@ -89,39 +77,53 @@ export default function NewsUpdatesScreen() {
           color={COLORS.primary}
         />
       ) : (
-        <View style={styles.cardsWrap}>
-          {(news ?? []).map((item: NewsItem) => {
-            const preview = stripHtml(item.content).replace(/\n/g, " ");
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() => navigation.navigate("NewsDetail", { item })}
-                data-testid={`card-news-${item.id}`}
-              >
-                <View style={styles.cardTop}>
-                  <View style={styles.newsIconWrap}>
+        <>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            data-testid="button-back"
+          >
+            <Ionicons
+              name="chevron-back"
+              size={16}
+              color="rgba(0,0,0,0)"
+            />
+            <Text style={styles.backText}>The Club</Text>
+          </TouchableOpacity>
+          <View style={styles.cardsWrap}>
+            {(news ?? []).map((item: NewsItem) => {
+              const preview = stripHtml(item.content).replace(/\n/g, " ");
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.card}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate("NewsDetail", { item })}
+                  data-testid={`card-news-${item.id}`}
+                >
+                  <View style={styles.cardTop}>
+                    <View style={styles.newsIconWrap}>
+                      <Ionicons
+                        name="megaphone-outline"
+                        size={16}
+                        color={COLORS.accent}
+                      />
+                    </View>
                     <Ionicons
-                      name="megaphone-outline"
+                      name="chevron-forward"
                       size={16}
-                      color={COLORS.accent}
+                      color={COLORS.textMuted}
                     />
                   </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={COLORS.textMuted}
-                  />
-                </View>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.bodyPreview} numberOfLines={2}>
-                  {preview}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <Text style={styles.title}>{item.title}</Text>
+                  <Text style={styles.bodyPreview} numberOfLines={2}>
+                    {preview}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
       )}
     </ScrollView>
   );
@@ -153,15 +155,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 8,
+    marginTop: 16,
+    paddingLeft: 20,
   },
   backText: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(0,0,0,0)",
     fontWeight: "600",
   },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   cardsWrap: { paddingHorizontal: 16, marginTop: 20, gap: 12 },
   card: {
     backgroundColor: "#fff",

@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -26 }],
     backgroundColor: COLORS.accent,
     borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
-    minWidth: 52, alignItems: "center",
+    minWidth: 70, alignItems: "center",
     borderWidth: 2, borderColor: "#fff",
   },
   badgePillText: {

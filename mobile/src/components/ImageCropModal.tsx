@@ -175,7 +175,7 @@ export default function ImageCropModal({
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#000" },
-  hint: { color: "rgba(255,255,255,0.7)", fontSize: 13, textAlign: "center", paddingVertical: 10 },
+  hint: { color: "rgba(255,255,255,0.7)", fontSize: 13, textAlign: "center", paddingVertical: 20 },
   dim: { position: "absolute", backgroundColor: "rgba(0,0,0,0.55)" },
   border: { position: "absolute", backgroundColor: "#fff" },
   grid: { position: "absolute", backgroundColor: "rgba(255,255,255,0.25)" },

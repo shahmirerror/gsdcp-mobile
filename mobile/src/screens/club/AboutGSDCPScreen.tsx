@@ -65,18 +65,6 @@ export default function AboutGSDCPScreen() {
             <Text style={styles.heroSub}>
               Our history, mission and objectives
             </Text>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => navigation.goBack()}
-              data-testid="button-back"
-            >
-              <Ionicons
-                name="chevron-back"
-                size={16}
-                color="rgba(255,255,255,0.75)"
-              />
-              <Text style={styles.backText}>The Club</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
@@ -88,9 +76,23 @@ export default function AboutGSDCPScreen() {
           color={COLORS.primary}
         />
       ) : (
-        <View style={styles.section}>
-          <Text style={styles.body}>{content}</Text>
-        </View>
+        <>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            data-testid="button-back"
+          >
+            <Ionicons
+              name="chevron-back"
+              size={16}
+              color="rgba(0,0,0,0)"
+            />
+            <Text style={styles.backText}>The Club</Text>
+          </TouchableOpacity>
+          <View style={styles.section}>
+            <Text style={styles.body}>{content}</Text>
+          </View>
+        </>
       )}
     </ScrollView>
   );
@@ -122,18 +124,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 8,
+    marginTop: 16,
+    paddingLeft: 20,
   },
   backText: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(0,0,0,0)",
     fontWeight: "600",
   },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginTop: 6 },
   section: {
     marginHorizontal: 16,
-    marginTop: 24,
+    marginTop: 20,
     backgroundColor: "#fff",
     borderRadius: BORDER_RADIUS.lg,
     padding: 18,

@@ -122,18 +122,6 @@ export default function SubscriptionScreen() {
               <Text style={styles.heroSub}>
                 Membership types and fee structure
               </Text>
-              <TouchableOpacity
-                style={styles.backBtn}
-                onPress={() => navigation.goBack()}
-                data-testid="button-back"
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={16}
-                  color="rgba(255,255,255,0.75)"
-                />
-                <Text style={styles.backText}>The Club</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
@@ -149,60 +137,74 @@ export default function SubscriptionScreen() {
             color={COLORS.primary}
           />
         ) : (
-          <View style={styles.categoriesWrap}>
-            {FEE_CATEGORIES.map((cat) => {
-              const catFees = (fees ?? []).filter((f: FeeItem) =>
-                cat.names.includes(f.option_name),
-              );
-              if (catFees.length === 0) return null;
-              return (
-                <View key={cat.key} style={styles.categoryBlock}>
-                  <View style={styles.categoryHeader}>
-                    <Ionicons
-                      name={cat.icon as any}
-                      size={15}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.categoryLabel}>{cat.label}</Text>
-                  </View>
-                  <View style={styles.feesCard}>
-                    {catFees.map((fee: FeeItem, i: number) => (
-                      <View
-                        key={fee.id}
-                        style={[
-                          styles.feeRow,
-                          i < catFees.length - 1 && styles.feeRowBorder,
-                        ]}
-                        data-testid={`row-fee-${fee.id}`}
-                      >
-                        <View style={styles.feeLabelRow}>
-                          <Text style={styles.feeLabel}>
-                            {fee.remarks ?? fee.option_name}
+          <>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+              data-testid="button-back"
+            >
+              <Ionicons
+                name="chevron-back"
+                size={16}
+                color="rgba(0,0,0,0)"
+              />
+              <Text style={styles.backText}>The Club</Text>
+            </TouchableOpacity>
+            <View style={styles.categoriesWrap}>
+              {FEE_CATEGORIES.map((cat) => {
+                const catFees = (fees ?? []).filter((f: FeeItem) =>
+                  cat.names.includes(f.option_name),
+                );
+                if (catFees.length === 0) return null;
+                return (
+                  <View key={cat.key} style={styles.categoryBlock}>
+                    <View style={styles.categoryHeader}>
+                      <Ionicons
+                        name={cat.icon as any}
+                        size={15}
+                        color={COLORS.primary}
+                      />
+                      <Text style={styles.categoryLabel}>{cat.label}</Text>
+                    </View>
+                    <View style={styles.feesCard}>
+                      {catFees.map((fee: FeeItem, i: number) => (
+                        <View
+                          key={fee.id}
+                          style={[
+                            styles.feeRow,
+                            i < catFees.length - 1 && styles.feeRowBorder,
+                          ]}
+                          data-testid={`row-fee-${fee.id}`}
+                        >
+                          <View style={styles.feeLabelRow}>
+                            <Text style={styles.feeLabel}>
+                              {fee.remarks ?? fee.option_name}
+                            </Text>
+                            {fee.explanation ? (
+                              <TouchableOpacity
+                                onPress={() => setPopupText(fee.explanation)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                data-testid={`button-info-fee-${fee.id}`}
+                              >
+                                <Ionicons
+                                  name="information-circle-outline"
+                                  size={16}
+                                  color={COLORS.textMuted}
+                                />
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                          <Text style={styles.feeAmount}>
+                            {formatAmount(fee.option_value)}
                           </Text>
-                          {fee.explanation ? (
-                            <TouchableOpacity
-                              onPress={() => setPopupText(fee.explanation)}
-                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                              data-testid={`button-info-fee-${fee.id}`}
-                            >
-                              <Ionicons
-                                name="information-circle-outline"
-                                size={16}
-                                color={COLORS.textMuted}
-                              />
-                            </TouchableOpacity>
-                          ) : null}
                         </View>
-                        <Text style={styles.feeAmount}>
-                          {formatAmount(fee.option_value)}
-                        </Text>
-                      </View>
-                    ))}
+                      ))}
+                    </View>
                   </View>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          </>
         )}
 
         <View style={styles.noteCard}>
@@ -278,15 +280,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 8,
+    marginTop: 16,
+    paddingLeft: 20,
   },
   backText: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(0,0,0,0)",
     fontWeight: "600",
   },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   sectionHeader: { paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
   sectionTitle: { fontSize: 17, fontWeight: "700", color: COLORS.text },
   categoriesWrap: { paddingHorizontal: 16, gap: 20 },

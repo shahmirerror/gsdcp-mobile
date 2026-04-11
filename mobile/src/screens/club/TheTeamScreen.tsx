@@ -168,18 +168,6 @@ export default function TheTeamScreen() {
           <View style={styles.headerContent}>
             <Text style={styles.heroTitle}>The GSDCP Team</Text>
             <Text style={styles.heroSub}>Executive committee & officials</Text>
-            <TouchableOpacity
-              style={styles.backBtn}
-              onPress={() => navigation.goBack()}
-              data-testid="button-back"
-            >
-              <Ionicons
-                name="chevron-back"
-                size={16}
-                color="rgba(255,255,255,0.75)"
-              />
-              <Text style={styles.backText}>The Club</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
@@ -191,40 +179,54 @@ export default function TheTeamScreen() {
           color={COLORS.primary}
         />
       ) : (
-        <View style={styles.content}>
-          {orderedKeys.map((committee) => {
-            const accent = committeeAccent(committee);
-            return (
-              <View key={committee} style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <View
-                    style={[
-                      styles.sectionDot,
-                      { backgroundColor: accent.color },
-                    ]}
-                  />
-                  <Text style={styles.sectionTitle}>{committee}</Text>
-                </View>
-                <View style={styles.cardsWrap}>
-                  {grouped[committee].map((member) => (
-                    <MemberCard
-                      key={`${member.team_id ?? member.full_name}-${member.position_name}`}
-                      member={member}
-                      onPress={
-                        member.team_id
-                          ? () =>
-                              navigation.navigate("TeamMemberDetail", {
-                                id: member.team_id!,
-                              })
-                          : undefined
-                      }
+        <>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            data-testid="button-back"
+          >
+            <Ionicons
+              name="chevron-back"
+              size={16}
+              color="rgba(0,0,0,0)"
+            />
+            <Text style={styles.backText}>The Club</Text>
+          </TouchableOpacity>
+          <View style={styles.content}>
+            {orderedKeys.map((committee) => {
+              const accent = committeeAccent(committee);
+              return (
+                <View key={committee} style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <View
+                      style={[
+                        styles.sectionDot,
+                        { backgroundColor: accent.color },
+                      ]}
                     />
-                  ))}
+                    <Text style={styles.sectionTitle}>{committee}</Text>
+                  </View>
+                  <View style={styles.cardsWrap}>
+                    {grouped[committee].map((member) => (
+                      <MemberCard
+                        key={`${member.team_id ?? member.full_name}-${member.position_name}`}
+                        member={member}
+                        onPress={
+                          member.team_id
+                            ? () =>
+                                navigation.navigate("TeamMemberDetail", {
+                                  id: member.team_id!,
+                                })
+                            : undefined
+                        }
+                      />
+                    ))}
+                  </View>
                 </View>
-              </View>
-            );
-          })}
-        </View>
+              );
+            })}
+          </View>
+        </>
       )}
     </ScrollView>
   );
@@ -252,14 +254,14 @@ const styles = StyleSheet.create({
   },
   logoImg: { width: 55, height: 55 },
   headerContent: { flex: 1, justifyContent: "center" },
-  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 16, paddingLeft: 20 },
   backText: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(0,0,0,0)",
     fontWeight: "600",
   },
-  heroTitle: { fontSize: 22, fontWeight: "800", color: "#fff" },
-  heroSub: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 4 },
+  heroTitle: { fontSize: 28, fontWeight: "800", color: "#fff" },
+  heroSub: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginTop: 4 },
   content: { paddingHorizontal: 16, marginTop: 20, gap: 24 },
   section: { gap: 10 },
   sectionHeader: {

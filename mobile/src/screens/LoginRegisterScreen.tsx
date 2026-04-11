@@ -634,25 +634,6 @@ export default function LoginRegisterScreen() {
             <Text style={styles.dividerLabel}>WUSV AFFILIATE</Text>
             <View style={styles.dividerLine} />
           </View>
-
-          {/* ── Support ── */}
-          <View style={styles.supportRow}>
-            <Text style={styles.supportQuestion}>
-              Need assistance with your account?
-            </Text>
-            <TouchableOpacity
-              style={styles.supportBtn}
-              data-testid="btn-contact-support"
-            >
-              <Ionicons name="paw" size={13} color={COLORS.accent} />
-              <Text style={styles.supportBtnText}>CONTACT SUPPORT</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.footer}>
-            © 2024 GERMAN SHEPHERD DOG CLUB OF PAKISTAN.{"\n"}ALL RIGHTS
-            RESERVED.
-          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

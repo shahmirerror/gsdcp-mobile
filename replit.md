@@ -78,8 +78,8 @@ Home tab is the initial route (center position)
 ## Development
 - Workflow runs `cd mobile && npx expo start --web --port 5000`
 - Preview available in Replit webview
-- To build for devices: use `expo build` or EAS Build
-- QR code in terminal can be scanned with Expo Go app on physical device
+- To build for devices: use `expo run:android` for a local development build or `eas build --profile development`
+- Launch the app with `npm start` and open it in a development build, not Expo Go, for Android push notifications
 
 ## Building for Production
 1. Install EAS CLI: `npm install -g eas-cli`
