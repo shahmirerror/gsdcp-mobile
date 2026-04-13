@@ -1,6 +1,8 @@
 node_modules
 dist
 .DS_Store
+.expo/
+mobile/.expo/
 server/public
 vite.config.ts.*
 *.tar.gz

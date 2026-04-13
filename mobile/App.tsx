@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Image, StyleSheet } from "react-native";
+import { Animated, StyleSheet } from "react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -23,7 +23,7 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
   const gsdcpOpacity = useRef(new Animated.Value(1)).current;
   const inspediumOpacity = useRef(new Animated.Value(0)).current;
 
-  const logoScale = useRef(new Animated.Value(0.88)).current;
+  const logoScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.spring(logoScale, {
@@ -86,7 +86,7 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
           { opacity: inspediumOpacity },
         ]}
       >
-        <Image
+        <Animated.Image
           source={ccmsLogo}
           style={[s.logo, { transform: [{ scale: logoScale }] }]}
           resizeMode="contain"
@@ -97,7 +97,7 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
       <Animated.View
         style={[StyleSheet.absoluteFill, s.screen, { opacity: gsdcpOpacity }]}
       >
-        <Image
+        <Animated.Image
           source={splashLogo}
           style={[s.logo, { transform: [{ scale: logoScale }] }]}
           resizeMode="contain"

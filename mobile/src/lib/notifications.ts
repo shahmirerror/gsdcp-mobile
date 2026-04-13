@@ -6,13 +6,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const BASE_URL = "https://gsdcp.org/api/mobile";
 const FCM_TOKEN_KEY = "gsdcp_fcm_token";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// Keep startup resilient: notification handler setup should never crash app boot.
+try {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+} catch {
+  // Non-critical — app should still run if notifications cannot initialize yet.
+}
 
 export async function getStoredFcmToken(): Promise<string | null> {
   return AsyncStorage.getItem(FCM_TOKEN_KEY);
