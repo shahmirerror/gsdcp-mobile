@@ -391,13 +391,15 @@ export default function DogProfileScreen() {
     if (!dog.dob) return null;
     const birth = new Date(dog.dob);
     const now = new Date();
-    const years = now.getFullYear() - birth.getFullYear();
-    const months = now.getMonth() - birth.getMonth();
-    if (years > 0) {
-      const m = months >= 0 ? months : 12 + months;
-      return m > 0 ? `${years}y ${m}m` : `${years}y`;
-    }
-    return `${months >= 0 ? months : 12 + months}m`;
+    let years = now.getFullYear() - birth.getFullYear();
+    let months = now.getMonth() - birth.getMonth();
+    // If the birthday day hasn't been reached yet this month, subtract a month
+    if (now.getDate() < birth.getDate()) months -= 1;
+    // If months went negative, borrow a year
+    if (months < 0) { years -= 1; months += 12; }
+    if (years < 0) return null; // DOB in the future
+    if (years > 0) return months > 0 ? `${years}y ${months}m` : `${years}y`;
+    return months > 0 ? `${months}m` : "< 1m";
   })();
 
   const tabs: { key: TabKey; label: string; icon: string; count?: number }[] = [
