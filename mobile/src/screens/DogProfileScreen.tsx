@@ -705,7 +705,6 @@ export default function DogProfileScreen() {
             <View style={styles.card}>
               <Text style={styles.cardHeading}>General</Text>
               <View style={styles.detailsGrid}>
-                <DetailItem icon="paw" label="Breed" value={dog.breed} />
                 <DetailItem icon="male-female" label="Gender" value={dog.sex} />
                 <DetailItem
                   icon="calendar"

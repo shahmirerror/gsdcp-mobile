@@ -160,7 +160,6 @@ function DogQuickView({
   const reg = dog.foreign_reg_no ?? null;
   if (kp)   rows.push({ icon: "card-outline",     label: "KP No.",      value: kp });
   if (reg)  rows.push({ icon: "document-outline", label: "Reg No.",     value: reg });
-  if (dog.breed) rows.push({ icon: "paw-outline",  label: "Breed",      value: dog.breed });
   if (dog.color) rows.push({ icon: "color-palette-outline", label: "Color", value: dog.color });
   if (dog.hair)  rows.push({ icon: "brush-outline",          label: "Hair",  value: dog.hair });
   const dob = formatDOB(dog.dateOfBirth);
