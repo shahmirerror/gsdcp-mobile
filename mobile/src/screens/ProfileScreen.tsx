@@ -76,6 +76,9 @@ import {
   SDRProofFile,
   SDRPickedFile,
   fetchMyDogs,
+  fetchMembersPage,
+  submitOwnershipChange,
+  OwnershipChangeType,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
@@ -1331,10 +1334,25 @@ function DogsTab({ userId }: { userId: string }) {
   const [tempHair,   setTempHair]         = useState("All");
   const [showFilters, setShowFilters]     = useState(false);
 
+  // Transfer/Lease form state
+  const [showTransferForm, setShowTransferForm]   = useState(false);
+  const [transferDog, setTransferDog]             = useState<MemberOwnedDog | null>(null);
+  const [transferType, setTransferType]           = useState<OwnershipChangeType | "">("");
+  const [memberSearch, setMemberSearch]           = useState("");
+  const [debouncedMemberSearch, setDebouncedMemberSearch] = useState("");
+  const [selectedMember, setSelectedMember]       = useState<Member | null>(null);
+  const [isSubmitting, setIsSubmitting]           = useState(false);
+  const [submitError, setSubmitError]             = useState<string | null>(null);
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedMemberSearch(memberSearch.trim()), 350);
+    return () => clearTimeout(t);
+  }, [memberSearch]);
 
   const {
     data,
@@ -1354,6 +1372,47 @@ function DogsTab({ userId }: { userId: string }) {
 
   const dogs = data?.pages.flatMap((p) => p.dogs) ?? [];
   const isSearching = isFetching && !isFetchingNextPage && !!data;
+
+  // Member search for transfer/lease form
+  const needsMember = transferType === "Transfer" || transferType === "Lease";
+  const { data: membersData, isLoading: membersLoading } = useQuery({
+    queryKey: ["members-search", debouncedMemberSearch],
+    queryFn: () => fetchMembersPage(1, { q: debouncedMemberSearch || undefined }),
+    enabled: showTransferForm && needsMember,
+    staleTime: 30_000,
+  });
+  const memberResults = membersData?.data ?? [];
+
+  const openTransferForm = (dog: MemberOwnedDog) => {
+    setTransferDog(dog);
+    setTransferType("");
+    setMemberSearch("");
+    setDebouncedMemberSearch("");
+    setSelectedMember(null);
+    setSubmitError(null);
+    setPreviewDog(null);
+    setShowTransferForm(true);
+  };
+
+  const handleSubmitTransfer = async () => {
+    if (!transferDog || !transferType) return;
+    if (needsMember && !selectedMember) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await submitOwnershipChange({
+        dog_id: transferDog.id,
+        type: transferType as OwnershipChangeType,
+        new_owner_id: selectedMember?.id ?? null,
+      });
+      setShowTransferForm(false);
+      Alert.alert("Request Submitted", "Your ownership change request has been submitted for review.");
+    } catch (e: any) {
+      setSubmitError(e?.message ?? "Submission failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
 
@@ -1647,19 +1706,163 @@ function DogsTab({ userId }: { userId: string }) {
             <TouchableOpacity
               style={dStyles.transferBtn}
               activeOpacity={0.85}
-              onPress={() =>
-                Alert.alert(
-                  "Transfer / Lease Ownership",
-                  "To initiate a transfer or lease for this dog, please contact the GSDCP office.",
-                  [{ text: "OK" }]
-                )
-              }
+              onPress={() => openTransferForm(previewDog)}
             >
               <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
               <Text style={dStyles.transferBtnText}>Transfer / Lease Ownership</Text>
             </TouchableOpacity>
           </View>
         )}
+      </BottomSheetModal>
+
+      {/* Transfer / Lease Ownership form */}
+      <BottomSheetModal
+        visible={showTransferForm}
+        onClose={() => setShowTransferForm(false)}
+      >
+        <View style={dStyles.modalContent}>
+          {/* Dog header */}
+          {transferDog && (
+            <View style={dStyles.tfDogHeader}>
+              <View style={dStyles.tfDogAvatar}>
+                <Text style={dStyles.tfDogAvatarText}>
+                  {(transferDog.dog_name || "")
+                    .trim().split(" ").filter((w) => w.length > 0)
+                    .map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={dStyles.tfDogName} numberOfLines={1}>{transferDog.dog_name}</Text>
+                <Text style={dStyles.tfDogKP}>
+                  {transferDog.KP && transferDog.KP !== "0"
+                    ? `KP ${transferDog.KP}`
+                    : transferDog.foreign_reg_no || "—"}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View style={dStyles.divider} />
+
+          {/* Type selector */}
+          <Text style={dStyles.tfLabel}>Type</Text>
+          <View style={dStyles.tfTypeRow}>
+            {(["Transfer", "Lease", "No Ownership"] as OwnershipChangeType[]).map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[dStyles.tfTypeOption, transferType === t && dStyles.tfTypeOptionActive]}
+                onPress={() => { setTransferType(t); setSelectedMember(null); setMemberSearch(""); }}
+                activeOpacity={0.75}
+              >
+                <Text style={[dStyles.tfTypeOptionText, transferType === t && dStyles.tfTypeOptionTextActive]}>
+                  {t}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Member search — only for Transfer or Lease */}
+          {needsMember && (
+            <>
+              <Text style={dStyles.tfLabel}>
+                {transferType === "Transfer" ? "Transfer To" : "Lease To"}
+              </Text>
+
+              {/* Selected member chip */}
+              {selectedMember && (
+                <View style={dStyles.tfSelectedMember}>
+                  <Ionicons name="person-circle-outline" size={18} color={COLORS.primary} />
+                  <Text style={dStyles.tfSelectedMemberText} numberOfLines={1}>
+                    {selectedMember.member_name}
+                    {selectedMember.membership_no ? ` — ${selectedMember.membership_no}` : ""}
+                  </Text>
+                  <TouchableOpacity onPress={() => setSelectedMember(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Search input */}
+              <View style={dStyles.tfSearchBox}>
+                <Ionicons name="search" size={15} color={COLORS.textMuted} />
+                <TextInput
+                  style={dStyles.tfSearchInput}
+                  value={memberSearch}
+                  onChangeText={setMemberSearch}
+                  placeholder="Search member by name or ID…"
+                  placeholderTextColor={COLORS.textMuted}
+                  autoCorrect={false}
+                />
+                {memberSearch.length > 0 && (
+                  <TouchableOpacity onPress={() => setMemberSearch("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Ionicons name="close-circle" size={15} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Results list */}
+              {membersLoading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 12 }} />
+              ) : memberResults.length === 0 && debouncedMemberSearch.length > 0 ? (
+                <Text style={dStyles.tfNoResults}>No members found</Text>
+              ) : (
+                <View style={dStyles.tfMemberList}>
+                  {memberResults.slice(0, 8).map((m) => (
+                    <TouchableOpacity
+                      key={m.id}
+                      style={[dStyles.tfMemberRow, selectedMember?.id === m.id && dStyles.tfMemberRowActive]}
+                      onPress={() => setSelectedMember(m)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={dStyles.tfMemberAvatar}>
+                        <Text style={dStyles.tfMemberAvatarText}>
+                          {(m.member_name || "?").trim().split(" ")
+                            .filter((w) => w.length > 0).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={dStyles.tfMemberName} numberOfLines={1}>{m.member_name}</Text>
+                        {(m.membership_no || m.city) && (
+                          <Text style={dStyles.tfMemberMeta} numberOfLines={1}>
+                            {[m.membership_no, m.city].filter(Boolean).join(" · ")}
+                          </Text>
+                        )}
+                      </View>
+                      {selectedMember?.id === m.id && (
+                        <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Error */}
+          {submitError && (
+            <Text style={dStyles.tfError}>{submitError}</Text>
+          )}
+
+          {/* Submit */}
+          <TouchableOpacity
+            style={[
+              dStyles.profileBtn,
+              { marginTop: 18 },
+              (!transferType || (needsMember && !selectedMember) || isSubmitting) && dStyles.tfSubmitDisabled,
+            ]}
+            activeOpacity={0.85}
+            onPress={handleSubmitTransfer}
+            disabled={!transferType || (needsMember && !selectedMember) || isSubmitting}
+          >
+            {isSubmitting
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
+                  <Text style={dStyles.profileBtnText}>Submit Request</Text>
+                </>
+            }
+          </TouchableOpacity>
+        </View>
       </BottomSheetModal>
 
     </View>
@@ -1893,6 +2096,111 @@ const dStyles = StyleSheet.create({
     marginTop: 10,
   },
   transferBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: "700" },
+
+  // Transfer form styles
+  tfDogHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  tfDogAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  tfDogAvatarText: { color: COLORS.primary, fontWeight: "700", fontSize: 16 },
+  tfDogName: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  tfDogKP: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 2 },
+  tfLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    marginTop: 16,
+  },
+  tfTypeRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  tfTypeOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  tfTypeOptionActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
+  tfTypeOptionText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
+  tfTypeOptionTextActive: { color: "#fff" },
+  tfSelectedMember: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(15,92,58,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.2)",
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  tfSelectedMemberText: { flex: 1, fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.primary },
+  tfSearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  tfSearchInput: { flex: 1, height: 40, fontSize: FONT_SIZES.sm, color: COLORS.text },
+  tfNoResults: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, textAlign: "center", marginVertical: 12 },
+  tfMemberList: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: "hidden",
+    marginBottom: 4,
+  },
+  tfMemberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    backgroundColor: "#fff",
+  },
+  tfMemberRowActive: { backgroundColor: "rgba(15,92,58,0.05)" },
+  tfMemberAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  tfMemberAvatarText: { color: COLORS.primary, fontWeight: "700", fontSize: 12 },
+  tfMemberName: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
+  tfMemberMeta: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 1 },
+  tfError: {
+    fontSize: FONT_SIZES.sm,
+    color: "#DC2626",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  tfSubmitDisabled: { opacity: 0.45 },
 });
 
 /* ── Reusable: list header with "+ New" button ────────── */

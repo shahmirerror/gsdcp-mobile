@@ -2075,3 +2075,25 @@ export async function submitSingleDogRegistration(
     throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
   }
 }
+
+/* ── Dog Ownership Change (Transfer / Lease) ──────────── */
+export type OwnershipChangeType = "Transfer" | "Lease" | "No Ownership";
+
+export type OwnershipChangePayload = {
+  dog_id: string;
+  type: OwnershipChangeType;
+  new_owner_id?: string | null;
+};
+
+export async function submitOwnershipChange(payload: OwnershipChangePayload): Promise<void> {
+  const res = await fetch(`${BASE_URL}/profile/dog-ownership`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (json.success === false)
+    throw new Error(json.message ?? "Submission failed. Please try again.");
+  if (!res.ok)
+    throw new Error(`Server error (${res.status}). Please try again.`);
+}
