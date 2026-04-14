@@ -1320,13 +1320,9 @@ const kStyles = StyleSheet.create({
 const DOG_GENDER_OPTS = ["All", "Male", "Female"] as const;
 const DOG_HAIR_OPTS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
 
-function DogsTab({
-  userId,
-  onDogPress,
-}: {
-  userId: string;
-  onDogPress: (d: MemberOwnedDog) => void;
-}) {
+function DogsTab({ userId }: { userId: string }) {
+  const navigation = useNavigation<any>();
+  const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
   const [search, setSearch]               = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [genderF, setGenderF]             = useState("All");
@@ -1491,7 +1487,7 @@ function DogsTab({
             <DogListItem
               key={dog.id}
               dog={toListDog(dog)}
-              onPress={() => onDogPress(dog)}
+              onPress={() => setPreviewDog(dog)}
             />
           ))}
           {hasNextPage && (
@@ -1560,6 +1556,110 @@ function DogsTab({
             <Text style={dStyles.applyButtonText}>Apply Filters</Text>
           </TouchableOpacity>
         </View>
+      </BottomSheetModal>
+
+      {/* Dog preview popup */}
+      <BottomSheetModal
+        visible={!!previewDog}
+        onClose={() => setPreviewDog(null)}
+      >
+        {previewDog && (
+          <View style={dStyles.modalContent}>
+            {/* Header: image + name + KP + titles */}
+            <View style={dStyles.previewHeader}>
+              {previewDog.imageUrl ? (
+                <LazyImage
+                  source={{ uri: previewDog.imageUrl }}
+                  style={dStyles.previewImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={dStyles.previewAvatar}>
+                  <Text style={dStyles.previewAvatarText}>
+                    {(previewDog.dog_name || "")
+                      .trim()
+                      .split(" ")
+                      .filter((w) => w.length > 0)
+                      .map((w) => w[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase() || "?"}
+                  </Text>
+                </View>
+              )}
+              <View style={dStyles.previewHeadInfo}>
+                <Text style={dStyles.previewName} numberOfLines={2}>
+                  {previewDog.dog_name}
+                </Text>
+                <Text style={dStyles.previewKP}>
+                  {previewDog.KP && previewDog.KP !== "0"
+                    ? `KP ${previewDog.KP}`
+                    : previewDog.foreign_reg_no || "—"}
+                </Text>
+                {previewDog.titles && previewDog.titles.length > 0 && (
+                  <View style={dStyles.titlesRow}>
+                    {previewDog.titles.slice(0, 3).map((t) => (
+                      <View key={t} style={dStyles.titleBadge}>
+                        <Text style={dStyles.titleBadgeText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={dStyles.divider} />
+
+            {/* Details grid */}
+            <View style={dStyles.infoGrid}>
+              {[
+                { label: "Sex",           value: previewDog.sex },
+                { label: "Color",         value: previewDog.color },
+                { label: "Hair",          value: previewDog.hair },
+                { label: "Date of Birth", value: formatDate(previewDog.dob) },
+                { label: "Sire",          value: previewDog.sire },
+                { label: "Dam",           value: previewDog.dam },
+                { label: "Breeder",       value: previewDog.breeder },
+              ]
+                .filter((r) => r.value)
+                .map((r) => (
+                  <View key={r.label} style={dStyles.infoRow}>
+                    <Text style={dStyles.infoLabel}>{r.label}</Text>
+                    <Text style={dStyles.infoValue} numberOfLines={2}>{r.value}</Text>
+                  </View>
+                ))}
+            </View>
+
+            {/* View Full Profile */}
+            <TouchableOpacity
+              style={dStyles.profileBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                setPreviewDog(null);
+                navigation.push("DogProfile", { id: previewDog.id, name: previewDog.dog_name });
+              }}
+            >
+              <Ionicons name="paw" size={16} color="#fff" />
+              <Text style={dStyles.profileBtnText}>View Full Profile</Text>
+            </TouchableOpacity>
+
+            {/* Transfer / Lease Ownership */}
+            <TouchableOpacity
+              style={dStyles.transferBtn}
+              activeOpacity={0.85}
+              onPress={() =>
+                Alert.alert(
+                  "Transfer / Lease Ownership",
+                  "To initiate a transfer or lease for this dog, please contact the GSDCP office.",
+                  [{ text: "OK" }]
+                )
+              }
+            >
+              <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
+              <Text style={dStyles.transferBtnText}>Transfer / Lease Ownership</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </BottomSheetModal>
 
     </View>
@@ -1781,6 +1881,18 @@ const dStyles = StyleSheet.create({
     paddingVertical: 14,
   },
   profileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  transferBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 13,
+    marginTop: 10,
+  },
+  transferBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: "700" },
 });
 
 /* ── Reusable: list header with "+ New" button ────────── */
@@ -6806,12 +6918,7 @@ export default function ProfileScreen() {
         return <KennelTab kennel={kennel} navigation={navigation} refetch={refetch} memberId={user.member_id} />;
       case "dogs":
         return (
-          <DogsTab
-            userId={String(user.member_id)}
-            onDogPress={(dog) =>
-              navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })
-            }
-          />
+          <DogsTab userId={String(user.member_id)} />
         );
       case "stud":
         return <StudCertTab />;
