@@ -2108,4 +2108,6 @@ export async function submitOwnershipChange(payload: OwnershipChangePayload): Pr
     console.error("[transfer-dog] response:", res.status, JSON.stringify(json));
     throw new Error(detail);
   }
+  console.log("[transfer-dog] success — payload:", JSON.stringify(payload));
+  console.log("[transfer-dog] success — response:", res.status, JSON.stringify(json));
 }
