@@ -1890,6 +1890,7 @@ function DogsTab({ userId }: { userId: string }) {
                 required
                 value={dateFrom}
                 onChange={setDateFrom}
+                minDate={new Date()}
                 maxDate={new Date(2100, 0, 1)}
               />
               <CalendarDatePicker
@@ -1897,6 +1898,7 @@ function DogsTab({ userId }: { userId: string }) {
                 required
                 value={dateTo}
                 onChange={setDateTo}
+                minDate={new Date()}
                 maxDate={new Date(2100, 0, 1)}
               />
             </>
@@ -2420,18 +2422,23 @@ function CalendarDatePicker({
   required,
   value,
   onChange,
+  minDate,
   maxDate,
 }: {
   label: string;
   required?: boolean;
   value: string; // DD-MM-YYYY display / storage
   onChange: (v: string) => void;
+  minDate?: Date; // no date before this may be selected (default: none)
   maxDate?: Date; // no date after this may be selected (defaults to today)
 }) {
   const today = new Date();
   const max = maxDate ?? today;
-  // Normalise max to start-of-day for clean comparisons
+  // Normalise to start-of-day for clean comparisons
   const maxDay = new Date(max.getFullYear(), max.getMonth(), max.getDate());
+  const minDay = minDate
+    ? new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())
+    : null;
 
   const parseValue = (v: string): Date | null => {
     if (!v) return null;
@@ -2447,6 +2454,9 @@ function CalendarDatePicker({
     if (selected) {
       setViewYear(selected.getFullYear());
       setViewMonth(selected.getMonth());
+    } else if (minDay) {
+      setViewYear(minDay.getFullYear());
+      setViewMonth(minDay.getMonth());
     } else {
       setViewYear(maxDay.getFullYear());
       setViewMonth(maxDay.getMonth());
@@ -2454,12 +2464,17 @@ function CalendarDatePicker({
     setShow(true);
   };
 
-  // Block navigating forward past the max month
+  // Block navigating forward past max / backward past min
   const atMaxMonth =
     viewYear > maxDay.getFullYear() ||
     (viewYear === maxDay.getFullYear() && viewMonth >= maxDay.getMonth());
+  const atMinMonth = !!minDay && (
+    viewYear < minDay.getFullYear() ||
+    (viewYear === minDay.getFullYear() && viewMonth <= minDay.getMonth())
+  );
 
   const prevMonth = () => {
+    if (atMinMonth) return;
     if (viewMonth === 0) {
       setViewMonth(11);
       setViewYear((y) => y - 1);
@@ -2473,10 +2488,15 @@ function CalendarDatePicker({
     } else setViewMonth((m) => m + 1);
   };
 
-  const isFuture = (day: number) => new Date(viewYear, viewMonth, day) > maxDay;
+  const isDisabled = (day: number) => {
+    const d = new Date(viewYear, viewMonth, day);
+    if (d > maxDay) return true;
+    if (minDay && d < minDay) return true;
+    return false;
+  };
 
   const selectDay = (day: number) => {
-    if (isFuture(day)) return;
+    if (isDisabled(day)) return;
     onChange(
       `${String(day).padStart(2, "0")}-${String(viewMonth + 1).padStart(2, "0")}-${viewYear}`,
     );
@@ -2597,8 +2617,9 @@ function CalendarDatePicker({
               }}
             >
               <TouchableOpacity
-                onPress={prevMonth}
+                onPress={atMinMonth ? undefined : prevMonth}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={{ opacity: atMinMonth ? 0.25 : 1 }}
               >
                 <Ionicons
                   name="chevron-back"
@@ -2647,16 +2668,16 @@ function CalendarDatePicker({
                 style={{ flexDirection: "row", marginBottom: 2 }}
               >
                 {cells.slice(week * 7, week * 7 + 7).map((day, i) => {
-                  const future = !!day && isFuture(day);
+                  const disabled = !!day && isDisabled(day);
                   const sel = !!day && !!isSel(day);
                   const tod = !!day && isTod(day);
                   return (
                     <TouchableOpacity
                       key={i}
                       onPress={() => {
-                        if (day && !future) selectDay(day);
+                        if (day && !disabled) selectDay(day);
                       }}
-                      activeOpacity={day && !future ? 0.7 : 1}
+                      activeOpacity={day && !disabled ? 0.7 : 1}
                       style={{
                         flex: 1,
                         height: 36,
@@ -2668,7 +2689,7 @@ function CalendarDatePicker({
                           : tod
                             ? `${COLORS.primary}18`
                             : "transparent",
-                        opacity: future ? 0.3 : 1,
+                        opacity: disabled ? 0.3 : 1,
                       }}
                     >
                       {!!day && (
