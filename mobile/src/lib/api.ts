@@ -2092,7 +2092,7 @@ export type OwnershipChangePayload = {
 };
 
 export async function submitOwnershipChange(payload: OwnershipChangePayload): Promise<void> {
-  const res = await fetch(`${BASE_URL}/profile/transfer-dog`, {
+  const res = await fetch(`${BASE_URL}/profile-transfer-dog`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
