@@ -1,0 +1,343 @@
+public function transferDog(Request $request)
+    {
+        $user = User::find($request->user_id);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'UNAUTHORIZED',
+                    'message' => 'Unauthorized'
+                ]
+            ], 401);
+        }
+        
+        $transfer_owners = $request->chosern_users;
+        $dog_id = str_replace("dog-","",$request->dog_id);
+        $transfer_type = $request->transfer_type;
+        
+        $user_Account_wallet = $user->id;
+        $memberbalance = $this->showBalance($user_Account_wallet);
+        $balance = $memberbalance->balance;
+        
+        if(is_array($transfer_owners) && count($transfer_owners) == 0 && $transfer_type != 'Remove Ownership')
+        {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'NO_TRANSFER_ONWERS',
+                    'message' => 'Please select atleast one member to add or transfer dog to.',
+                ],
+            ], 500);
+            
+        }
+        elseif($transfer_type == 'Lease Ownership')
+        {
+            if (!empty($transfer_owners))
+            {
+                $check_prev_owners = DogOwner::where('dog_id','=',$dog_id)->count();
+                
+                if($check_prev_owners == 0)
+                {
+                    foreach($transfer_owners as $value)
+                    {
+                        $task4 = new DogOwner;
+                        $task4->dog_id = $dog_id;
+                        $task4->owner_id = str_replace("member-","",$value);
+                        $task4->type = "Lease";
+                        $task4->date_from = date("Y-m-d",strtotime($request->date_from));
+                        $task4->date_to = date("Y-m-d",strtotime($request->date_to));
+                        // $task4->remarks = $request->remarks;
+                        $task4->save();
+                    }
+                    
+                }
+                else
+                {
+                    $current_owner = $user;
+                    $check_setting = ProjectSetting::where('option_name','=','dog_lease_fee')->first();
+                    $entry_amount = $check_setting->option_value;
+                    
+                    if($balance < $entry_amount)
+                    {
+                        if(abs($balance) >= $entry_amount)
+                        {
+                            $task22 = DogOwner::where('dog_id','=',$dog_id)->get();
+                            
+                            foreach($task22 as $t22)
+                            {
+                                $task2 = DogOwner::find($t22->id);
+                                $task2->type = "Previous";
+                            
+                                if($t22->type == 'Owner')
+                                {
+                                    $task2->date_from = date("Y-m-d",strtotime($request->date_from));
+                                    $task2->date_to = date("Y-m-d",strtotime($request->date_to));
+                                    // $task2->remarks = $request->remarks;
+                                }
+                            
+                                $task2->update();
+                            }
+                        
+                            //accounts code
+                            
+                            $credit_head = $check_setting->account_info->company_head;
+                        
+                            foreach($transfer_owners as $value)
+                            {
+                                $task4 = new DogOwner;
+                                $task4->dog_id = $dog_id;
+                                $task4->owner_id = str_replace("member-","",$value);
+                                $task4->type = "Lease";
+                                $task4->date_from = date("Y-m-d",strtotime($request->date_from));
+                                $task4->date_to = date("Y-m-d",strtotime($request->date_to));
+                                // $task4->remarks = $request->remarks;
+                                $task4->save();
+                                
+                                //account entry
+                                $user_account_info = $current_owner;
+                                
+                                $first_name= $user_account_info->first_name;
+                                $last_name = $user_account_info->last_name;
+                                $userid = $user_account_info->id;
+                                $accountidt = $user_account_info->account_id;
+                                
+                                $get_account = AccountHeadCompany::findorfail($accountidt);
+                                $get_recv_head = AccountHeadCompany::where('chart_detail_id','=','3')->where('user_id','=',$userid)->first();
+                                
+                                $user_Account = $get_recv_head->company_head; 
+                                // $user_Account_wallet = $first_name.'-'.$last_name.'-Wallet';
+                                $user_Account_wallet = $get_account->company_head;
+                                
+                                $dog_detail = Dog::select('dog_name')->where('id',$dog_id)->first();
+                                
+                                $lease_to = User::select('first_name','last_name')->where('id','=',str_replace("member-","",$value))->first();
+                                
+                                $msg = "Dog Ownership Lease of $dog_detail->dog_name, lease to $lease_to->first_name $lease_to->last_name ";
+                                
+                                //account entry --accrecv
+                                $this->saveTransaction($user_Account,$credit_head,$entry_amount,$msg);
+                                
+                                //member wallet entry
+                                $this->saveTransaction($user_Account_wallet,$user_Account,$entry_amount,$msg);
+                            }
+                        }
+                        else
+                        {
+                            return response()->json([
+                                'success' => false,
+                                'error' => [
+                                    'code' => 'LOW_BALANCE',
+                                    'message' => 'Failed to Save! In-Sufficient Funds of Member.'
+                                ]
+                            ], 404);
+                        }
+                    }
+                    else
+                    {
+                        return response()->json([
+                            'success' => false,
+                            'error' => [
+                                'code' => 'LOW_BALANCE',
+                                'message' => 'Failed to Save! In-Sufficient Funds of Member.'
+                            ]
+                        ], 404);
+                    }
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'error' => [
+                        'code' => 'OWNERSHIP_LEASED',
+                        'message' => '',
+                    ],
+                ], 200);
+            }
+        }
+        elseif($transfer_type == 'Transfer Ownership')
+        {
+            $current_owner = $user;
+            
+            //accounts code
+            $check_setting = ProjectSetting::where('option_name','=','ownership_transfer_fee')->first();
+            $entry_amount = $check_setting->option_value;
+            $credit_head = $check_setting->account_info->company_head;
+            
+            if($balance < $entry_amount)
+            {
+                if(abs($balance) >= $entry_amount)
+                {
+                    $ownership_data = DogOwner::where('dog_id','=',$dog_id)->where('owner_id','=',$current_owner->id)->count();
+                    
+                    if($ownership_data == 0)
+                    {
+                        $ownership = new DogOwner;
+                        $ownership->dog_id = $dog_id;
+                        $ownership->owner_id = $current_owner->id;
+                        $ownership->type = "Previous";
+                        // $ownership->remarks = $request->remarks;
+                        $ownership->save();
+                        
+                    }
+                    else
+                    {
+                        $ownership_data = DogOwner::where('dog_id','=',$dog_id)->where('owner_id','=',$current_owner->id)->first();
+                        $ownership = DogOwner::findOrFail($ownership_data->id);
+                        $ownership->type = "Previous";
+                        // $ownership->remarks = $request->remarks;
+                        $ownership->update();
+                    }
+                    
+                    foreach($transfer_owners as $value)
+                    {
+                        $task4 = new DogOwner;
+                        $task4->dog_id = $dog_id;
+                        $task4->owner_id = str_replace("member-","",$value);
+                        $task4->type = "Owner";
+                        // $task4->remarks = $request->remarks;
+                        $task4->save();
+                        
+                        $dog_detail = Dog::select('dog_name')->where('id','=', $dog_id)->first();
+                        
+                        $newowner = User::select('first_name','last_name')->where('id','=',str_replace("member-","",$value))->first();
+                        
+                        $litterwise = DB::table('litter_details')
+                                     ->select('litters.owner_id')
+                                     ->leftjoin('litters','litters.id','=','litter_details.litter_id')
+                                     ->where('litter_details.dog_id','=',$dog_id)
+                                     ->where('litters.owner_id','=',$current_owner->id)
+                                     ->first();
+                        
+                        //check if current owner is breeder
+                        $check_breeder = Dog::select('breeder')->where('id','=',$dog_id)->first();
+                       
+                        if($check_breeder->breeder != null)
+                        {
+                            // $curr_owner_first_name = $current_owner->first_name;
+                            // $curr_owner_last_name = $current_owner->last_name;
+                            
+                            $curr_fullname = $current_owner->first_name.' '.$current_owner->last_name;
+                            
+                            $curr_fullname2 = str_replace(' ', '', $curr_fullname);
+                            $breedername = str_replace(' ', '', $check_breeder->breeder);
+                            
+                            if($breedername != $curr_fullname2 && !$litterwise)
+                            {
+                                //account entry
+                                $user_account_info = $user;
+                                $first_name= $user_account_info->first_name;
+                                $last_name = $user_account_info->last_name;
+                                $userid = $user_account_info->id;
+                                $accountidt = $user_account_info->account_id;
+                                
+                                //$user_Account = $first_name.'-'.$last_name;
+                                $get_account = AccountHeadCompany::findorfail($accountidt);
+                                $get_recv_head = AccountHeadCompany::where('chart_detail_id','=','3')->where('user_id','=',$userid)->first();
+                                
+                                $user_Account = $get_recv_head->company_head;
+                                
+                                $user_Account_wallet = $get_account->company_head; //$first_name.'-'.$last_name.'-Wallet';
+                                
+                                $dog_detail = Dog::select('dog_name')->where('id','=',$dog_id)->first();
+                                
+                                $new_owner = User::select('first_name','last_name')->where('id','=',str_replace("member-","",str_replace("member-","",$value)))->first();
+                                
+                                $msg = "Ownership Transfer of $dog_detail->dog_name from $first_name $last_name to $new_owner->first_name $new_owner->last_name";
+                                //account entry --accrecv
+                                $this->saveTransaction($user_Account,$credit_head,$entry_amount,$msg);
+                                
+                                //member wallet entry
+                                $this->saveTransaction($user_Account_wallet,$user_Account,$entry_amount,$msg);
+                                
+                            }
+                        }
+                        else
+                        {
+                            //account entry
+                            $user_account_info = $user;
+                            
+                            $first_name= $user_account_info->first_name;
+                            $last_name = $user_account_info->last_name;
+                            $userid = $user_account_info->id;
+                            $accountidt = $user_account_info->account_id;
+                            
+                            //$user_Account = $first_name.'-'.$last_name;
+                            $get_account = AccountHeadCompany::findorfail($accountidt);
+                            $get_recv_head = AccountHeadCompany::where('chart_detail_id','=','3')->where('user_id','=',$userid)->first();
+                            
+                            $user_Account = $get_recv_head->company_head;
+                            
+                            $user_Account_wallet = $get_account->company_head; //$first_name.'-'.$last_name.'-Wallet';
+                            
+                            $dog_detail = Dog::select('dog_name')->where('id',$dog_id)->first();
+                            
+                            $new_owner = User::select('first_name','last_name')->where('id','=',str_replace("member-","",$value))->first();
+                            
+                            $msg = "Ownership Transfer of $dog_detail->dog_name from $first_name $last_name to $new_owner->first_name $new_owner->last_name";
+                            
+                            //account entry --accrecv
+                            $this->saveTransaction($user_Account,$credit_head,$entry_amount,$msg);
+                            
+                            // //member wallet entry
+                            $this->saveTransaction($user_Account_wallet,$user_Account,$entry_amount,$msg);
+                        }
+                    }
+                    
+                    return response()->json([
+                        'success' => true,
+                        'error' => [
+                            'code' => 'OWNERSHIP_TRANSFERRED',
+                            'message' => '',
+                        ],
+                    ], 200);
+                }
+                else
+                {
+                    return response()->json([
+                        'success' => false,
+                        'error' => [
+                            'code' => 'LOW_BALANCE',
+                            'message' => 'Failed to Save! In-Sufficient Funds of Member.'
+                        ]
+                    ], 404);
+                }
+            }
+            else
+            {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'LOW_BALANCE',
+                        'message' => 'Failed to Save! In-Sufficient Funds of Member.'
+                    ]
+                ], 404);
+            }
+        }
+        else
+        {
+            //transfertype is no owner
+            $current_owner = $user;
+            
+            $ownership_data = DogOwner::where('dog_id','=',$dog_id)->where('owner_id','=',$current_owner->id)->first();
+                    
+            $ownership = DogOwner::findOrFail($ownership_data->id);
+            $ownership->type = "Previous";
+            $ownership->update();
+            
+            return response()->json([
+                'success' => true,
+                'error' => [
+                    'code' => 'OWNERSHIP_REMOVED',
+                    'message' => '',
+                ],
+            ], 200);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'error' => [
+                'code' => 'NOTHING_HAPPENED',
+                'message' => '',
+            ],
+        ], 200);
+    }

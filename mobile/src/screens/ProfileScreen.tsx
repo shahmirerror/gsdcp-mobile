@@ -1428,7 +1428,7 @@ function DogsTab({ userId }: { userId: string }) {
         dog_id: transferDog.id,
         user_id: userId,
         transfer_type: transferType as OwnershipChangeType,
-        chosern_owners: selectedMembers.map((m) => m.id),
+        chosern_users: selectedMembers.map((m) => m.id),
         ...(isLease && dateFrom ? { date_from: dateFrom } : {}),
         ...(isLease && dateTo   ? { date_to:   dateTo   } : {}),
       });

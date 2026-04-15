@@ -2086,7 +2086,7 @@ export type OwnershipChangePayload = {
   dog_id: string;
   user_id: string;
   transfer_type: OwnershipChangeType;
-  chosern_owners: string[];  // array of member IDs
+  chosern_users: string[];   // array of member IDs (field name the API reads)
   date_from?: string;        // DD-MM-YYYY, Lease Ownership only
   date_to?: string;          // DD-MM-YYYY, Lease Ownership only
 };
