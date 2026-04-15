@@ -2098,8 +2098,14 @@ export async function submitOwnershipChange(payload: OwnershipChangePayload): Pr
     body: JSON.stringify(payload),
   });
   const json = await res.json().catch(() => ({}));
-  if (json.success === false)
-    throw new Error(json.message ?? "Submission failed. Please try again.");
-  if (!res.ok)
-    throw new Error(`Server error (${res.status}). Please try again.`);
+  if (!res.ok || json.success === false) {
+    const detail =
+      json.message ??
+      json.error ??
+      (typeof json === "string" ? json : null) ??
+      `Server error (${res.status})`;
+    console.error("[transfer-dog] payload:", JSON.stringify(payload));
+    console.error("[transfer-dog] response:", res.status, JSON.stringify(json));
+    throw new Error(detail);
+  }
 }
