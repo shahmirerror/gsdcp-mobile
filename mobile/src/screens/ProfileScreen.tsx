@@ -1341,6 +1341,8 @@ function DogsTab({ userId }: { userId: string }) {
   const [memberSearch, setMemberSearch]           = useState("");
   const [debouncedMemberSearch, setDebouncedMemberSearch] = useState("");
   const [selectedMembers, setSelectedMembers]     = useState<Member[]>([]);
+  const [memberSearchFocused, setMemberSearchFocused] = useState(false);
+  const memberBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dateFrom, setDateFrom]                   = useState("");
   const [dateTo, setDateTo]                       = useState("");
   const [isSubmitting, setIsSubmitting]           = useState(false);
@@ -1393,11 +1395,13 @@ function DogsTab({ userId }: { userId: string }) {
   };
 
   const openTransferForm = (dog: MemberOwnedDog) => {
+    if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
     setTransferDog(dog);
     setTransferType("");
     setMemberSearch("");
     setDebouncedMemberSearch("");
     setSelectedMembers([]);
+    setMemberSearchFocused(false);
     setDateFrom("");
     setDateTo("");
     setSubmitError(null);
@@ -1814,6 +1818,13 @@ function DogsTab({ userId }: { userId: string }) {
                   placeholder="Search member by name or ID…"
                   placeholderTextColor={COLORS.textMuted}
                   autoCorrect={false}
+                  onFocus={() => {
+                    if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
+                    setMemberSearchFocused(true);
+                  }}
+                  onBlur={() => {
+                    memberBlurTimer.current = setTimeout(() => setMemberSearchFocused(false), 150);
+                  }}
                 />
                 {memberSearch.length > 0 && (
                   <TouchableOpacity onPress={() => setMemberSearch("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
@@ -1822,8 +1833,8 @@ function DogsTab({ userId }: { userId: string }) {
                 )}
               </View>
 
-              {/* Results list */}
-              {membersLoading ? (
+              {/* Results list — only while input is focused */}
+              {memberSearchFocused && (membersLoading ? (
                 <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 12 }} />
               ) : memberResults.length === 0 && debouncedMemberSearch.length > 0 ? (
                 <Text style={dStyles.tfNoResults}>No members found</Text>
@@ -1835,6 +1846,9 @@ function DogsTab({ userId }: { userId: string }) {
                       <TouchableOpacity
                         key={m.id}
                         style={[dStyles.tfMemberRow, isSelected && dStyles.tfMemberRowActive]}
+                        onPressIn={() => {
+                          if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
+                        }}
                         onPress={() => toggleMember(m)}
                         activeOpacity={0.75}
                       >
@@ -1860,7 +1874,7 @@ function DogsTab({ userId }: { userId: string }) {
                     );
                   })}
                 </View>
-              ) : null}
+              ) : null)}
             </>
           )}
 
