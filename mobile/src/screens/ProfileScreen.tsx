@@ -1340,7 +1340,9 @@ function DogsTab({ userId }: { userId: string }) {
   const [transferType, setTransferType]           = useState<OwnershipChangeType | "">("");
   const [memberSearch, setMemberSearch]           = useState("");
   const [debouncedMemberSearch, setDebouncedMemberSearch] = useState("");
-  const [selectedMember, setSelectedMember]       = useState<Member | null>(null);
+  const [selectedMembers, setSelectedMembers]     = useState<Member[]>([]);
+  const [dateFrom, setDateFrom]                   = useState("");
+  const [dateTo, setDateTo]                       = useState("");
   const [isSubmitting, setIsSubmitting]           = useState(false);
   const [submitError, setSubmitError]             = useState<string | null>(null);
 
@@ -1374,7 +1376,8 @@ function DogsTab({ userId }: { userId: string }) {
   const isSearching = isFetching && !isFetchingNextPage && !!data;
 
   // Member search for transfer/lease form
-  const needsMember = transferType === "Transfer" || transferType === "Lease";
+  const needsMember = transferType === "Transfer Ownership" || transferType === "Lease Ownership";
+  const isLease = transferType === "Lease Ownership";
   const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ["members-search", debouncedMemberSearch],
     queryFn: () => fetchMembersPage(1, { q: debouncedMemberSearch || undefined }),
@@ -1383,27 +1386,43 @@ function DogsTab({ userId }: { userId: string }) {
   });
   const memberResults = membersData?.data ?? [];
 
+  const toggleMember = (m: Member) => {
+    setSelectedMembers((prev) =>
+      prev.some((s) => s.id === m.id) ? prev.filter((s) => s.id !== m.id) : [...prev, m]
+    );
+  };
+
   const openTransferForm = (dog: MemberOwnedDog) => {
     setTransferDog(dog);
     setTransferType("");
     setMemberSearch("");
     setDebouncedMemberSearch("");
-    setSelectedMember(null);
+    setSelectedMembers([]);
+    setDateFrom("");
+    setDateTo("");
     setSubmitError(null);
     setPreviewDog(null);
     setShowTransferForm(true);
   };
 
+  const isSubmitDisabled =
+    !transferType ||
+    (needsMember && selectedMembers.length === 0) ||
+    (isLease && (!dateFrom || !dateTo)) ||
+    isSubmitting;
+
   const handleSubmitTransfer = async () => {
-    if (!transferDog || !transferType) return;
-    if (needsMember && !selectedMember) return;
+    if (!transferDog || !transferType || isSubmitDisabled) return;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
       await submitOwnershipChange({
         dog_id: transferDog.id,
-        type: transferType as OwnershipChangeType,
-        new_owner_id: selectedMember?.id ?? null,
+        user_id: userId,
+        transfer_type: transferType as OwnershipChangeType,
+        chosern_owners: selectedMembers.map((m) => m.id),
+        ...(isLease && dateFrom ? { date_from: dateFrom } : {}),
+        ...(isLease && dateTo   ? { date_to:   dateTo   } : {}),
       });
       setShowTransferForm(false);
       Alert.alert("Request Submitted", "Your ownership change request has been submitted for review.");
@@ -1747,11 +1766,11 @@ function DogsTab({ userId }: { userId: string }) {
           {/* Type selector */}
           <Text style={dStyles.tfLabel}>Type</Text>
           <View style={dStyles.tfTypeRow}>
-            {(["Transfer", "Lease", "No Ownership"] as OwnershipChangeType[]).map((t) => (
+            {(["Transfer Ownership", "Lease Ownership", "Remove Ownership"] as OwnershipChangeType[]).map((t) => (
               <TouchableOpacity
                 key={t}
                 style={[dStyles.tfTypeOption, transferType === t && dStyles.tfTypeOptionActive]}
-                onPress={() => { setTransferType(t); setSelectedMember(null); setMemberSearch(""); }}
+                onPress={() => { setTransferType(t); setSelectedMembers([]); setMemberSearch(""); setDateFrom(""); setDateTo(""); }}
                 activeOpacity={0.75}
               >
                 <Text style={[dStyles.tfTypeOptionText, transferType === t && dStyles.tfTypeOptionTextActive]}>
@@ -1761,24 +1780,27 @@ function DogsTab({ userId }: { userId: string }) {
             ))}
           </View>
 
-          {/* Member search — only for Transfer or Lease */}
+          {/* Member search — Transfer Ownership or Lease Ownership */}
           {needsMember && (
             <>
               <Text style={dStyles.tfLabel}>
-                {transferType === "Transfer" ? "Transfer To" : "Lease To"}
+                {transferType === "Transfer Ownership" ? "Transfer To" : "Lease To"}
               </Text>
 
-              {/* Selected member chip */}
-              {selectedMember && (
-                <View style={dStyles.tfSelectedMember}>
-                  <Ionicons name="person-circle-outline" size={18} color={COLORS.primary} />
-                  <Text style={dStyles.tfSelectedMemberText} numberOfLines={1}>
-                    {selectedMember.member_name}
-                    {selectedMember.membership_no ? ` — ${selectedMember.membership_no}` : ""}
-                  </Text>
-                  <TouchableOpacity onPress={() => setSelectedMember(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
-                  </TouchableOpacity>
+              {/* Selected member chips */}
+              {selectedMembers.length > 0 && (
+                <View style={dStyles.tfSelectedChips}>
+                  {selectedMembers.map((m) => (
+                    <View key={m.id} style={dStyles.tfSelectedMember}>
+                      <Ionicons name="person-circle-outline" size={16} color={COLORS.primary} />
+                      <Text style={dStyles.tfSelectedMemberText} numberOfLines={1}>
+                        {m.member_name}{m.membership_no ? ` — ${m.membership_no}` : ""}
+                      </Text>
+                      <TouchableOpacity onPress={() => toggleMember(m)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                        <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
                 </View>
               )}
 
@@ -1805,36 +1827,60 @@ function DogsTab({ userId }: { userId: string }) {
                 <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 12 }} />
               ) : memberResults.length === 0 && debouncedMemberSearch.length > 0 ? (
                 <Text style={dStyles.tfNoResults}>No members found</Text>
-              ) : (
+              ) : memberResults.length > 0 ? (
                 <View style={dStyles.tfMemberList}>
-                  {memberResults.slice(0, 8).map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      style={[dStyles.tfMemberRow, selectedMember?.id === m.id && dStyles.tfMemberRowActive]}
-                      onPress={() => setSelectedMember(m)}
-                      activeOpacity={0.75}
-                    >
-                      <View style={dStyles.tfMemberAvatar}>
-                        <Text style={dStyles.tfMemberAvatarText}>
-                          {(m.member_name || "?").trim().split(" ")
-                            .filter((w) => w.length > 0).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={dStyles.tfMemberName} numberOfLines={1}>{m.member_name}</Text>
-                        {(m.membership_no || m.city) && (
-                          <Text style={dStyles.tfMemberMeta} numberOfLines={1}>
-                            {[m.membership_no, m.city].filter(Boolean).join(" · ")}
+                  {memberResults.slice(0, 8).map((m) => {
+                    const isSelected = selectedMembers.some((s) => s.id === m.id);
+                    return (
+                      <TouchableOpacity
+                        key={m.id}
+                        style={[dStyles.tfMemberRow, isSelected && dStyles.tfMemberRowActive]}
+                        onPress={() => toggleMember(m)}
+                        activeOpacity={0.75}
+                      >
+                        <View style={dStyles.tfMemberAvatar}>
+                          <Text style={dStyles.tfMemberAvatarText}>
+                            {(m.member_name || "?").trim().split(" ")
+                              .filter((w) => w.length > 0).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
                           </Text>
-                        )}
-                      </View>
-                      {selectedMember?.id === m.id && (
-                        <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={dStyles.tfMemberName} numberOfLines={1}>{m.member_name}</Text>
+                          {(m.membership_no || m.city) && (
+                            <Text style={dStyles.tfMemberMeta} numberOfLines={1}>
+                              {[m.membership_no, m.city].filter(Boolean).join(" · ")}
+                            </Text>
+                          )}
+                        </View>
+                        {isSelected
+                          ? <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+                          : <Ionicons name="ellipse-outline" size={20} color={COLORS.border} />
+                        }
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-              )}
+              ) : null}
+            </>
+          )}
+
+          {/* Lease date range */}
+          {isLease && (
+            <>
+              <CalendarDatePicker
+                label="Date From"
+                required
+                value={dateFrom}
+                onChange={setDateFrom}
+                maxDate={new Date(2100, 0, 1)}
+              />
+              <CalendarDatePicker
+                label="Date To"
+                required
+                value={dateTo}
+                onChange={setDateTo}
+                maxDate={new Date(2100, 0, 1)}
+              />
             </>
           )}
 
@@ -1845,14 +1891,10 @@ function DogsTab({ userId }: { userId: string }) {
 
           {/* Submit */}
           <TouchableOpacity
-            style={[
-              dStyles.profileBtn,
-              { marginTop: 18 },
-              (!transferType || (needsMember && !selectedMember) || isSubmitting) && dStyles.tfSubmitDisabled,
-            ]}
+            style={[dStyles.profileBtn, { marginTop: 18 }, isSubmitDisabled && dStyles.tfSubmitDisabled]}
             activeOpacity={0.85}
             onPress={handleSubmitTransfer}
-            disabled={!transferType || (needsMember && !selectedMember) || isSubmitting}
+            disabled={isSubmitDisabled}
           >
             {isSubmitting
               ? <ActivityIndicator size="small" color="#fff" />
@@ -2137,6 +2179,7 @@ const dStyles = StyleSheet.create({
   tfTypeOptionActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
   tfTypeOptionText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
   tfTypeOptionTextActive: { color: "#fff" },
+  tfSelectedChips: { gap: 6, marginBottom: 10 },
   tfSelectedMember: {
     flexDirection: "row",
     alignItems: "center",
@@ -2146,8 +2189,7 @@ const dStyles = StyleSheet.create({
     borderColor: "rgba(15,92,58,0.2)",
     borderRadius: BORDER_RADIUS.md,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
+    paddingVertical: 8,
   },
   tfSelectedMemberText: { flex: 1, fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.primary },
   tfSearchBox: {

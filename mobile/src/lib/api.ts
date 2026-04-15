@@ -2077,16 +2077,22 @@ export async function submitSingleDogRegistration(
 }
 
 /* ── Dog Ownership Change (Transfer / Lease) ──────────── */
-export type OwnershipChangeType = "Transfer" | "Lease" | "No Ownership";
+export type OwnershipChangeType =
+  | "Transfer Ownership"
+  | "Lease Ownership"
+  | "Remove Ownership";
 
 export type OwnershipChangePayload = {
   dog_id: string;
-  type: OwnershipChangeType;
-  new_owner_id?: string | null;
+  user_id: string;
+  transfer_type: OwnershipChangeType;
+  chosern_owners: string[];  // array of member IDs
+  date_from?: string;        // DD-MM-YYYY, Lease Ownership only
+  date_to?: string;          // DD-MM-YYYY, Lease Ownership only
 };
 
 export async function submitOwnershipChange(payload: OwnershipChangePayload): Promise<void> {
-  const res = await fetch(`${BASE_URL}/profile/dog-ownership`, {
+  const res = await fetch(`${BASE_URL}/profile/transfer-dog`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(payload),
