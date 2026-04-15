@@ -4,5 +4,7 @@ android/build/
 android/build/**
 android/app/build/
 android/app/build/**
+android/app/.cxx/
+android/app/.cxx/**
 .expo/
 node_modules/
