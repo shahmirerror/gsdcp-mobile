@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "./index.js",
   "scripts": {
+    "postinstall": "node scripts/patch-worklets.js",
     "start": "expo start --dev-client",
     "start:go": "expo start",
     "web": "expo start --web --port 5000",
