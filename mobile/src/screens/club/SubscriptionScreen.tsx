@@ -61,7 +61,7 @@ const FEE_CATEGORIES: {
     key: "show",
     label: "Other Services",
     icon: "ribbon-outline",
-    names: ["breed_survey_fee", "endurance_test", "online_stud_fee"],
+    names: ["breed_survey_fee", "endurance_test", "online_stud_fee", "DNA_analysis_fee", "hd_ed_fee"],
   },
 ];
 
