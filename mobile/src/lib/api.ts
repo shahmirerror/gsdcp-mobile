@@ -2100,9 +2100,9 @@ export async function submitOwnershipChange(payload: OwnershipChangePayload): Pr
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.success === false) {
     const detail =
-      json.message ??
-      json.error ??
-      (typeof json === "string" ? json : null) ??
+      json.error?.message ||
+      json.message ||
+      json.error?.code ||
       `Server error (${res.status})`;
     console.error("[transfer-dog] payload:", JSON.stringify(payload));
     console.error("[transfer-dog] response:", res.status, JSON.stringify(json));
@@ -2110,4 +2110,5 @@ export async function submitOwnershipChange(payload: OwnershipChangePayload): Pr
   }
   console.log("[transfer-dog] success — payload:", JSON.stringify(payload));
   console.log("[transfer-dog] success — response:", res.status, JSON.stringify(json));
+  console.log("[transfer-dog] result code:", json.error?.code ?? "—", "| message:", json.error?.message ?? "—");
 }
