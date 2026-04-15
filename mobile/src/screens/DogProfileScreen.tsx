@@ -38,6 +38,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 import LazyImage from "../components/LazyImage";
+import TransferDogModal from "../components/TransferDogModal";
 
 const heroBg = require("../../assets/hero-bg.png");
 
@@ -282,6 +283,7 @@ export default function DogProfileScreen() {
   );
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [showTransferForm, setShowTransferForm] = useState(false);
 
   const { data, isLoading, isError, refetch, isRefetching } =
     useQuery<DogDetail>({
@@ -552,6 +554,7 @@ export default function DogProfileScreen() {
   };
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
@@ -744,6 +747,16 @@ export default function DogProfileScreen() {
                   value={dog.microchip || "-"}
                 />
                 <OwnerSection owners={dog.owner} navigation={navigation} />
+                {viewerIsOwner && (
+                  <TouchableOpacity
+                    style={styles.transferBtn}
+                    activeOpacity={0.85}
+                    onPress={() => setShowTransferForm(true)}
+                  >
+                    <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
+                    <Text style={styles.transferBtnText}>Transfer / Lease Ownership</Text>
+                  </TouchableOpacity>
+                )}
                 <DetailItem
                   icon="build"
                   label="Breeder"
@@ -1337,6 +1350,20 @@ export default function DogProfileScreen() {
 
       <View style={{ height: 32 }} />
     </ScrollView>
+
+    <TransferDogModal
+      visible={showTransferForm}
+      onClose={() => setShowTransferForm(false)}
+      dog={data ? {
+        id: dog.id,
+        dog_name: dog.dog_name,
+        KP: dog.KP,
+        foreign_reg_no: dog.foreign_reg_no,
+      } : null}
+      userId={String(user?.id ?? "")}
+      onSuccess={() => queryClient.invalidateQueries({ queryKey: ["dog", dogId] })}
+    />
+    </>
   );
 }
 
@@ -1599,6 +1626,21 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     textDecorationLine: "underline",
   },
+
+  /* Transfer/Lease button */
+  transferBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 11,
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  transferBtnText: { color: COLORS.primary, fontSize: 14, fontWeight: "700" },
 
   /* Owner section */
   ownersToggle: {

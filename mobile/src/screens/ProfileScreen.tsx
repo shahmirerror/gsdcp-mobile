@@ -76,15 +76,14 @@ import {
   SDRProofFile,
   SDRPickedFile,
   fetchMyDogs,
-  fetchMembersPage,
-  submitOwnershipChange,
-  OwnershipChangeType,
 } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import { Switch } from "react-native";
 import LazyImage from "../components/LazyImage";
 import BottomSheetModal from "../components/BottomSheetModal";
+import TransferDogModal from "../components/TransferDogModal";
+import { CalendarDatePicker } from "../components/CalendarDatePicker";
 
 const heroBg = require("../../assets/hero-bg.png");
 
@@ -1325,6 +1324,7 @@ const DOG_HAIR_OPTS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
 
 function DogsTab({ userId }: { userId: string }) {
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
   const [search, setSearch]               = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -1335,28 +1335,13 @@ function DogsTab({ userId }: { userId: string }) {
   const [showFilters, setShowFilters]     = useState(false);
 
   // Transfer/Lease form state
-  const [showTransferForm, setShowTransferForm]   = useState(false);
-  const [transferDog, setTransferDog]             = useState<MemberOwnedDog | null>(null);
-  const [transferType, setTransferType]           = useState<OwnershipChangeType | "">("");
-  const [memberSearch, setMemberSearch]           = useState("");
-  const [debouncedMemberSearch, setDebouncedMemberSearch] = useState("");
-  const [selectedMembers, setSelectedMembers]     = useState<Member[]>([]);
-  const [memberSearchFocused, setMemberSearchFocused] = useState(false);
-  const memberBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [dateFrom, setDateFrom]                   = useState("");
-  const [dateTo, setDateTo]                       = useState("");
-  const [isSubmitting, setIsSubmitting]           = useState(false);
-  const [submitError, setSubmitError]             = useState<string | null>(null);
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [transferDog, setTransferDog]           = useState<MemberOwnedDog | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
     return () => clearTimeout(t);
   }, [search]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedMemberSearch(memberSearch.trim()), 350);
-    return () => clearTimeout(t);
-  }, [memberSearch]);
 
   const {
     data,
@@ -1377,68 +1362,14 @@ function DogsTab({ userId }: { userId: string }) {
   const dogs = data?.pages.flatMap((p) => p.dogs) ?? [];
   const isSearching = isFetching && !isFetchingNextPage && !!data;
 
-  // Member search for transfer/lease form
-  const needsMember = transferType === "Transfer Ownership" || transferType === "Lease Ownership";
-  const isLease = transferType === "Lease Ownership";
-  const { data: membersData, isLoading: membersLoading } = useQuery({
-    queryKey: ["members-search", debouncedMemberSearch],
-    queryFn: () => fetchMembersPage(1, { q: debouncedMemberSearch || undefined }),
-    enabled: showTransferForm && needsMember,
-    staleTime: 30_000,
-  });
-  const memberResults = membersData?.data ?? [];
-
-  const toggleMember = (m: Member) => {
-    setSelectedMembers((prev) =>
-      prev.some((s) => s.id === m.id) ? prev.filter((s) => s.id !== m.id) : [...prev, m]
-    );
-    if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
-    setMemberSearchFocused(false);
-    setMemberSearch("");
-    setDebouncedMemberSearch("");
-  };
-
   const openTransferForm = (dog: MemberOwnedDog) => {
-    if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
     setTransferDog(dog);
-    setTransferType("");
-    setMemberSearch("");
-    setDebouncedMemberSearch("");
-    setSelectedMembers([]);
-    setMemberSearchFocused(false);
-    setDateFrom("");
-    setDateTo("");
-    setSubmitError(null);
     setPreviewDog(null);
     setShowTransferForm(true);
   };
 
-  const isSubmitDisabled =
-    !transferType ||
-    (needsMember && selectedMembers.length === 0) ||
-    (isLease && (!dateFrom || !dateTo)) ||
-    isSubmitting;
-
-  const handleSubmitTransfer = async () => {
-    if (!transferDog || !transferType || isSubmitDisabled) return;
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      await submitOwnershipChange({
-        dog_id: transferDog.id,
-        user_id: userId,
-        transfer_type: transferType as OwnershipChangeType,
-        chosern_users: selectedMembers.map((m) => m.id),
-        ...(isLease && dateFrom ? { date_from: dateFrom } : {}),
-        ...(isLease && dateTo   ? { date_to:   dateTo   } : {}),
-      });
-      setShowTransferForm(false);
-      Alert.alert("Request Submitted", "Your ownership change request has been submitted for review.");
-    } catch (e: any) {
-      setSubmitError(e?.message ?? "Submission failed. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleTransferSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["my-dogs", userId] });
   };
 
   const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
@@ -1742,196 +1673,18 @@ function DogsTab({ userId }: { userId: string }) {
         )}
       </BottomSheetModal>
 
-      {/* Transfer / Lease Ownership form */}
-      <BottomSheetModal
+      <TransferDogModal
         visible={showTransferForm}
         onClose={() => setShowTransferForm(false)}
-        maxHeight="92%"
-      >
-        <ScrollView
-          style={{ paddingHorizontal: 24 }}
-          contentContainerStyle={{ paddingBottom: 24 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Dog header */}
-          {transferDog && (
-            <View style={dStyles.tfDogHeader}>
-              <View style={dStyles.tfDogAvatar}>
-                <Text style={dStyles.tfDogAvatarText}>
-                  {(transferDog.dog_name || "")
-                    .trim().split(" ").filter((w) => w.length > 0)
-                    .map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
-                </Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={dStyles.tfDogName} numberOfLines={1}>{transferDog.dog_name}</Text>
-                <Text style={dStyles.tfDogKP}>
-                  {transferDog.KP && transferDog.KP !== "0"
-                    ? `KP ${transferDog.KP}`
-                    : transferDog.foreign_reg_no || "—"}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          <View style={dStyles.divider} />
-
-          {/* Type selector */}
-          <Text style={dStyles.tfLabel}>Type</Text>
-          <View style={dStyles.tfTypeRow}>
-            {(["Transfer Ownership", "Lease Ownership", "Remove Ownership"] as OwnershipChangeType[]).map((t) => (
-              <TouchableOpacity
-                key={t}
-                style={[dStyles.tfTypeOption, transferType === t && dStyles.tfTypeOptionActive]}
-                onPress={() => { setTransferType(t); setSelectedMembers([]); setMemberSearch(""); setDateFrom(""); setDateTo(""); }}
-                activeOpacity={0.75}
-              >
-                <Text style={[dStyles.tfTypeOptionText, transferType === t && dStyles.tfTypeOptionTextActive]}>
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Member search — Transfer Ownership or Lease Ownership */}
-          {needsMember && (
-            <>
-              <Text style={dStyles.tfLabel}>
-                {transferType === "Transfer Ownership" ? "Transfer To" : "Lease To"}
-              </Text>
-
-              {/* Selected member chips */}
-              {selectedMembers.length > 0 && (
-                <View style={dStyles.tfSelectedChips}>
-                  {selectedMembers.map((m) => (
-                    <View key={m.id} style={dStyles.tfSelectedMember}>
-                      <Ionicons name="person-circle-outline" size={16} color={COLORS.primary} />
-                      <Text style={dStyles.tfSelectedMemberText} numberOfLines={1}>
-                        {m.member_name}{m.membership_no ? ` — ${m.membership_no}` : ""}
-                      </Text>
-                      <TouchableOpacity onPress={() => toggleMember(m)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                        <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* Search input */}
-              <View style={dStyles.tfSearchBox}>
-                <Ionicons name="search" size={15} color={COLORS.textMuted} />
-                <TextInput
-                  style={dStyles.tfSearchInput}
-                  value={memberSearch}
-                  onChangeText={setMemberSearch}
-                  placeholder="Search member by name or ID…"
-                  placeholderTextColor={COLORS.textMuted}
-                  autoCorrect={false}
-                  onFocus={() => {
-                    if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
-                    setMemberSearchFocused(true);
-                  }}
-                  onBlur={() => {
-                    memberBlurTimer.current = setTimeout(() => setMemberSearchFocused(false), 150);
-                  }}
-                />
-                {memberSearch.length > 0 && (
-                  <TouchableOpacity onPress={() => setMemberSearch("")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Ionicons name="close-circle" size={15} color={COLORS.textMuted} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Results list — only while input is focused */}
-              {memberSearchFocused && (membersLoading ? (
-                <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 12 }} />
-              ) : memberResults.length === 0 && debouncedMemberSearch.length > 0 ? (
-                <Text style={dStyles.tfNoResults}>No members found</Text>
-              ) : memberResults.length > 0 ? (
-                <View style={dStyles.tfMemberList}>
-                  {memberResults.slice(0, 8).map((m) => {
-                    const isSelected = selectedMembers.some((s) => s.id === m.id);
-                    return (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={[dStyles.tfMemberRow, isSelected && dStyles.tfMemberRowActive]}
-                        onPressIn={() => {
-                          if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
-                        }}
-                        onPress={() => toggleMember(m)}
-                        activeOpacity={0.75}
-                      >
-                        <View style={dStyles.tfMemberAvatar}>
-                          <Text style={dStyles.tfMemberAvatarText}>
-                            {(m.member_name || "?").trim().split(" ")
-                              .filter((w) => w.length > 0).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
-                          </Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={dStyles.tfMemberName} numberOfLines={1}>{m.member_name}</Text>
-                          {(m.membership_no || m.city) && (
-                            <Text style={dStyles.tfMemberMeta} numberOfLines={1}>
-                              {[m.membership_no, m.city].filter(Boolean).join(" · ")}
-                            </Text>
-                          )}
-                        </View>
-                        {isSelected
-                          ? <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
-                          : <Ionicons name="ellipse-outline" size={20} color={COLORS.border} />
-                        }
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              ) : null)}
-            </>
-          )}
-
-          {/* Lease date range */}
-          {isLease && (
-            <>
-              <CalendarDatePicker
-                label="Date From"
-                required
-                value={dateFrom}
-                onChange={setDateFrom}
-                minDate={new Date()}
-                maxDate={new Date(2100, 0, 1)}
-              />
-              <CalendarDatePicker
-                label="Date To"
-                required
-                value={dateTo}
-                onChange={setDateTo}
-                minDate={new Date()}
-                maxDate={new Date(2100, 0, 1)}
-              />
-            </>
-          )}
-
-          {/* Error */}
-          {submitError && (
-            <Text style={dStyles.tfError}>{submitError}</Text>
-          )}
-
-          {/* Submit */}
-          <TouchableOpacity
-            style={[dStyles.profileBtn, { marginTop: 18 }, isSubmitDisabled && dStyles.tfSubmitDisabled]}
-            activeOpacity={0.85}
-            onPress={handleSubmitTransfer}
-            disabled={isSubmitDisabled}
-          >
-            {isSubmitting
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <>
-                  <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-                  <Text style={dStyles.profileBtnText}>Submit Request</Text>
-                </>
-            }
-          </TouchableOpacity>
-        </ScrollView>
-      </BottomSheetModal>
+        dog={transferDog ? {
+          id: transferDog.id,
+          dog_name: transferDog.dog_name,
+          KP: transferDog.KP,
+          foreign_reg_no: transferDog.foreign_reg_no,
+        } : null}
+        userId={userId}
+        onSuccess={handleTransferSuccess}
+      />
 
     </View>
   );
@@ -2407,341 +2160,6 @@ function kpLabel(kp?: string | null, foreign?: string | null): string {
   return f || "—";
 }
 
-const CAL_MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const CAL_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-function CalendarDatePicker({
-  label,
-  required,
-  value,
-  onChange,
-  minDate,
-  maxDate,
-}: {
-  label: string;
-  required?: boolean;
-  value: string; // DD-MM-YYYY display / storage
-  onChange: (v: string) => void;
-  minDate?: Date; // no date before this may be selected (default: none)
-  maxDate?: Date; // no date after this may be selected (defaults to today)
-}) {
-  const today = new Date();
-  const max = maxDate ?? today;
-  // Normalise to start-of-day for clean comparisons
-  const maxDay = new Date(max.getFullYear(), max.getMonth(), max.getDate());
-  const minDay = minDate
-    ? new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())
-    : null;
-
-  const parseValue = (v: string): Date | null => {
-    if (!v) return null;
-    const [d, m, y] = v.split("-").map(Number);
-    return d && m && y ? new Date(y, m - 1, d) : null;
-  };
-  const selected = parseValue(value);
-  const [show, setShow] = useState(false);
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-
-  const openPicker = () => {
-    if (selected) {
-      setViewYear(selected.getFullYear());
-      setViewMonth(selected.getMonth());
-    } else if (minDay) {
-      setViewYear(minDay.getFullYear());
-      setViewMonth(minDay.getMonth());
-    } else {
-      setViewYear(maxDay.getFullYear());
-      setViewMonth(maxDay.getMonth());
-    }
-    setShow(true);
-  };
-
-  // Block navigating forward past max / backward past min
-  const atMaxMonth =
-    viewYear > maxDay.getFullYear() ||
-    (viewYear === maxDay.getFullYear() && viewMonth >= maxDay.getMonth());
-  const atMinMonth = !!minDay && (
-    viewYear < minDay.getFullYear() ||
-    (viewYear === minDay.getFullYear() && viewMonth <= minDay.getMonth())
-  );
-
-  const prevMonth = () => {
-    if (atMinMonth) return;
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((y) => y - 1);
-    } else setViewMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    if (atMaxMonth) return;
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((y) => y + 1);
-    } else setViewMonth((m) => m + 1);
-  };
-
-  const isDisabled = (day: number) => {
-    const d = new Date(viewYear, viewMonth, day);
-    if (d > maxDay) return true;
-    if (minDay && d < minDay) return true;
-    return false;
-  };
-
-  const selectDay = (day: number) => {
-    if (isDisabled(day)) return;
-    onChange(
-      `${String(day).padStart(2, "0")}-${String(viewMonth + 1).padStart(2, "0")}-${viewYear}`,
-    );
-    setShow(false);
-  };
-
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let i = 1; i <= daysInMonth; i++) cells.push(i);
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const isSel = (d: number) =>
-    selected &&
-    selected.getDate() === d &&
-    selected.getMonth() === viewMonth &&
-    selected.getFullYear() === viewYear;
-  const isTod = (d: number) =>
-    today.getDate() === d &&
-    today.getMonth() === viewMonth &&
-    today.getFullYear() === viewYear;
-
-  return (
-    <View style={{ marginBottom: 14 }}>
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: "600",
-          color: "#334155",
-          marginBottom: 5,
-        }}
-      >
-        {label}
-        {required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
-      </Text>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          borderRadius: 10,
-          backgroundColor: "#fff",
-          overflow: "hidden",
-        }}
-      >
-        <TouchableOpacity
-          onPress={openPicker}
-          activeOpacity={0.8}
-          style={{
-            flex: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-          }}
-        >
-          <Ionicons
-            name="calendar-outline"
-            size={16}
-            color={value ? COLORS.primary : COLORS.textMuted}
-          />
-          <Text
-            style={{
-              fontSize: 13,
-              color: value ? COLORS.text : COLORS.textMuted,
-            }}
-          >
-            {value || "Select date"}
-          </Text>
-        </TouchableOpacity>
-        {!!value && (
-          <TouchableOpacity
-            onPress={() => onChange("")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ paddingHorizontal: 12 }}
-          >
-            <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <Modal
-        visible={show}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShow(false)}
-      >
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.45)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-          activeOpacity={1}
-          onPress={() => setShow(false)}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => {}}
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 16,
-              padding: 16,
-              width: 300,
-            }}
-          >
-            {/* Month navigation */}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <TouchableOpacity
-                onPress={atMinMonth ? undefined : prevMonth}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={{ opacity: atMinMonth ? 0.25 : 1 }}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={22}
-                  color={COLORS.primary}
-                />
-              </TouchableOpacity>
-              <Text
-                style={{ fontSize: 15, fontWeight: "700", color: COLORS.text }}
-              >
-                {CAL_MONTHS[viewMonth]} {viewYear}
-              </Text>
-              <TouchableOpacity
-                onPress={atMaxMonth ? undefined : nextMonth}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={{ opacity: atMaxMonth ? 0.25 : 1 }}
-              >
-                <Ionicons
-                  name="chevron-forward"
-                  size={22}
-                  color={COLORS.primary}
-                />
-              </TouchableOpacity>
-            </View>
-            {/* Day-of-week headers */}
-            <View style={{ flexDirection: "row", marginBottom: 6 }}>
-              {CAL_DOW.map((d) => (
-                <Text
-                  key={d}
-                  style={{
-                    flex: 1,
-                    textAlign: "center",
-                    fontSize: 11,
-                    fontWeight: "600",
-                    color: COLORS.textMuted,
-                  }}
-                >
-                  {d}
-                </Text>
-              ))}
-            </View>
-            {/* Day grid */}
-            {Array.from({ length: cells.length / 7 }).map((_, week) => (
-              <View
-                key={week}
-                style={{ flexDirection: "row", marginBottom: 2 }}
-              >
-                {cells.slice(week * 7, week * 7 + 7).map((day, i) => {
-                  const disabled = !!day && isDisabled(day);
-                  const sel = !!day && !!isSel(day);
-                  const tod = !!day && isTod(day);
-                  return (
-                    <TouchableOpacity
-                      key={i}
-                      onPress={() => {
-                        if (day && !disabled) selectDay(day);
-                      }}
-                      activeOpacity={day && !disabled ? 0.7 : 1}
-                      style={{
-                        flex: 1,
-                        height: 36,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: 18,
-                        backgroundColor: sel
-                          ? COLORS.primary
-                          : tod
-                            ? `${COLORS.primary}18`
-                            : "transparent",
-                        opacity: disabled ? 0.3 : 1,
-                      }}
-                    >
-                      {!!day && (
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            fontWeight: sel || tod ? "700" : "400",
-                            color: sel
-                              ? "#fff"
-                              : tod
-                                ? COLORS.primary
-                                : COLORS.text,
-                          }}
-                        >
-                          {day}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ))}
-            <TouchableOpacity
-              onPress={() => setShow(false)}
-              style={{
-                marginTop: 10,
-                alignItems: "center",
-                paddingVertical: 8,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: COLORS.textMuted,
-                }}
-              >
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-    </View>
-  );
-}
 
 /* Highlight the matched portion of a string */
 function HighlightText({
