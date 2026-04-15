@@ -1746,8 +1746,14 @@ function DogsTab({ userId }: { userId: string }) {
       <BottomSheetModal
         visible={showTransferForm}
         onClose={() => setShowTransferForm(false)}
+        maxHeight="92%"
       >
-        <View style={dStyles.modalContent}>
+        <ScrollView
+          style={{ paddingHorizontal: 24 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {/* Dog header */}
           {transferDog && (
             <View style={dStyles.tfDogHeader}>
@@ -1924,7 +1930,7 @@ function DogsTab({ userId }: { userId: string }) {
                 </>
             }
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </BottomSheetModal>
 
     </View>
