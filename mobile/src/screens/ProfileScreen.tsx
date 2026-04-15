@@ -1392,6 +1392,10 @@ function DogsTab({ userId }: { userId: string }) {
     setSelectedMembers((prev) =>
       prev.some((s) => s.id === m.id) ? prev.filter((s) => s.id !== m.id) : [...prev, m]
     );
+    if (memberBlurTimer.current) clearTimeout(memberBlurTimer.current);
+    setMemberSearchFocused(false);
+    setMemberSearch("");
+    setDebouncedMemberSearch("");
   };
 
   const openTransferForm = (dog: MemberOwnedDog) => {
