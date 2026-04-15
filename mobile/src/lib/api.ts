@@ -1114,6 +1114,8 @@ export type FeeItem = {
   option_value: string;
   remarks: string | null;
   explanation: string | null;
+  account_id: string | null;
+  access: string | null;
 };
 
 export async function fetchAbout(): Promise<AboutItem[]> {
@@ -2074,4 +2076,41 @@ export async function submitSingleDogRegistration(
   if (json.success === false) {
     throw new Error(json.error?.message ?? json.message ?? "Submission failed. Please try again.");
   }
+}
+
+/* ── Dog Ownership Change (Transfer / Lease) ──────────── */
+export type OwnershipChangeType =
+  | "Transfer Ownership"
+  | "Lease Ownership"
+  | "Remove Ownership";
+
+export type OwnershipChangePayload = {
+  dog_id: string;
+  user_id: string;
+  transfer_type: OwnershipChangeType;
+  chosern_users: string[];   // array of member IDs (field name the API reads)
+  date_from?: string;        // DD-MM-YYYY, Lease Ownership only
+  date_to?: string;          // DD-MM-YYYY, Lease Ownership only
+};
+
+export async function submitOwnershipChange(payload: OwnershipChangePayload): Promise<void> {
+  const res = await fetch(`${BASE_URL}/profile-transfer-dog`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || json.success === false) {
+    const detail =
+      json.error?.message ||
+      json.message ||
+      json.error?.code ||
+      `Server error (${res.status})`;
+    console.error("[transfer-dog] payload:", JSON.stringify(payload));
+    console.error("[transfer-dog] response:", res.status, JSON.stringify(json));
+    throw new Error(detail);
+  }
+  console.log("[transfer-dog] success — payload:", JSON.stringify(payload));
+  console.log("[transfer-dog] success — response:", res.status, JSON.stringify(json));
+  console.log("[transfer-dog] result code:", json.error?.code ?? "—", "| message:", json.error?.message ?? "—");
 }

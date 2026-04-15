@@ -82,6 +82,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { Switch } from "react-native";
 import LazyImage from "../components/LazyImage";
 import BottomSheetModal from "../components/BottomSheetModal";
+import TransferDogModal from "../components/TransferDogModal";
+import { CalendarDatePicker } from "../components/CalendarDatePicker";
 
 const heroBg = require("../../assets/hero-bg.png");
 
@@ -1320,13 +1322,10 @@ const kStyles = StyleSheet.create({
 const DOG_GENDER_OPTS = ["All", "Male", "Female"] as const;
 const DOG_HAIR_OPTS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
 
-function DogsTab({
-  userId,
-  onDogPress,
-}: {
-  userId: string;
-  onDogPress: (d: MemberOwnedDog) => void;
-}) {
+function DogsTab({ userId }: { userId: string }) {
+  const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
+  const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
   const [search, setSearch]               = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [genderF, setGenderF]             = useState("All");
@@ -1334,6 +1333,10 @@ function DogsTab({
   const [tempGender, setTempGender]       = useState("All");
   const [tempHair,   setTempHair]         = useState("All");
   const [showFilters, setShowFilters]     = useState(false);
+
+  // Transfer/Lease form state
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [transferDog, setTransferDog]           = useState<MemberOwnedDog | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -1358,6 +1361,16 @@ function DogsTab({
 
   const dogs = data?.pages.flatMap((p) => p.dogs) ?? [];
   const isSearching = isFetching && !isFetchingNextPage && !!data;
+
+  const openTransferForm = (dog: MemberOwnedDog) => {
+    setTransferDog(dog);
+    setPreviewDog(null);
+    setShowTransferForm(true);
+  };
+
+  const handleTransferSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ["my-dogs", userId] });
+  };
 
   const activeFilterCount = (genderF !== "All" ? 1 : 0) + (hairF !== "All" ? 1 : 0);
 
@@ -1491,7 +1504,7 @@ function DogsTab({
             <DogListItem
               key={dog.id}
               dog={toListDog(dog)}
-              onPress={() => onDogPress(dog)}
+              onPress={() => setPreviewDog(dog)}
             />
           ))}
           {hasNextPage && (
@@ -1561,6 +1574,117 @@ function DogsTab({
           </TouchableOpacity>
         </View>
       </BottomSheetModal>
+
+      {/* Dog preview popup */}
+      <BottomSheetModal
+        visible={!!previewDog}
+        onClose={() => setPreviewDog(null)}
+      >
+        {previewDog && (
+          <View style={dStyles.modalContent}>
+            {/* Header: image + name + KP + titles */}
+            <View style={dStyles.previewHeader}>
+              {previewDog.imageUrl ? (
+                <LazyImage
+                  source={{ uri: previewDog.imageUrl }}
+                  style={dStyles.previewImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={dStyles.previewAvatar}>
+                  <Text style={dStyles.previewAvatarText}>
+                    {(previewDog.dog_name || "")
+                      .trim()
+                      .split(" ")
+                      .filter((w) => w.length > 0)
+                      .map((w) => w[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase() || "?"}
+                  </Text>
+                </View>
+              )}
+              <View style={dStyles.previewHeadInfo}>
+                <Text style={dStyles.previewName} numberOfLines={2}>
+                  {previewDog.dog_name}
+                </Text>
+                <Text style={dStyles.previewKP}>
+                  {previewDog.KP && previewDog.KP !== "0"
+                    ? `KP ${previewDog.KP}`
+                    : previewDog.foreign_reg_no || "—"}
+                </Text>
+                {previewDog.titles && previewDog.titles.length > 0 && (
+                  <View style={dStyles.titlesRow}>
+                    {previewDog.titles.slice(0, 3).map((t) => (
+                      <View key={t} style={dStyles.titleBadge}>
+                        <Text style={dStyles.titleBadgeText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={dStyles.divider} />
+
+            {/* Details grid */}
+            <View style={dStyles.infoGrid}>
+              {[
+                { label: "Sex",           value: previewDog.sex },
+                { label: "Color",         value: previewDog.color },
+                { label: "Hair",          value: previewDog.hair },
+                { label: "Date of Birth", value: formatDate(previewDog.dob) },
+                { label: "Sire",          value: previewDog.sire },
+                { label: "Dam",           value: previewDog.dam },
+                { label: "Breeder",       value: previewDog.breeder },
+              ]
+                .filter((r) => r.value)
+                .map((r) => (
+                  <View key={r.label} style={dStyles.infoRow}>
+                    <Text style={dStyles.infoLabel}>{r.label}</Text>
+                    <Text style={dStyles.infoValue} numberOfLines={2}>{r.value}</Text>
+                  </View>
+                ))}
+            </View>
+
+            {/* View Full Profile */}
+            <TouchableOpacity
+              style={dStyles.profileBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                setPreviewDog(null);
+                navigation.push("DogProfile", { id: previewDog.id, name: previewDog.dog_name });
+              }}
+            >
+              <Ionicons name="paw" size={16} color="#fff" />
+              <Text style={dStyles.profileBtnText}>View Full Profile</Text>
+            </TouchableOpacity>
+
+            {/* Transfer / Lease Ownership */}
+            <TouchableOpacity
+              style={dStyles.transferBtn}
+              activeOpacity={0.85}
+              onPress={() => openTransferForm(previewDog)}
+            >
+              <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
+              <Text style={dStyles.transferBtnText}>Transfer / Lease Ownership</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </BottomSheetModal>
+
+      <TransferDogModal
+        visible={showTransferForm}
+        onClose={() => setShowTransferForm(false)}
+        dog={transferDog ? {
+          id: transferDog.id,
+          dog_name: transferDog.dog_name,
+          KP: transferDog.KP,
+          foreign_reg_no: transferDog.foreign_reg_no,
+        } : null}
+        userId={userId}
+        onSuccess={handleTransferSuccess}
+      />
 
     </View>
   );
@@ -1781,6 +1905,123 @@ const dStyles = StyleSheet.create({
     paddingVertical: 14,
   },
   profileBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  transferBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 13,
+    marginTop: 10,
+  },
+  transferBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: "700" },
+
+  // Transfer form styles
+  tfDogHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 14,
+  },
+  tfDogAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  tfDogAvatarText: { color: COLORS.primary, fontWeight: "700", fontSize: 16 },
+  tfDogName: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  tfDogKP: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginTop: 2 },
+  tfLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    marginTop: 16,
+  },
+  tfTypeRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  tfTypeOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  tfTypeOptionActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
+  tfTypeOptionText: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
+  tfTypeOptionTextActive: { color: "#fff" },
+  tfSelectedChips: { gap: 6, marginBottom: 10 },
+  tfSelectedMember: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(15,92,58,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(15,92,58,0.2)",
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  tfSelectedMemberText: { flex: 1, fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.primary },
+  tfSearchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  tfSearchInput: { flex: 1, height: 40, fontSize: FONT_SIZES.sm, color: COLORS.text },
+  tfNoResults: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, textAlign: "center", marginVertical: 12 },
+  tfMemberList: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: "hidden",
+    marginBottom: 4,
+  },
+  tfMemberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    backgroundColor: "#fff",
+  },
+  tfMemberRowActive: { backgroundColor: "rgba(15,92,58,0.05)" },
+  tfMemberAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  tfMemberAvatarText: { color: COLORS.primary, fontWeight: "700", fontSize: 12 },
+  tfMemberName: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
+  tfMemberMeta: { fontSize: FONT_SIZES.xs, color: COLORS.textMuted, marginTop: 1 },
+  tfError: {
+    fontSize: FONT_SIZES.sm,
+    color: "#DC2626",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  tfSubmitDisabled: { opacity: 0.45 },
 });
 
 /* ── Reusable: list header with "+ New" button ────────── */
@@ -1919,322 +2160,6 @@ function kpLabel(kp?: string | null, foreign?: string | null): string {
   return f || "—";
 }
 
-const CAL_MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const CAL_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-function CalendarDatePicker({
-  label,
-  required,
-  value,
-  onChange,
-  maxDate,
-}: {
-  label: string;
-  required?: boolean;
-  value: string; // DD-MM-YYYY display / storage
-  onChange: (v: string) => void;
-  maxDate?: Date; // no date after this may be selected (defaults to today)
-}) {
-  const today = new Date();
-  const max = maxDate ?? today;
-  // Normalise max to start-of-day for clean comparisons
-  const maxDay = new Date(max.getFullYear(), max.getMonth(), max.getDate());
-
-  const parseValue = (v: string): Date | null => {
-    if (!v) return null;
-    const [d, m, y] = v.split("-").map(Number);
-    return d && m && y ? new Date(y, m - 1, d) : null;
-  };
-  const selected = parseValue(value);
-  const [show, setShow] = useState(false);
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-
-  const openPicker = () => {
-    if (selected) {
-      setViewYear(selected.getFullYear());
-      setViewMonth(selected.getMonth());
-    } else {
-      setViewYear(maxDay.getFullYear());
-      setViewMonth(maxDay.getMonth());
-    }
-    setShow(true);
-  };
-
-  // Block navigating forward past the max month
-  const atMaxMonth =
-    viewYear > maxDay.getFullYear() ||
-    (viewYear === maxDay.getFullYear() && viewMonth >= maxDay.getMonth());
-
-  const prevMonth = () => {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear((y) => y - 1);
-    } else setViewMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    if (atMaxMonth) return;
-    if (viewMonth === 11) {
-      setViewMonth(0);
-      setViewYear((y) => y + 1);
-    } else setViewMonth((m) => m + 1);
-  };
-
-  const isFuture = (day: number) => new Date(viewYear, viewMonth, day) > maxDay;
-
-  const selectDay = (day: number) => {
-    if (isFuture(day)) return;
-    onChange(
-      `${String(day).padStart(2, "0")}-${String(viewMonth + 1).padStart(2, "0")}-${viewYear}`,
-    );
-    setShow(false);
-  };
-
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) cells.push(null);
-  for (let i = 1; i <= daysInMonth; i++) cells.push(i);
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const isSel = (d: number) =>
-    selected &&
-    selected.getDate() === d &&
-    selected.getMonth() === viewMonth &&
-    selected.getFullYear() === viewYear;
-  const isTod = (d: number) =>
-    today.getDate() === d &&
-    today.getMonth() === viewMonth &&
-    today.getFullYear() === viewYear;
-
-  return (
-    <View style={{ marginBottom: 14 }}>
-      <Text
-        style={{
-          fontSize: 13,
-          fontWeight: "600",
-          color: "#334155",
-          marginBottom: 5,
-        }}
-      >
-        {label}
-        {required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
-      </Text>
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          borderWidth: 1,
-          borderColor: COLORS.border,
-          borderRadius: 10,
-          backgroundColor: "#fff",
-          overflow: "hidden",
-        }}
-      >
-        <TouchableOpacity
-          onPress={openPicker}
-          activeOpacity={0.8}
-          style={{
-            flex: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-          }}
-        >
-          <Ionicons
-            name="calendar-outline"
-            size={16}
-            color={value ? COLORS.primary : COLORS.textMuted}
-          />
-          <Text
-            style={{
-              fontSize: 13,
-              color: value ? COLORS.text : COLORS.textMuted,
-            }}
-          >
-            {value || "Select date"}
-          </Text>
-        </TouchableOpacity>
-        {!!value && (
-          <TouchableOpacity
-            onPress={() => onChange("")}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ paddingHorizontal: 12 }}
-          >
-            <Ionicons name="close-circle" size={16} color={COLORS.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <Modal
-        visible={show}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShow(false)}
-      >
-        <TouchableOpacity
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.45)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-          activeOpacity={1}
-          onPress={() => setShow(false)}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => {}}
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 16,
-              padding: 16,
-              width: 300,
-            }}
-          >
-            {/* Month navigation */}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 14,
-              }}
-            >
-              <TouchableOpacity
-                onPress={prevMonth}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={22}
-                  color={COLORS.primary}
-                />
-              </TouchableOpacity>
-              <Text
-                style={{ fontSize: 15, fontWeight: "700", color: COLORS.text }}
-              >
-                {CAL_MONTHS[viewMonth]} {viewYear}
-              </Text>
-              <TouchableOpacity
-                onPress={atMaxMonth ? undefined : nextMonth}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={{ opacity: atMaxMonth ? 0.25 : 1 }}
-              >
-                <Ionicons
-                  name="chevron-forward"
-                  size={22}
-                  color={COLORS.primary}
-                />
-              </TouchableOpacity>
-            </View>
-            {/* Day-of-week headers */}
-            <View style={{ flexDirection: "row", marginBottom: 6 }}>
-              {CAL_DOW.map((d) => (
-                <Text
-                  key={d}
-                  style={{
-                    flex: 1,
-                    textAlign: "center",
-                    fontSize: 11,
-                    fontWeight: "600",
-                    color: COLORS.textMuted,
-                  }}
-                >
-                  {d}
-                </Text>
-              ))}
-            </View>
-            {/* Day grid */}
-            {Array.from({ length: cells.length / 7 }).map((_, week) => (
-              <View
-                key={week}
-                style={{ flexDirection: "row", marginBottom: 2 }}
-              >
-                {cells.slice(week * 7, week * 7 + 7).map((day, i) => {
-                  const future = !!day && isFuture(day);
-                  const sel = !!day && !!isSel(day);
-                  const tod = !!day && isTod(day);
-                  return (
-                    <TouchableOpacity
-                      key={i}
-                      onPress={() => {
-                        if (day && !future) selectDay(day);
-                      }}
-                      activeOpacity={day && !future ? 0.7 : 1}
-                      style={{
-                        flex: 1,
-                        height: 36,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: 18,
-                        backgroundColor: sel
-                          ? COLORS.primary
-                          : tod
-                            ? `${COLORS.primary}18`
-                            : "transparent",
-                        opacity: future ? 0.3 : 1,
-                      }}
-                    >
-                      {!!day && (
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            fontWeight: sel || tod ? "700" : "400",
-                            color: sel
-                              ? "#fff"
-                              : tod
-                                ? COLORS.primary
-                                : COLORS.text,
-                          }}
-                        >
-                          {day}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ))}
-            <TouchableOpacity
-              onPress={() => setShow(false)}
-              style={{
-                marginTop: 10,
-                alignItems: "center",
-                paddingVertical: 8,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: "600",
-                  color: COLORS.textMuted,
-                }}
-              >
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-    </View>
-  );
-}
 
 /* Highlight the matched portion of a string */
 function HighlightText({
@@ -6806,12 +6731,7 @@ export default function ProfileScreen() {
         return <KennelTab kennel={kennel} navigation={navigation} refetch={refetch} memberId={user.member_id} />;
       case "dogs":
         return (
-          <DogsTab
-            userId={String(user.member_id)}
-            onDogPress={(dog) =>
-              navigation.push("DogProfile", { id: dog.id, name: dog.dog_name })
-            }
-          />
+          <DogsTab userId={String(user.member_id)} />
         );
       case "stud":
         return <StudCertTab />;

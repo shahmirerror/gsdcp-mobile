@@ -36,6 +36,9 @@ mobile/                      # Main app directory
     components/
       DogListItem.tsx        # Dog card for FlatList
       PedigreeTree.tsx       # 4-generation pedigree with clickable ancestors
+      CalendarDatePicker.tsx # Shared date picker (DD-MM-YYYY, minDate/maxDate support)
+      TransferDogModal.tsx   # Reusable ownership transfer/lease modal (used in ProfileScreen DogsTab + DogProfileScreen)
+      BottomSheetModal.tsx   # Animated bottom sheet modal
     lib/
       api.ts                 # API functions and TypeScript types
       theme.ts               # GSDCP brand colors, spacing, typography
