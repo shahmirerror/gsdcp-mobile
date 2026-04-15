@@ -298,7 +298,7 @@ export default function TransferDogModal({ visible, onClose, dog, userId, onSucc
             ? <ActivityIndicator size="small" color="#fff" />
             : <>
                 <Ionicons name="checkmark-circle-outline" size={16} color="#fff" />
-                <Text style={s.submitBtnText}>Submit Request</Text>
+                <Text style={s.submitBtnText}>Confirm</Text>
               </>
           }
         </TouchableOpacity>
