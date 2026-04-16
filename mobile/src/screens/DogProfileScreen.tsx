@@ -415,9 +415,7 @@ export default function DogProfileScreen() {
     { key: "progeny", label: "Progeny", icon: "paw-outline" as const },
     { key: "shows", label: "Shows", icon: "ribbon-outline" as const },
     { key: "health", label: "HD/ED", icon: "medkit-outline" as const },
-    ...(breedSurvey
-      ? [{ key: "breedSurvey" as const, label: "Breed Survey", icon: "clipboard-outline" as const }]
-      : []),
+    { key: "breedSurvey" as const, label: "Breed Survey", icon: "clipboard-outline" as const },
   ];
 
   // ── HD/ED tab helpers (defined outside JSX to avoid IIFE-inside-JSX parser issues) ──
@@ -1352,6 +1350,16 @@ export default function DogProfileScreen() {
           ))}
 
         {activeTab === "health" ? renderHealthContent() : null}
+
+        {activeTab === "breedSurvey" && !breedSurvey && (
+          <View style={styles.emptyState}>
+            <Ionicons name="clipboard-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
+            <Text style={styles.emptyTitle}>No Breed Survey</Text>
+            <Text style={styles.emptyDesc}>
+              This dog does not have a breed survey on record.
+            </Text>
+          </View>
+        )}
 
         {activeTab === "breedSurvey" && breedSurvey && (() => {
           const gi = breedSurvey.general_information ?? {};
