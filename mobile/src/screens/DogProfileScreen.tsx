@@ -1354,7 +1354,7 @@ export default function DogProfileScreen() {
         {activeTab === "breedSurvey" && !breedSurvey && (
           <View style={styles.emptyState}>
             <Ionicons name="clipboard-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
-            <Text style={styles.emptyTitle}>No Breed Survey</Text>
+            <Text style={styles.emptyTitle}>Breed Survey Not Done</Text>
             <Text style={styles.emptyDesc}>
               This dog does not have a breed survey on record.
             </Text>
