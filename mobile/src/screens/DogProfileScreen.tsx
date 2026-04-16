@@ -25,6 +25,7 @@ import {
   fetchDog,
   uploadDogPhoto,
   DogDetail,
+  BreedSurveyData,
   Pedigree,
   Dog,
   DogOwner,
@@ -266,7 +267,8 @@ type TabKey =
   | "siblings"
   | "progeny"
   | "shows"
-  | "health";
+  | "health"
+  | "breedSurvey";
 
 export default function DogProfileScreen() {
   const route = useRoute<any>();
@@ -381,6 +383,8 @@ export default function DogProfileScreen() {
   const lineBreeding = data.line_breeding ?? [];
   const progeny = data.progeny ?? [];
   const viewerIsOwner = data.viewer_is_owner === true;
+  const breedSurvey: BreedSurveyData | null =
+    data.breedSurvey && !Array.isArray(data.breedSurvey) ? data.breedSurvey : null;
 
   const initials = dog.dog_name
     .split(" ")
@@ -411,6 +415,9 @@ export default function DogProfileScreen() {
     { key: "progeny", label: "Progeny", icon: "paw-outline" as const },
     { key: "shows", label: "Shows", icon: "ribbon-outline" as const },
     { key: "health", label: "HD/ED", icon: "medkit-outline" as const },
+    ...(breedSurvey
+      ? [{ key: "breedSurvey" as const, label: "Breed Survey", icon: "clipboard-outline" as const }]
+      : []),
   ];
 
   // ── HD/ED tab helpers (defined outside JSX to avoid IIFE-inside-JSX parser issues) ──
@@ -1346,6 +1353,171 @@ export default function DogProfileScreen() {
 
         {activeTab === "health" ? renderHealthContent() : null}
 
+        {activeTab === "breedSurvey" && breedSurvey && (() => {
+          const gi = breedSurvey.general_information ?? {};
+          const assessment = breedSurvey.assessment_during_stand_and_while_moving ?? {};
+          const assessmentEntries = Object.entries(assessment).filter(
+            ([, v]) => v != null && String(v).trim() !== "" && String(v).trim().toLowerCase() !== "not applicable"
+          );
+          const labelMap: Record<string, string> = {
+            gender_characteristics: "Gender Characteristics",
+            constitution: "Constitution",
+            expression: "Expression",
+            proportions: "Proportions",
+            bones: "Bones",
+            musculature: "Musculature",
+            "stand_and_limbs_-_front": "Stand & Limbs (Front)",
+            "stand_and_limbs_-_rear": "Stand & Limbs (Rear)",
+            back: "Back",
+            elbow_closure: "Elbow Closure",
+            front_pastern_firmness: "Front Pastern Firmness",
+            front: "Front",
+            croup: "Croup",
+            hock_firmness: "Hock Firmness",
+            gait: "Gait",
+            trot_front: "Trot (Front)",
+            trot_hind_thrust: "Trot (Hind Thrust)",
+            nails: "Nails",
+            feet: "Feet",
+            head: "Head",
+            eye_color: "Eye Color",
+            upper_jaw: "Upper Jaw",
+            lower_jaw: "Lower Jaw",
+            bite: "Bite",
+            teeth_faults: "Teeth Faults",
+            neutered: "Neutered",
+          };
+
+          const surveyPeriod = (() => {
+            const from = breedSurvey.survey_date_from?.trim();
+            const to = breedSurvey.survey_date_to?.trim();
+            if (from && to && from === to) return from;
+            if (from && to) return `${from} – ${to}`;
+            return from || to || null;
+          })();
+
+          const hasHeight = gi.height_at_withers && parseFloat(gi.height_at_withers) > 0;
+          const hasDepth = gi.depth_of_chest && parseFloat(gi.depth_of_chest) > 0;
+          const hasChest = gi.chest_circumference && parseFloat(gi.chest_circumference) > 0;
+          const hasWeight = gi.weight && parseFloat(gi.weight) > 0;
+
+          return (
+            <>
+              {/* Survey Meta */}
+              {(surveyPeriod || breedSurvey.breed_surveyor) && (
+                <View style={styles.bsMetaCard}>
+                  {surveyPeriod && (
+                    <View style={styles.bsMetaRow}>
+                      <Ionicons name="calendar-outline" size={15} color={COLORS.primary} />
+                      <Text style={styles.bsMetaLabel}>Survey Period</Text>
+                      <Text style={styles.bsMetaValue}>{surveyPeriod}</Text>
+                    </View>
+                  )}
+                  {breedSurvey.breed_surveyor && breedSurvey.breed_surveyor.trim() !== "" && (
+                    <View style={[styles.bsMetaRow, surveyPeriod ? styles.bsMetaRowBorder : null]}>
+                      <Ionicons name="person-outline" size={15} color={COLORS.primary} />
+                      <Text style={styles.bsMetaLabel}>Breed Surveyor</Text>
+                      <Text style={styles.bsMetaValue}>{breedSurvey.breed_surveyor}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Quick Stats: Hip / Elbows / DNA */}
+              <View style={styles.bsStatsRow}>
+                {breedSurvey.hip && (
+                  <View style={styles.bsStatChip}>
+                    <Text style={styles.bsStatChipLabel}>Hip</Text>
+                    <Text style={styles.bsStatChipValue}>{breedSurvey.hip}</Text>
+                  </View>
+                )}
+                {breedSurvey.elbows && (
+                  <View style={styles.bsStatChip}>
+                    <Text style={styles.bsStatChipLabel}>Elbows</Text>
+                    <Text style={styles.bsStatChipValue}>{breedSurvey.elbows}</Text>
+                  </View>
+                )}
+                {breedSurvey.dna_status && (
+                  <View style={styles.bsStatChip}>
+                    <Text style={styles.bsStatChipLabel}>DNA</Text>
+                    <Text style={styles.bsStatChipValue}>{breedSurvey.dna_status}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* General Information */}
+              {(hasHeight || hasDepth || hasChest || hasWeight || gi["color_&_markings"] || gi.hair) && (
+                <View style={styles.card}>
+                  <Text style={styles.cardHeading}>General Information</Text>
+                  <View style={styles.detailsGrid}>
+                    {hasHeight && (
+                      <DetailItem icon="resize-outline" label="Height at Withers" value={`${parseFloat(gi.height_at_withers!).toFixed(1)} cm`} />
+                    )}
+                    {hasDepth && (
+                      <DetailItem icon="arrow-down-outline" label="Depth of Chest" value={`${parseFloat(gi.depth_of_chest!).toFixed(1)} cm`} />
+                    )}
+                    {hasChest && (
+                      <DetailItem icon="ellipse-outline" label="Chest Circumference" value={`${gi.chest_circumference} cm`} />
+                    )}
+                    {hasWeight && (
+                      <DetailItem icon="barbell-outline" label="Weight" value={`${parseFloat(gi.weight!).toFixed(1)} kg`} />
+                    )}
+                    {gi["color_&_markings"] && gi["color_&_markings"].trim() !== "" && (
+                      <DetailItem icon="color-palette-outline" label="Color & Markings" value={gi["color_&_markings"]} />
+                    )}
+                    {gi.hair && gi.hair.trim() !== "" && (
+                      <DetailItem icon="sparkles-outline" label="Hair" value={gi.hair} />
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* Breed Survey Report */}
+              {breedSurvey.breed_survey_report && breedSurvey.breed_survey_report.trim() !== "" && (
+                <View style={styles.card}>
+                  <Text style={styles.cardHeading}>Breed Survey Report</Text>
+                  <Text style={styles.bsReportText}>{breedSurvey.breed_survey_report.trim()}</Text>
+                </View>
+              )}
+
+              {/* Assessment */}
+              {assessmentEntries.length > 0 && (
+                <View style={styles.card}>
+                  <Text style={styles.cardHeading}>Assessment (Stand & Movement)</Text>
+                  {assessmentEntries.map(([key, val], i) => (
+                    <View
+                      key={key}
+                      style={[styles.bsAssessRow, i < assessmentEntries.length - 1 && styles.bsAssessRowBorder]}
+                    >
+                      <Text style={styles.bsAssessKey}>{labelMap[key] ?? key.replace(/_/g, " ")}</Text>
+                      <Text style={styles.bsAssessVal}>{String(val)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Particular Virtues & Faults */}
+              {breedSurvey.particular_virtues_and_faults && breedSurvey.particular_virtues_and_faults.trim() !== "" && (
+                <View style={styles.card}>
+                  <Text style={styles.cardHeading}>Virtues & Faults</Text>
+                  <Text style={styles.bsReportText}>{breedSurvey.particular_virtues_and_faults.trim()}</Text>
+                </View>
+              )}
+
+              {/* Advice */}
+              {breedSurvey["advice,_recommendations_&_warnings_for_selection_of_a_breeding_partner"] &&
+                breedSurvey["advice,_recommendations_&_warnings_for_selection_of_a_breeding_partner"].trim() !== "" && (
+                <View style={styles.card}>
+                  <Text style={styles.cardHeading}>Advice & Recommendations</Text>
+                  <Text style={styles.bsReportText}>
+                    {breedSurvey["advice,_recommendations_&_warnings_for_selection_of_a_breeding_partner"].trim()}
+                  </Text>
+                </View>
+              )}
+            </>
+          );
+        })()}
+
       </View>
 
       <View style={{ height: 32 }} />
@@ -2168,5 +2340,98 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  bsMetaCard: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    backgroundColor: "#fff",
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  bsMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  bsMetaRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  bsMetaLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  bsMetaValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text,
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  bsStatsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  bsStatChip: {
+    flex: 1,
+    minWidth: 90,
+    backgroundColor: "#fff",
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: "center",
+  },
+  bsStatChipLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  bsStatChipValue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primaryDark,
+    textAlign: "center",
+  },
+  bsReportText: {
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 22,
+  },
+  bsAssessRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: 9,
+    gap: 12,
+  },
+  bsAssessRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  bsAssessKey: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    textTransform: "capitalize",
+  },
+  bsAssessVal: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text,
+    textAlign: "right",
   },
 });

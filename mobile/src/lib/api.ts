@@ -282,8 +282,32 @@ export type HereditaryData = {
   dam?: HereditaryGrades | null;
 };
 
+export type BreedSurveyGeneralInfo = {
+  height_at_withers: string | null;
+  depth_of_chest: string | null;
+  chest_circumference: string | null;
+  weight: string | null;
+  "color_&_markings": string | null;
+  hair: string | null;
+};
+
+export type BreedSurveyData = {
+  general_information: BreedSurveyGeneralInfo;
+  breed_survey_report: string | null;
+  particular_virtues_and_faults: string | null;
+  assessment_during_stand_and_while_moving: Record<string, string | null>;
+  hip: string | null;
+  elbows: string | null;
+  dna_status: string | null;
+  "advice,_recommendations_&_warnings_for_selection_of_a_breeding_partner": string | null;
+  breed_surveyor: string | null;
+  survey_date_from: string | null;
+  survey_date_to: string | null;
+};
+
 export type DogDetail = {
   dog: Dog;
+  breedSurvey?: BreedSurveyData | null;
   showResults: ShowResult[];
   pedigree: Pedigree | any[];
   siblings: Dog[];
