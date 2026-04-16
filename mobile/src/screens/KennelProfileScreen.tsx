@@ -130,7 +130,7 @@ function MatingRow({
   );
 }
 
-type TabKey = "info" | "matings";
+type TabKey = "info" | "litters";
 
 export default function KennelProfileScreen() {
   const route = useRoute<any>();
@@ -195,7 +195,7 @@ export default function KennelProfileScreen() {
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
-    { key: "matings", label: "Matings", count: matings.length },
+    { key: "litters", label: "Litters", count: matings.length },
   ];
 
   return (
@@ -301,7 +301,7 @@ export default function KennelProfileScreen() {
                 ) : null}
                 <DetailItem
                   icon="heart"
-                  label="Total Matings"
+                  label="Total Litters"
                   value={String(matings.length)}
                 />
               </View>
@@ -443,7 +443,7 @@ export default function KennelProfileScreen() {
           </>
         )}
 
-        {activeTab === "matings" &&
+        {activeTab === "litters" &&
           (matings.length > 0 ? (
             <View style={{ gap: 12 }}>
               {matings.map((m, i) => (
@@ -470,9 +470,9 @@ export default function KennelProfileScreen() {
               <View style={styles.emptyIconWrap}>
                 <Ionicons name="heart-outline" size={32} color={COLORS.primary} />
               </View>
-              <Text style={styles.emptyTitle}>No Matings Recorded</Text>
+              <Text style={styles.emptyTitle}>No Litters Recorded</Text>
               <Text style={styles.emptyDesc}>
-                No matings have been recorded for this kennel yet.
+                No litters have been recorded for this kennel yet.
               </Text>
             </View>
           ))}
