@@ -1364,8 +1364,11 @@ export default function DogProfileScreen() {
         {activeTab === "breedSurvey" && breedSurvey && (() => {
           const gi = breedSurvey.general_information ?? {};
           const assessment = breedSurvey.assessment_during_stand_and_while_moving ?? {};
+          const isNA = (v: string | null | undefined) =>
+            !v || v.trim() === "" || v.trim().toLowerCase() === "not applicable";
+
           const assessmentEntries = Object.entries(assessment).filter(
-            ([, v]) => v != null && String(v).trim() !== "" && String(v).trim().toLowerCase() !== "not applicable"
+            ([, v]) => !isNA(v as string | null)
           );
           const labelMap: Record<string, string> = {
             gender_characteristics: "Gender Characteristics",
@@ -1432,26 +1435,28 @@ export default function DogProfileScreen() {
               )}
 
               {/* Quick Stats: Hip / Elbows / DNA */}
-              <View style={styles.bsStatsRow}>
-                {breedSurvey.hip && (
-                  <View style={styles.bsStatChip}>
-                    <Text style={styles.bsStatChipLabel}>Hip</Text>
-                    <Text style={styles.bsStatChipValue}>{breedSurvey.hip}</Text>
-                  </View>
-                )}
-                {breedSurvey.elbows && (
-                  <View style={styles.bsStatChip}>
-                    <Text style={styles.bsStatChipLabel}>Elbows</Text>
-                    <Text style={styles.bsStatChipValue}>{breedSurvey.elbows}</Text>
-                  </View>
-                )}
-                {breedSurvey.dna_status && (
-                  <View style={styles.bsStatChip}>
-                    <Text style={styles.bsStatChipLabel}>DNA</Text>
-                    <Text style={styles.bsStatChipValue}>{breedSurvey.dna_status}</Text>
-                  </View>
-                )}
-              </View>
+              {(!isNA(breedSurvey.hip) || !isNA(breedSurvey.elbows) || !isNA(breedSurvey.dna_status)) && (
+                <View style={styles.bsStatsRow}>
+                  {!isNA(breedSurvey.hip) && (
+                    <View style={styles.bsStatChip}>
+                      <Text style={styles.bsStatChipLabel}>Hip</Text>
+                      <Text style={styles.bsStatChipValue}>{breedSurvey.hip}</Text>
+                    </View>
+                  )}
+                  {!isNA(breedSurvey.elbows) && (
+                    <View style={styles.bsStatChip}>
+                      <Text style={styles.bsStatChipLabel}>Elbows</Text>
+                      <Text style={styles.bsStatChipValue}>{breedSurvey.elbows}</Text>
+                    </View>
+                  )}
+                  {!isNA(breedSurvey.dna_status) && (
+                    <View style={styles.bsStatChip}>
+                      <Text style={styles.bsStatChipLabel}>DNA</Text>
+                      <Text style={styles.bsStatChipValue}>{breedSurvey.dna_status}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* General Information */}
               {(hasHeight || hasDepth || hasChest || hasWeight || gi["color_&_markings"] || gi.hair) && (
@@ -1470,11 +1475,11 @@ export default function DogProfileScreen() {
                     {hasWeight && (
                       <DetailItem icon="barbell-outline" label="Weight" value={`${parseFloat(gi.weight!).toFixed(1)} kg`} />
                     )}
-                    {gi["color_&_markings"] && gi["color_&_markings"].trim() !== "" && (
-                      <DetailItem icon="color-palette-outline" label="Color & Markings" value={gi["color_&_markings"]} />
+                    {!isNA(gi["color_&_markings"]) && (
+                      <DetailItem icon="color-palette-outline" label="Color & Markings" value={gi["color_&_markings"]!} />
                     )}
-                    {gi.hair && gi.hair.trim() !== "" && (
-                      <DetailItem icon="sparkles-outline" label="Hair" value={gi.hair} />
+                    {!isNA(gi.hair) && (
+                      <DetailItem icon="sparkles-outline" label="Hair" value={gi.hair!} />
                     )}
                   </View>
                 </View>
