@@ -1414,52 +1414,8 @@ export default function DogProfileScreen() {
 
           return (
             <>
-              {/* Survey Meta */}
-              {(surveyPeriod || breedSurvey.breed_surveyor) && (
-                <View style={styles.bsMetaCard}>
-                  {surveyPeriod && (
-                    <View style={styles.bsMetaRow}>
-                      <Ionicons name="calendar-outline" size={15} color={COLORS.primary} />
-                      <Text style={styles.bsMetaLabel}>Survey Period</Text>
-                      <Text style={styles.bsMetaValue}>{surveyPeriod}</Text>
-                    </View>
-                  )}
-                  {breedSurvey.breed_surveyor && breedSurvey.breed_surveyor.trim() !== "" && (
-                    <View style={[styles.bsMetaRow, surveyPeriod ? styles.bsMetaRowBorder : null]}>
-                      <Ionicons name="person-outline" size={15} color={COLORS.primary} />
-                      <Text style={styles.bsMetaLabel}>Breed Surveyor</Text>
-                      <Text style={styles.bsMetaValue}>{breedSurvey.breed_surveyor}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Quick Stats: Hip / Elbows / DNA */}
-              {(!isNA(breedSurvey.hip) || !isNA(breedSurvey.elbows) || !isNA(breedSurvey.dna_status)) && (
-                <View style={styles.bsStatsRow}>
-                  {!isNA(breedSurvey.hip) && (
-                    <View style={styles.bsStatChip}>
-                      <Text style={styles.bsStatChipLabel}>Hip</Text>
-                      <Text style={styles.bsStatChipValue}>{breedSurvey.hip}</Text>
-                    </View>
-                  )}
-                  {!isNA(breedSurvey.elbows) && (
-                    <View style={styles.bsStatChip}>
-                      <Text style={styles.bsStatChipLabel}>Elbows</Text>
-                      <Text style={styles.bsStatChipValue}>{breedSurvey.elbows}</Text>
-                    </View>
-                  )}
-                  {!isNA(breedSurvey.dna_status) && (
-                    <View style={styles.bsStatChip}>
-                      <Text style={styles.bsStatChipLabel}>DNA</Text>
-                      <Text style={styles.bsStatChipValue}>{breedSurvey.dna_status}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* General Information */}
-              {(hasHeight || hasDepth || hasChest || hasWeight || gi["color_&_markings"] || gi.hair) && (
+              {/* 1. General Information */}
+              {(hasHeight || hasDepth || hasChest || hasWeight || !isNA(gi["color_&_markings"]) || !isNA(gi.hair)) && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>General Information</Text>
                   <View style={styles.detailsGrid}>
@@ -1485,7 +1441,7 @@ export default function DogProfileScreen() {
                 </View>
               )}
 
-              {/* Breed Survey Report */}
+              {/* 2. Breed Survey Report */}
               {breedSurvey.breed_survey_report && breedSurvey.breed_survey_report.trim() !== "" && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>Breed Survey Report</Text>
@@ -1493,7 +1449,15 @@ export default function DogProfileScreen() {
                 </View>
               )}
 
-              {/* Assessment */}
+              {/* 3. Particular Virtues & Faults */}
+              {breedSurvey.particular_virtues_and_faults && breedSurvey.particular_virtues_and_faults.trim() !== "" && (
+                <View style={styles.card}>
+                  <Text style={styles.cardHeading}>Virtues & Faults</Text>
+                  <Text style={styles.bsReportText}>{breedSurvey.particular_virtues_and_faults.trim()}</Text>
+                </View>
+              )}
+
+              {/* 4. Assessment */}
               {assessmentEntries.length > 0 && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>Assessment (Stand & Movement)</Text>
@@ -1509,15 +1473,31 @@ export default function DogProfileScreen() {
                 </View>
               )}
 
-              {/* Particular Virtues & Faults */}
-              {breedSurvey.particular_virtues_and_faults && breedSurvey.particular_virtues_and_faults.trim() !== "" && (
-                <View style={styles.card}>
-                  <Text style={styles.cardHeading}>Virtues & Faults</Text>
-                  <Text style={styles.bsReportText}>{breedSurvey.particular_virtues_and_faults.trim()}</Text>
+              {/* 5. Hip / Elbows / DNA */}
+              {(!isNA(breedSurvey.hip) || !isNA(breedSurvey.elbows) || !isNA(breedSurvey.dna_status)) && (
+                <View style={styles.bsStatsRow}>
+                  {!isNA(breedSurvey.hip) && (
+                    <View style={styles.bsStatChip}>
+                      <Text style={styles.bsStatChipLabel}>Hip</Text>
+                      <Text style={styles.bsStatChipValue}>{breedSurvey.hip}</Text>
+                    </View>
+                  )}
+                  {!isNA(breedSurvey.elbows) && (
+                    <View style={styles.bsStatChip}>
+                      <Text style={styles.bsStatChipLabel}>Elbows</Text>
+                      <Text style={styles.bsStatChipValue}>{breedSurvey.elbows}</Text>
+                    </View>
+                  )}
+                  {!isNA(breedSurvey.dna_status) && (
+                    <View style={styles.bsStatChip}>
+                      <Text style={styles.bsStatChipLabel}>DNA</Text>
+                      <Text style={styles.bsStatChipValue}>{breedSurvey.dna_status}</Text>
+                    </View>
+                  )}
                 </View>
               )}
 
-              {/* Advice */}
+              {/* 6. Advice & Recommendations */}
               {breedSurvey["advice,_recommendations_&_warnings_for_selection_of_a_breeding_partner"] &&
                 breedSurvey["advice,_recommendations_&_warnings_for_selection_of_a_breeding_partner"].trim() !== "" && (
                 <View style={styles.card}>
@@ -1525,6 +1505,26 @@ export default function DogProfileScreen() {
                   <Text style={styles.bsReportText}>
                     {breedSurvey["advice,_recommendations_&_warnings_for_selection_of_a_breeding_partner"].trim()}
                   </Text>
+                </View>
+              )}
+
+              {/* 7. Survey Meta (Breed Surveyor + Period) */}
+              {(surveyPeriod || (!isNA(breedSurvey.breed_surveyor))) && (
+                <View style={styles.bsMetaCard}>
+                  {breedSurvey.breed_surveyor && breedSurvey.breed_surveyor.trim() !== "" && (
+                    <View style={styles.bsMetaRow}>
+                      <Ionicons name="person-outline" size={15} color={COLORS.primary} />
+                      <Text style={styles.bsMetaLabel}>Breed Surveyor</Text>
+                      <Text style={styles.bsMetaValue}>{breedSurvey.breed_surveyor}</Text>
+                    </View>
+                  )}
+                  {surveyPeriod && (
+                    <View style={[styles.bsMetaRow, !isNA(breedSurvey.breed_surveyor) ? styles.bsMetaRowBorder : null]}>
+                      <Ionicons name="calendar-outline" size={15} color={COLORS.primary} />
+                      <Text style={styles.bsMetaLabel}>Survey Period</Text>
+                      <Text style={styles.bsMetaValue}>{surveyPeriod}</Text>
+                    </View>
+                  )}
                 </View>
               )}
             </>
