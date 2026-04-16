@@ -1356,7 +1356,7 @@ export default function DogProfileScreen() {
             <Ionicons name="clipboard-outline" size={40} color={COLORS.textMuted} style={{ marginBottom: 12 }} />
             <Text style={styles.emptyTitle}>Breed Survey Not Done</Text>
             <Text style={styles.emptyDesc}>
-              This dog does not have a breed survey on record.
+              This dog is yet to have a Breed Survey recorded.
             </Text>
           </View>
         )}
