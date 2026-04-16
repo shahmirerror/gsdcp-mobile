@@ -1475,25 +1475,18 @@ export default function DogProfileScreen() {
 
               {/* 5. Hip / Elbows / DNA */}
               {(!isNA(breedSurvey.hip) || !isNA(breedSurvey.elbows) || !isNA(breedSurvey.dna_status)) && (
-                <View style={styles.bsStatsRow}>
-                  {!isNA(breedSurvey.hip) && (
-                    <View style={styles.bsStatChip}>
-                      <Text style={styles.bsStatChipLabel}>Hip</Text>
-                      <Text style={styles.bsStatChipValue}>{breedSurvey.hip}</Text>
+                <View style={styles.card}>
+                  <Text style={styles.cardHeading}>Health Ratings</Text>
+                  {[
+                    { label: "Hip", value: breedSurvey.hip },
+                    { label: "Elbows", value: breedSurvey.elbows },
+                    { label: "DNA Status", value: breedSurvey.dna_status },
+                  ].filter(({ value }) => !isNA(value)).map(({ label, value }, i, arr) => (
+                    <View key={label} style={[styles.bsTableRow, i < arr.length - 1 && styles.bsTableRowBorder]}>
+                      <Text style={styles.bsTableKey}>{label}</Text>
+                      <Text style={styles.bsTableVal}>{value}</Text>
                     </View>
-                  )}
-                  {!isNA(breedSurvey.elbows) && (
-                    <View style={styles.bsStatChip}>
-                      <Text style={styles.bsStatChipLabel}>Elbows</Text>
-                      <Text style={styles.bsStatChipValue}>{breedSurvey.elbows}</Text>
-                    </View>
-                  )}
-                  {!isNA(breedSurvey.dna_status) && (
-                    <View style={styles.bsStatChip}>
-                      <Text style={styles.bsStatChipLabel}>DNA</Text>
-                      <Text style={styles.bsStatChipValue}>{breedSurvey.dna_status}</Text>
-                    </View>
-                  )}
+                  ))}
                 </View>
               )}
 
@@ -2445,6 +2438,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: COLORS.text,
+    textAlign: "right",
+  },
+  bsTableRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 11,
+  },
+  bsTableRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  bsTableKey: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+  bsTableVal: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.primaryDark,
     textAlign: "right",
   },
 });
