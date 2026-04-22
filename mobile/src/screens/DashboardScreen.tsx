@@ -527,7 +527,11 @@ export default function DashboardScreen() {
                       </View>
                     )}
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                  <Ionicons
+                    name="arrow-forward"
+                    size={18}
+                    color={COLORS.primary}
+                  />
                 </TouchableOpacity>
 
                 <View style={styles.previewDivider} />
@@ -747,9 +751,9 @@ export default function DashboardScreen() {
                                           {d.dog_name}
                                         </Text>
                                         <Ionicons
-                                          name="chevron-forward"
+                                          name="arrow-forward"
                                           size={16}
-                                          color="#94A3B8"
+                                          color={COLORS.primary}
                                         />
                                       </TouchableOpacity>
                                     ))}
@@ -794,7 +798,6 @@ export default function DashboardScreen() {
                       </View>
                     </>
                   )}
-
               </ScrollView>
             );
           })()}
@@ -1365,9 +1368,10 @@ const styles = StyleSheet.create({
 
   previewHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    gap: 14,
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
   },
   previewKennelImage: {
     width: 64,
