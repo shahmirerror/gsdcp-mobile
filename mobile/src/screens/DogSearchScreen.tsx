@@ -27,6 +27,7 @@ type Nav = NativeStackNavigationProp<DogsStackParamList, "DogSearch">;
 
 const GENDER_OPTIONS = ["All", "Male", "Female"] as const;
 const HAIR_OPTIONS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
+const TITLED_OPTIONS = ["All", "Yes", "No"] as const;
 
 export default function DogSearchScreen() {
   const navigation = useNavigation<Nav>();
@@ -37,9 +38,11 @@ export default function DogSearchScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState<string>(route.params?.searchQuery || "");
   const [genderFilter, setGenderFilter]       = useState<string>("All");
   const [hairFilter,   setHairFilter]         = useState<string>("All");
+  const [titledFilter, setTitledFilter]       = useState<string>("All");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempGender, setTempGender]           = useState<string>("All");
   const [tempHair,   setTempHair]             = useState<string>("All");
+  const [tempTitled, setTempTitled]           = useState<string>("All");
   const [previewDog, setPreviewDog]           = useState<Dog | null>(null);
 
   useEffect(() => {
@@ -48,23 +51,28 @@ export default function DogSearchScreen() {
   }, [searchQuery]);
 
   const activeFilterCount =
-    (genderFilter !== "All" ? 1 : 0) + (hairFilter !== "All" ? 1 : 0);
+    (genderFilter !== "All" ? 1 : 0) +
+    (hairFilter !== "All" ? 1 : 0) +
+    (titledFilter !== "All" ? 1 : 0);
 
   const openFilters = () => {
     setTempGender(genderFilter);
     setTempHair(hairFilter);
+    setTempTitled(titledFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setGenderFilter(tempGender);
     setHairFilter(tempHair);
+    setTitledFilter(tempTitled);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempGender("All");
     setTempHair("All");
+    setTempTitled("All");
   };
 
   const {
@@ -77,12 +85,13 @@ export default function DogSearchScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<DogsPage>({
-    queryKey: ["dogs", debouncedSearch, genderFilter, hairFilter],
+    queryKey: ["dogs", debouncedSearch, genderFilter, hairFilter, titledFilter],
     queryFn: ({ pageParam }) =>
       fetchDogsPage(pageParam as number, {
         search: debouncedSearch || undefined,
         gender: genderFilter,
         hair:   hairFilter,
+        titled: titledFilter,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
@@ -160,7 +169,15 @@ export default function DogSearchScreen() {
               </TouchableOpacity>
             </View>
           )}
-          <TouchableOpacity onPress={() => { setGenderFilter("All"); setHairFilter("All"); }}>
+          {titledFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>Titled: {titledFilter}</Text>
+              <TouchableOpacity onPress={() => setTitledFilter("All")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close" size={13} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity onPress={() => { setGenderFilter("All"); setHairFilter("All"); setTitledFilter("All"); }}>
             <Text style={styles.clearAllText}>Clear all</Text>
           </TouchableOpacity>
         </View>
@@ -378,6 +395,30 @@ export default function DogSearchScreen() {
                   style={[
                     styles.filterOptionText,
                     tempHair === opt && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.filterSectionTitle}>Titled</Text>
+          <View style={styles.filterOptionsRow}>
+            {TITLED_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.filterOption,
+                  tempTitled === opt && styles.filterOptionActive,
+                ]}
+                onPress={() => setTempTitled(opt)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempTitled === opt && styles.filterOptionTextActive,
                   ]}
                 >
                   {opt}

@@ -259,14 +259,15 @@ function DogListSection({
 }) {
   const [query, setQuery] = useState("");
   const [sex, setSex] = useState<SexFilter>("All");
-  const [titlesOnly, setTitlesOnly] = useState(false);
+  const [titledFilter, setTitledFilter] = useState<"All" | "Yes" | "No">("All");
   const [selectedDog, setSelectedDog] = useState<BreederDog | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return dogs.filter((d) => {
       if (sex !== "All" && d.sex?.toLowerCase() !== sex.toLowerCase()) return false;
-      if (titlesOnly && d.titles.length === 0) return false;
+      if (titledFilter === "Yes" && d.titles.length === 0) return false;
+      if (titledFilter === "No" && d.titles.length > 0) return false;
       if (q) {
         const inName = d.name.toLowerCase().includes(q);
         const inKP   = (d.KP ?? "").toLowerCase().includes(q);
@@ -275,10 +276,11 @@ function DogListSection({
       }
       return true;
     });
-  }, [dogs, query, sex, titlesOnly]);
+  }, [dogs, query, sex, titledFilter]);
 
   const SEX_OPTIONS: SexFilter[] = ["All", "Male", "Female"];
-  const hasActiveFilter = query.trim() !== "" || sex !== "All" || titlesOnly;
+  const TITLED_OPTIONS = ["All", "Yes", "No"] as const;
+  const hasActiveFilter = query.trim() !== "" || sex !== "All" || titledFilter !== "All";
 
   if (dogs.length === 0) {
     return (
@@ -343,20 +345,30 @@ function DogListSection({
           </TouchableOpacity>
         ))}
 
-        {/* Titled dogs chip */}
-        <TouchableOpacity
-          style={[styles.chip, titlesOnly && styles.chipActiveGold]}
-          onPressIn={() => setTitlesOnly((v) => !v)}
-          activeOpacity={0.75}
-        >
-          <Ionicons
-            name="ribbon-outline"
-            size={12}
-            color={titlesOnly ? "#fff" : COLORS.textSecondary}
-            style={{ marginRight: 4 }}
-          />
-          <Text style={[styles.chipText, titlesOnly && styles.chipTextActive]}>Titled Only</Text>
-        </TouchableOpacity>
+        {/* Titled filter chips */}
+        {TITLED_OPTIONS.map((opt) => (
+          <TouchableOpacity
+            key={`titled-${opt}`}
+            style={[
+              styles.chip,
+              titledFilter === opt && (opt === "Yes" ? styles.chipActiveGold : styles.chipActive),
+            ]}
+            onPressIn={() => setTitledFilter(opt)}
+            activeOpacity={0.75}
+          >
+            {opt !== "All" && (
+              <Ionicons
+                name="ribbon-outline"
+                size={12}
+                color={titledFilter === opt ? "#fff" : COLORS.textSecondary}
+                style={{ marginRight: 4 }}
+              />
+            )}
+            <Text style={[styles.chipText, titledFilter === opt && styles.chipTextActive]}>
+              {opt === "All" ? "All Titles" : opt === "Yes" ? "Titled" : "Untitled"}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
       {/* Result count / clear */}
@@ -367,7 +379,7 @@ function DogListSection({
         </Text>
         {hasActiveFilter && (
           <TouchableOpacity
-            onPressIn={() => { setQuery(""); setSex("All"); setTitlesOnly(false); }}
+            onPressIn={() => { setQuery(""); setSex("All"); setTitledFilter("All"); }}
             activeOpacity={0.7}
           >
             <Text style={styles.clearText}>Clear filters</Text>

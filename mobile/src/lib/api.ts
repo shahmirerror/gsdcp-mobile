@@ -58,12 +58,13 @@ export type DogsPage = {
 
 export async function fetchDogsPage(
   page: number = 1,
-  filters?: { search?: string; gender?: string; hair?: string },
+  filters?: { search?: string; gender?: string; hair?: string; titled?: string },
 ): Promise<DogsPage> {
   const params = new URLSearchParams({ page: String(page) });
   if (filters?.search) params.set("q", filters.search);
   if (filters?.gender && filters.gender !== "All") params.set("gender", filters.gender);
   if (filters?.hair && filters.hair !== "All") params.set("hair", filters.hair);
+  if (filters?.titled && filters.titled !== "All") params.set("titled", filters.titled.toLowerCase());
   const res = await fetch(`${BASE_URL}/dogs?${params.toString()}`);
   const json = await res.json();
   if (!json.success) throw new Error("Failed to fetch dogs");
