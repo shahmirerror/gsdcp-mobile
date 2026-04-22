@@ -435,8 +435,18 @@ export default function RecentMatingsScreen() {
             const date = parseMatingDate(previewMating.mating_date);
             return (
               <View style={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.previewHeader}>
+                {/* Header — tappable kennel row */}
+                <TouchableOpacity
+                  style={styles.previewHeader}
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    setPreviewMating(null);
+                    navigation.push("KennelProfile", {
+                      id: previewMating.kennel_id,
+                      name: previewMating.kennel_name,
+                    });
+                  }}
+                >
                   {previewMating.kennel_image ? (
                     <LazyImage
                       source={{ uri: previewMating.kennel_image }}
@@ -489,7 +499,8 @@ export default function RecentMatingsScreen() {
                       </View>
                     )}
                   </View>
-                </View>
+                  <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                </TouchableOpacity>
 
                 <View style={styles.previewDivider} />
 
@@ -711,25 +722,6 @@ export default function RecentMatingsScreen() {
                     </>
                   )}
 
-                <View style={[styles.previewDivider, { marginTop: 16 }]} />
-
-                {/* Kennel button */}
-                <TouchableOpacity
-                  style={styles.viewProfileBtn}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setPreviewMating(null);
-                    navigation.push("KennelProfile", {
-                      id: previewMating.kennel_id,
-                      name: previewMating.kennel_name,
-                    });
-                  }}
-                >
-                  <Ionicons name="home" size={16} color="#fff" />
-                  <Text style={styles.viewProfileBtnText}>
-                    View Kennel Profile
-                  </Text>
-                </TouchableOpacity>
               </View>
             );
           })()}
