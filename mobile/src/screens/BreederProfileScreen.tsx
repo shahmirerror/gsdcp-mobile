@@ -266,8 +266,8 @@ function DogListSection({
     const q = query.trim().toLowerCase();
     return dogs.filter((d) => {
       if (sex !== "All" && d.sex?.toLowerCase() !== sex.toLowerCase()) return false;
-      if (titledFilter === "Yes" && d.titles.length === 0) return false;
-      if (titledFilter === "No" && d.titles.length > 0) return false;
+      if (titledFilter === "Yes" && (d.titles?.length ?? 0) === 0) return false;
+      if (titledFilter === "No" && (d.titles?.length ?? 0) > 0) return false;
       if (q) {
         const inName = d.name.toLowerCase().includes(q);
         const inKP   = (d.KP ?? "").toLowerCase().includes(q);
@@ -353,7 +353,7 @@ function DogListSection({
               styles.chip,
               titledFilter === opt && (opt === "Yes" ? styles.chipActiveGold : styles.chipActive),
             ]}
-            onPressIn={() => setTitledFilter(opt)}
+            onPressIn={() => setTitledFilter(titledFilter === opt ? "All" : opt)}
             activeOpacity={0.75}
           >
             {opt !== "All" && (

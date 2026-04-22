@@ -412,7 +412,7 @@ export default function DogSearchScreen() {
                   styles.filterOption,
                   tempTitled === opt && styles.filterOptionActive,
                 ]}
-                onPress={() => setTempTitled(opt)}
+                onPress={() => setTempTitled(tempTitled === opt ? "All" : opt)}
                 activeOpacity={0.7}
               >
                 <Text
