@@ -24,6 +24,7 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
 
   const showImage = hasImage(dog.imageUrl);
   const titles = dog.titles || [];
+  const ownerName = dog.owner && dog.owner.length > 0 ? dog.owner.map((o) => o.name).join(", ") : null;
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
@@ -43,6 +44,9 @@ export function DogListItem({ dog, onPress }: DogListItemProps) {
               ? dog.foreign_reg_no
               : "-"}
         </Text>
+        {ownerName ? (
+          <Text style={styles.owner} numberOfLines={1}>{ownerName}</Text>
+        ) : null}
         {dog.microchip ? <Text style={styles.kp}>Microchip: {dog.microchip}</Text> : null}
         <View style={styles.badges}>
           <View style={styles.badge}>
@@ -117,6 +121,11 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
     marginTop: 2,
+  },
+  owner: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: 1,
   },
   badges: {
     flexDirection: "row",
