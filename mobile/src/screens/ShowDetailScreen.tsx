@@ -146,77 +146,117 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile, onViewOwner }: {
   onViewOwner: (id: string) => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
+  const [ownerOpen, setOwnerOpen] = useState(false);
   const hasImg = !!entry.imageUrl && !imgErr;
-  const gradingLine = [entry.grading, entry.placement ? `#${entry.placement}` : ""].filter(Boolean).join("  ·  ");
+
+  const initials = (entry.dog_name || "")
+    .trim().split(" ").filter((w) => w.length > 0)
+    .map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+
+  const ids  = entry.owner_ids?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const names = entry.owner_names?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const nos  = entry.owner_membership_nos?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+
+  const gridRows = [
+    { label: "Sex",       value: entry.sex },
+    { label: "Hair",      value: entry.hair },
+    { label: "Class",     value: entry.class },
+    { label: "Grading",   value: entry.grading },
+    { label: "Placement", value: entry.placement ? `#${entry.placement}` : null },
+  ].filter((r): r is { label: string; value: string } => !!r.value);
+
   return (
-    <View style={styles.popupInner}>
-      <View style={styles.popupAvatarWrap}>
+    <View style={styles.dpWrap}>
+      {/* ── Header ── */}
+      <View style={styles.dpHeader}>
         {hasImg ? (
-          <LazyImage source={{ uri: entry.imageUrl! }} style={styles.popupAvatarImg} onError={() => setImgErr(true)} />
+          <LazyImage
+            source={{ uri: entry.imageUrl! }}
+            style={styles.dpImage}
+            resizeMode="cover"
+            onError={() => setImgErr(true)}
+          />
         ) : (
-          <View style={[styles.popupAvatarFallback, { backgroundColor: `${COLORS.primary}15` }]}>
-            <Ionicons name="paw" size={32} color={COLORS.primary} />
+          <View style={styles.dpAvatar}>
+            <Text style={styles.dpAvatarText}>{initials}</Text>
+          </View>
+        )}
+        <View style={styles.dpHeadInfo}>
+          <Text style={styles.dpName} numberOfLines={2}>{entry.dog_name.trim()}</Text>
+          {kpLine ? <Text style={styles.dpKP}>{kpLine}</Text> : null}
+          <View style={styles.dpBadgesRow}>
+            {entry.class ? (
+              <View style={styles.dpBadge}>
+                <Text style={styles.dpBadgeText}>{entry.class}</Text>
+              </View>
+            ) : null}
+            {entry.grading ? (
+              <View style={[styles.dpBadge, { backgroundColor: `${COLORS.accent}25` }]}>
+                <Text style={[styles.dpBadgeText, { color: COLORS.accent }]}>{entry.grading}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.dpDivider} />
+
+      {/* ── Grid ── */}
+      <View style={styles.dpGrid}>
+        {gridRows.map((r) => (
+          <View key={r.label} style={styles.dpRow}>
+            <Text style={styles.dpRowLabel}>{r.label}</Text>
+            <Text style={styles.dpRowValue} numberOfLines={2}>{r.value}</Text>
+          </View>
+        ))}
+
+        {/* Owner row */}
+        {names.length > 0 && (
+          <View style={styles.dpRow}>
+            <Text style={styles.dpRowLabel}>Owner</Text>
+            <View style={styles.dpOwnerSection}>
+              {names.length === 1 ? (
+                ids[0] ? (
+                  <TouchableOpacity style={styles.dpOwnerSingleRow} activeOpacity={0.7} onPress={() => onViewOwner(ids[0])}>
+                    <Text style={styles.dpOwnerLink}>{names[0]}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.dpRowValue}>{names[0]}</Text>
+                )
+              ) : (
+                <View>
+                  <TouchableOpacity style={styles.dpOwnerSingleRow} activeOpacity={0.7} onPress={() => setOwnerOpen(!ownerOpen)}>
+                    <Text style={styles.dpOwnerLink}>{names.length} owners</Text>
+                    <Ionicons name={ownerOpen ? "chevron-up" : "chevron-down"} size={14} color={COLORS.primary} />
+                  </TouchableOpacity>
+                  {ownerOpen && names.map((name, i) => {
+                    const id = ids[i] ?? null;
+                    const no = nos[i] ?? null;
+                    const label = no ? `${name}  ·  ${no}` : name;
+                    return id ? (
+                      <TouchableOpacity key={i} style={styles.dpOwnerDropdownItem} activeOpacity={0.7} onPress={() => onViewOwner(id)}>
+                        <Ionicons name="person-circle-outline" size={15} color={COLORS.textMuted} />
+                        <Text style={styles.dpOwnerDropdownItemText}>{label}</Text>
+                        <Ionicons name="chevron-forward" size={12} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    ) : (
+                      <View key={i} style={styles.dpOwnerDropdownItem}>
+                        <Ionicons name="person-circle-outline" size={15} color={COLORS.textMuted} />
+                        <Text style={styles.dpOwnerDropdownItemText}>{label}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
           </View>
         )}
       </View>
-      <Text style={styles.popupLabel}>RESULT</Text>
-      <Text style={styles.popupName} numberOfLines={2}>{entry.dog_name.trim()}</Text>
-      {kpLine ? <Text style={styles.popupSub}>{kpLine}</Text> : null}
-      <View style={styles.popupChipRow}>
-        {entry.class ? (
-          <View style={styles.popupChip}>
-            <Text style={styles.popupChipText}>{entry.class}</Text>
-          </View>
-        ) : null}
-        {gradingLine ? (
-          <View style={[styles.popupChip, { backgroundColor: `${COLORS.accent}18` }]}>
-            <Text style={[styles.popupChipText, { color: COLORS.accent }]}>{gradingLine}</Text>
-          </View>
-        ) : null}
-        {entry.sex ? (
-          <View style={styles.popupChip}>
-            <Text style={styles.popupChipText}>{entry.sex}</Text>
-          </View>
-        ) : null}
-      </View>
-      {(() => {
-        const ids   = entry.owner_ids?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
-        const names = entry.owner_names?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
-        const nos   = entry.owner_membership_nos?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
-        if (!names.length) return null;
-        return (
-          <View style={{ width: "100%" }}>
-            {names.map((name, i) => {
-              const id = ids[i] ?? null;
-              const no = nos[i] ?? null;
-              const label = no ? `${name}  ·  ${no}` : name;
-              return id ? (
-                <TouchableOpacity
-                  key={i}
-                  style={styles.popupOwnerRow}
-                  activeOpacity={0.7}
-                  onPress={() => onViewOwner(id)}
-                >
-                  <Ionicons name="person-outline" size={13} color={COLORS.primary} />
-                  <Text style={[styles.popupOwnerText, { color: COLORS.primary }]} numberOfLines={1}>{label}</Text>
-                  <Ionicons name="chevron-forward" size={12} color={COLORS.primary} />
-                </TouchableOpacity>
-              ) : (
-                <View key={i} style={styles.popupOwnerRow}>
-                  <Ionicons name="person-outline" size={13} color={COLORS.textMuted} />
-                  <Text style={styles.popupOwnerText} numberOfLines={1}>{label}</Text>
-                </View>
-              );
-            })}
-          </View>
-        );
-      })()}
-      <TouchableOpacity style={styles.popupBtn} activeOpacity={0.8} onPress={onViewProfile}>
-        <Ionicons name="paw-outline" size={16} color="#fff" />
-        <Text style={styles.popupBtnText}>View Dog Profile</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.popupDismiss} onPress={onClose} activeOpacity={0.7}>
-        <Text style={styles.popupDismissText}>Dismiss</Text>
+
+      <TouchableOpacity style={styles.dpBtn} activeOpacity={0.8} onPress={onViewProfile}>
+        <Ionicons name="paw" size={16} color="#fff" />
+        <Text style={styles.dpBtnText}>View Full Profile</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1929,5 +1969,140 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textMuted,
     fontWeight: "500",
+  },
+
+  /* ── Dog popup (matches DogSearchScreen style) ── */
+  dpWrap: {
+    paddingHorizontal: 24,
+    paddingBottom: 8,
+  },
+  dpHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 14,
+  },
+  dpImage: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+  },
+  dpAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9",
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
+  },
+  dpAvatarText: {
+    color: COLORS.primary,
+    fontWeight: "700",
+    fontSize: 22,
+  },
+  dpHeadInfo: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  dpName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
+  },
+  dpKP: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  dpBadgesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  dpBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  dpBadgeText: {
+    fontSize: FONT_SIZES.xs,
+    color: "#fff",
+    fontWeight: "600",
+  },
+  dpDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginBottom: 14,
+  },
+  dpGrid: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  dpRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  dpRowLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textMuted,
+    fontWeight: "500",
+    width: 100,
+    flexShrink: 0,
+  },
+  dpRowValue: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  dpOwnerSection: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  dpOwnerSingleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dpOwnerLink: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.primary,
+    textAlign: "right",
+  },
+  dpOwnerDropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingLeft: 4,
+  },
+  dpOwnerDropdownItemText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
+  },
+  dpBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+  },
+  dpBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
