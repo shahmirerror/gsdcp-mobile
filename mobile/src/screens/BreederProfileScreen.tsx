@@ -6,8 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal,
-  Pressable,
   Platform,
   StyleSheet,
   ActivityIndicator,
@@ -22,6 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchBreeder, BreederDetail, BreederDog, Breeder } from "../lib/api";
 import LazyImage from "../components/LazyImage";
+import BottomSheetModal from "../components/BottomSheetModal";
 
 const heroBg = require("../../assets/hero-bg.png");
 
@@ -151,100 +150,105 @@ function DogQuickView({
   onViewProfile: () => void;
 }) {
   const hasImg = dog.imageUrl && !dog.imageUrl.includes("dog-not-found") && dog.imageUrl.length > 0;
-  const initials = dog.name
+  const initials = (dog.name || "")
     .trim().split(" ").filter(Boolean)
-    .map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+    .map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
 
-  const rows: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }[] = [];
-  const kp = dog.KP && dog.KP !== "0" ? `KP ${dog.KP}` : null;
-  const reg = dog.foreign_reg_no ?? null;
-  if (kp)   rows.push({ icon: "card-outline",     label: "KP No.",      value: kp });
-  if (reg)  rows.push({ icon: "document-outline", label: "Reg No.",     value: reg });
-  if (dog.color) rows.push({ icon: "color-palette-outline", label: "Color", value: dog.color });
-  if (dog.hair)  rows.push({ icon: "brush-outline",          label: "Hair",  value: dog.hair });
+  const kpLabel = dog.KP && dog.KP !== "0" ? `KP ${dog.KP}` : dog.foreign_reg_no || "—";
   const dob = formatDOB(dog.dateOfBirth);
-  if (dob)  rows.push({ icon: "calendar-outline", label: "Date of Birth", value: dob });
-  if (dog.sire)  rows.push({ icon: "male-outline",   label: "Sire",     value: dog.sire });
-  if (dog.dam)   rows.push({ icon: "female-outline", label: "Dam",      value: dog.dam });
-  if (dog.owner) rows.push({ icon: "person-outline", label: "Owner",    value: dog.owner });
-  if (dog.breeder) rows.push({ icon: "home-outline", label: "Breeder",  value: dog.breeder });
-  if (dog.microchip) rows.push({ icon: "barcode-outline", label: "Microchip", value: dog.microchip });
+
+  const rows: { label: string; value: string | null }[] = [
+    { label: "Sex",           value: dog.sex },
+    { label: "Color",         value: dog.color },
+    { label: "Hair",          value: dog.hair },
+    { label: "Date of Birth", value: dob },
+    { label: "Sire",          value: dog.sire },
+    { label: "Dam",           value: dog.dam },
+    { label: "Breeder",       value: dog.breeder },
+    { label: "Owner",         value: dog.owner },
+  ];
 
   return (
-    <Modal transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalBackdrop} onPress={onClose}>
-        <Pressable style={styles.modalSheet} onPress={() => {}}>
-          {/* Handle bar */}
-          <View style={styles.modalHandle} />
-
-          {/* Close */}
-          <TouchableOpacity style={styles.modalClose} onPress={onClose} activeOpacity={0.7}>
-            <Ionicons name="close" size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            {hasImg ? (
-              <LazyImage source={{ uri: dog.imageUrl }} style={styles.modalAvatar} resizeMode="cover" />
-            ) : (
-              <View style={styles.modalAvatarFallback}>
-                <Text style={styles.modalAvatarText}>{initials}</Text>
-              </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.modalName} numberOfLines={2}>{dog.name.trim()}</Text>
-              {/* Sex badge */}
-              <View style={styles.modalBadgeRow}>
-                <View style={[styles.modalBadge, dog.sex === "Male" ? styles.modalBadgeMale : styles.modalBadgeFemale]}>
-                  <Ionicons
-                    name={dog.sex === "Male" ? "male" : "female"}
-                    size={10}
-                    color="#fff"
-                  />
-                  <Text style={styles.modalBadgeText}>{dog.sex}</Text>
-                </View>
+    <BottomSheetModal visible onClose={onClose}>
+      <View style={qStyles.content}>
+        {/* Header */}
+        <View style={qStyles.header}>
+          {hasImg ? (
+            <LazyImage source={{ uri: dog.imageUrl }} style={qStyles.image} resizeMode="cover" />
+          ) : (
+            <View style={qStyles.avatar}>
+              <Text style={qStyles.avatarText}>{initials}</Text>
+            </View>
+          )}
+          <View style={qStyles.headInfo}>
+            <Text style={qStyles.name} numberOfLines={2}>{dog.name}</Text>
+            <Text style={qStyles.kp}>{kpLabel}</Text>
+            {(dog.titles?.length ?? 0) > 0 && (
+              <View style={qStyles.titlesRow}>
                 {dog.titles.slice(0, 3).map((t) => (
-                  <View key={t} style={[styles.modalBadge, t.startsWith("VA") || t.startsWith("V ") ? styles.titleBadgeGold : styles.titleBadgeGreen]}>
-                    <Text style={styles.modalBadgeText}>{t}</Text>
+                  <View key={t} style={qStyles.titleBadge}>
+                    <Text style={qStyles.titleBadgeText}>{t}</Text>
                   </View>
                 ))}
               </View>
-            </View>
+            )}
           </View>
+        </View>
 
-          {/* Divider */}
-          <View style={styles.modalDivider} />
+        {/* Divider */}
+        <View style={qStyles.divider} />
 
-          {/* Details scroll */}
-          <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 280 }}>
-            <View style={styles.modalRows}>
-              {rows.map((r) => (
-                <View key={r.label} style={styles.modalRow}>
-                  <View style={styles.modalRowIcon}>
-                    <Ionicons name={r.icon} size={15} color={COLORS.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalRowLabel}>{r.label}</Text>
-                    <Text style={styles.modalRowValue}>{r.value}</Text>
-                  </View>
-                </View>
-              ))}
-              {rows.length === 0 && (
-                <Text style={styles.modalNoDetails}>No additional details available.</Text>
-              )}
-            </View>
-          </ScrollView>
+        {/* Details grid */}
+        <View style={qStyles.grid}>
+          {rows
+            .filter((r) => r.value)
+            .map((r) => (
+              <View key={r.label} style={qStyles.row}>
+                <Text style={qStyles.rowLabel}>{r.label}</Text>
+                <Text style={qStyles.rowValue} numberOfLines={2}>{r.value}</Text>
+              </View>
+            ))}
+        </View>
 
-          {/* Action button */}
-          <TouchableOpacity style={styles.modalViewBtn} onPress={onViewProfile} activeOpacity={0.85}>
-            <Text style={styles.modalViewBtnText}>VIEW FULL PROFILE</Text>
-            <Ionicons name="arrow-forward" size={16} color="#fff" style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        {/* View Full Profile */}
+        <TouchableOpacity style={qStyles.btn} onPress={onViewProfile} activeOpacity={0.8}>
+          <Ionicons name="paw" size={16} color="#fff" />
+          <Text style={qStyles.btnText}>View Full Profile</Text>
+        </TouchableOpacity>
+      </View>
+    </BottomSheetModal>
   );
 }
+
+const qStyles = StyleSheet.create({
+  content: { paddingHorizontal: 24 },
+  header: { flexDirection: "row", alignItems: "flex-start", marginBottom: 16, gap: 14 },
+  image: { width: 72, height: 72, borderRadius: BORDER_RADIUS.md, backgroundColor: "#E8F5E9" },
+  avatar: {
+    width: 72, height: 72, borderRadius: BORDER_RADIUS.md,
+    backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center", flexShrink: 0,
+  },
+  avatarText: { color: COLORS.primary, fontWeight: "700", fontSize: 22 },
+  headInfo: { flex: 1, justifyContent: "center" },
+  name: { fontSize: 18, fontWeight: "700", color: COLORS.text, marginBottom: 3 },
+  kp: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginBottom: 6 },
+  titlesRow: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  titleBadge: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: BORDER_RADIUS.sm,
+  },
+  titleBadgeText: { fontSize: FONT_SIZES.xs, color: "#fff", fontWeight: "600" },
+  divider: { height: 1, backgroundColor: COLORS.border, marginBottom: 14 },
+  grid: { marginBottom: 20, gap: 10 },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
+  rowLabel: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, fontWeight: "500", width: 100, flexShrink: 0 },
+  rowValue: { fontSize: FONT_SIZES.sm, color: COLORS.text, fontWeight: "500", flex: 1, textAlign: "right" },
+  btn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.md, paddingVertical: 14,
+  },
+  btnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+});
 
 function DogListSection({
   dogs,

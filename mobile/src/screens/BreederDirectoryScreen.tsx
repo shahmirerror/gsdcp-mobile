@@ -21,13 +21,19 @@ import type { BreedersStackParamList } from "../navigation/AppNavigator";
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
 
-type Nav = NativeStackNavigationProp<BreedersStackParamList, "BreederDirectory">;
+type Nav = NativeStackNavigationProp<
+  BreedersStackParamList,
+  "BreederDirectory"
+>;
 
 function tierBadgeStyles(tier: string): { bg: object; text: object } {
   const t = tier.toLowerCase();
-  if (t === "gold breeder")   return { bg: styles.badgeGold,   text: styles.badgeGoldText };
-  if (t === "silver breeder") return { bg: styles.badgeSilver, text: styles.badgeSilverText };
-  if (t === "bronze breeder") return { bg: styles.badgeBronze, text: styles.badgeBronzeText };
+  if (t === "gold breeder")
+    return { bg: styles.badgeGold, text: styles.badgeGoldText };
+  if (t === "silver breeder")
+    return { bg: styles.badgeSilver, text: styles.badgeSilverText };
+  if (t === "bronze breeder")
+    return { bg: styles.badgeBronze, text: styles.badgeBronzeText };
   return { bg: styles.badgeTier, text: styles.badgeTierText };
 }
 
@@ -37,44 +43,67 @@ function formatYear(dateStr: string | null): string | null {
   return isNaN(year) ? null : String(year);
 }
 
-function BreederListItem({ breeder, onPress }: { breeder: Breeder; onPress: () => void }) {
+function BreederListItem({
+  breeder,
+  onPress,
+}: {
+  breeder: Breeder;
+  onPress: () => void;
+}) {
   const hasImage =
-    breeder.imageUrl &&
-    !breeder.imageUrl.includes("user-not-found");
-  const initials = (breeder.name || "?")
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "?";
+    breeder.imageUrl && !breeder.imageUrl.includes("user-not-found");
+  const initials =
+    (breeder.name || "?")
+      .split(" ")
+      .map((w) => w[0] ?? "")
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?";
   const year = formatYear(breeder.activeSince);
 
   return (
-    <TouchableOpacity style={styles.listItem} onPress={onPress} activeOpacity={0.7} data-testid={`card-breeder-${breeder.id}`}>
+    <TouchableOpacity
+      style={styles.listItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+      data-testid={`card-breeder-${breeder.id}`}
+    >
       {hasImage ? (
-        <LazyImage source={{ uri: breeder.imageUrl }} style={styles.avatarImage} resizeMode="cover" />
+        <LazyImage
+          source={{ uri: breeder.imageUrl }}
+          style={styles.avatarImage}
+          resizeMode="cover"
+        />
       ) : (
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
       )}
       <View style={styles.itemInfo}>
-        <Text style={styles.itemName} numberOfLines={1}>{breeder.name}</Text>
-        <Text style={styles.itemSub} numberOfLines={1}>{breeder.kennelName}</Text>
+        <Text style={styles.itemName} numberOfLines={1}>
+          {breeder.name}
+        </Text>
+        <Text style={styles.itemSub} numberOfLines={1}>
+          {breeder.kennelName}
+        </Text>
         <View style={styles.badges}>
           {breeder.location ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{breeder.location}</Text>
             </View>
           ) : null}
-          {breeder.breederType ? (() => {
-            const ts = tierBadgeStyles(breeder.breederType);
-            return (
-              <View style={[styles.badge, ts.bg]}>
-                <Text style={[styles.badgeText, ts.text]}>{breeder.breederType}</Text>
-              </View>
-            );
-          })() : null}
+          {breeder.breederType
+            ? (() => {
+                const ts = tierBadgeStyles(breeder.breederType);
+                return (
+                  <View style={[styles.badge, ts.bg]}>
+                    <Text style={[styles.badgeText, ts.text]}>
+                      {breeder.breederType}
+                    </Text>
+                  </View>
+                );
+              })()
+            : null}
           {year ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Since {year}</Text>
@@ -128,7 +157,13 @@ export default function BreederDirectoryScreen() {
     setTempType("All");
   };
 
-  const { data: breeders, isLoading, isError, refetch, isRefetching } = useQuery<Breeder[]>({
+  const {
+    data: breeders,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useQuery<Breeder[]>({
     queryKey: ["breeders"],
     queryFn: fetchBreeders,
   });
@@ -201,8 +236,15 @@ export default function BreederDirectoryScreen() {
             data-testid="input-search-breeders"
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} data-testid="btn-clear-search">
-              <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+            <TouchableOpacity
+              onPress={() => setSearch("")}
+              data-testid="btn-clear-search"
+            >
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={COLORS.textMuted}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -212,10 +254,17 @@ export default function BreederDirectoryScreen() {
           activeOpacity={0.7}
           data-testid="btn-info-breeders"
         >
-          <Ionicons name="information-circle-outline" size={22} color={COLORS.textSecondary} />
+          <Ionicons
+            name="information-circle-outline"
+            size={22}
+            color={COLORS.textSecondary}
+          />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
+          style={[
+            styles.filterButton,
+            activeFilterCount > 0 && styles.filterButtonActive,
+          ]}
           onPress={openFilters}
           activeOpacity={0.7}
           data-testid="btn-open-filters"
@@ -227,7 +276,9 @@ export default function BreederDirectoryScreen() {
           />
           {activeFilterCount > 0 && (
             <View style={styles.filterBadgeCount}>
-              <Text style={styles.filterBadgeCountText}>{activeFilterCount}</Text>
+              <Text style={styles.filterBadgeCountText}>
+                {activeFilterCount}
+              </Text>
             </View>
           )}
         </TouchableOpacity>
@@ -238,7 +289,10 @@ export default function BreederDirectoryScreen() {
           {countryFilter !== "All" && (
             <View style={styles.activeChip}>
               <Text style={styles.activeChipText}>{countryFilter}</Text>
-              <TouchableOpacity onPress={() => setCountryFilter("All")} data-testid="btn-remove-country-filter">
+              <TouchableOpacity
+                onPress={() => setCountryFilter("All")}
+                data-testid="btn-remove-country-filter"
+              >
                 <Ionicons name="close" size={14} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
@@ -246,7 +300,10 @@ export default function BreederDirectoryScreen() {
           {cityFilter !== "All" && (
             <View style={styles.activeChip}>
               <Text style={styles.activeChipText}>{cityFilter}</Text>
-              <TouchableOpacity onPress={() => setCityFilter("All")} data-testid="btn-remove-city-filter">
+              <TouchableOpacity
+                onPress={() => setCityFilter("All")}
+                data-testid="btn-remove-city-filter"
+              >
                 <Ionicons name="close" size={14} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
@@ -254,13 +311,20 @@ export default function BreederDirectoryScreen() {
           {typeFilter !== "All" && (
             <View style={styles.activeChip}>
               <Text style={styles.activeChipText}>{typeFilter}</Text>
-              <TouchableOpacity onPress={() => setTypeFilter("All")} data-testid="btn-remove-type-filter">
+              <TouchableOpacity
+                onPress={() => setTypeFilter("All")}
+                data-testid="btn-remove-type-filter"
+              >
                 <Ionicons name="close" size={14} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
           )}
           <TouchableOpacity
-            onPress={() => { setCityFilter("All"); setCountryFilter("All"); setTypeFilter("All"); }}
+            onPress={() => {
+              setCityFilter("All");
+              setCountryFilter("All");
+              setTypeFilter("All");
+            }}
             data-testid="btn-clear-all-filters"
           >
             <Text style={styles.clearAllText}>Clear all</Text>
@@ -275,13 +339,28 @@ export default function BreederDirectoryScreen() {
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.xxl }} data-testid="loading-breeders" />
+        <ActivityIndicator
+          size="large"
+          color={COLORS.primary}
+          style={{ marginTop: SPACING.xxl }}
+          data-testid="loading-breeders"
+        />
       ) : isError ? (
         <View style={styles.emptyState}>
-          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={48}
+            color={COLORS.textMuted}
+          />
           <Text style={styles.emptyTitle}>Failed to load breeders</Text>
-          <Text style={styles.emptyDesc}>Could not connect to the server. Please try again.</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()} data-testid="btn-retry">
+          <Text style={styles.emptyDesc}>
+            Could not connect to the server. Please try again.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => refetch()}
+            data-testid="btn-retry"
+          >
             <Text style={styles.retryText}>Try Again</Text>
           </TouchableOpacity>
         </View>
@@ -291,7 +370,12 @@ export default function BreederDirectoryScreen() {
           keyExtractor={(item, index) => `${item.id}-${index}`}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
           }
           renderItem={({ item }) => (
             <BreederListItem
@@ -301,9 +385,15 @@ export default function BreederDirectoryScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={48} color={COLORS.textMuted} />
+              <Ionicons
+                name="search-outline"
+                size={48}
+                color={COLORS.textMuted}
+              />
               <Text style={styles.emptyTitle}>No breeders found</Text>
-              <Text style={styles.emptyDesc}>Try adjusting your search or filters.</Text>
+              <Text style={styles.emptyDesc}>
+                Try adjusting your search or filters.
+              </Text>
             </View>
           }
         />
@@ -314,19 +404,21 @@ export default function BreederDirectoryScreen() {
         visible={!!selectedBreeder}
         onClose={() => setSelectedBreeder(null)}
       >
-          {selectedBreeder && (() => {
+        {selectedBreeder &&
+          (() => {
             const b = selectedBreeder;
             const hasImg = b.imageUrl && !b.imageUrl.includes("user-not-found");
-            const hasKennelImg = b.kennelImage && !b.kennelImage.includes("user-not-found");
-            const popupInitials = (b.name || "?")
-              .split(" ")
-              .map((w) => w[0] ?? "")
-              .join("")
-              .slice(0, 2)
-              .toUpperCase() || "?";
+            const hasKennelImg =
+              b.kennelImage && !b.kennelImage.includes("user-not-found");
+            const popupInitials =
+              (b.name || "?")
+                .split(" ")
+                .map((w) => w[0] ?? "")
+                .join("")
+                .slice(0, 2)
+                .toUpperCase() || "?";
             return (
               <View style={styles.popupContent}>
-
                 {/* Kennel Row — tappable link to profile */}
                 <Text style={styles.popupRowLabel}>Kennel</Text>
                 <TouchableOpacity
@@ -334,21 +426,40 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("KennelProfile", { id: b.id, name: b.kennelName || b.name });
+                    navigation.navigate("KennelProfile", {
+                      id: b.id,
+                      name: b.kennelName || b.name,
+                    });
                   }}
                 >
                   {hasKennelImg ? (
-                    <LazyImage source={{ uri: b.kennelImage }} style={styles.popupAvatar} resizeMode="cover" />
+                    <LazyImage
+                      source={{ uri: b.kennelImage }}
+                      style={styles.popupAvatar}
+                      resizeMode="cover"
+                    />
                   ) : (
                     <View style={styles.popupAvatarFallback}>
-                      <Ionicons name="home-outline" size={28} color={COLORS.primary} />
+                      <Ionicons
+                        name="home-outline"
+                        size={28}
+                        color={COLORS.primary}
+                      />
                     </View>
                   )}
                   <View style={styles.popupHeaderInfo}>
-                    <Text style={[styles.popupName, styles.popupLink]}>{b.kennelName || "—"}</Text>
-                    {b.city ? <Text style={styles.popupKennel}>{b.city}</Text> : null}
+                    <Text style={[styles.popupName, styles.popupLink]}>
+                      {b.kennelName || "—"}
+                    </Text>
+                    {b.city ? (
+                      <Text style={styles.popupKennel}>{b.city}</Text>
+                    ) : null}
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={COLORS.primary}
+                  />
                 </TouchableOpacity>
 
                 <View style={styles.popupDivider} />
@@ -360,49 +471,79 @@ export default function BreederDirectoryScreen() {
                   activeOpacity={0.7}
                   onPress={() => {
                     setSelectedBreeder(null);
-                    navigation.navigate("BreederProfile", { id: b.memberId, name: b.name, breederData: b });
+                    navigation.navigate("BreederProfile", {
+                      id: b.memberId,
+                      name: b.name,
+                      breederData: b,
+                    });
                   }}
                 >
                   {hasImg ? (
-                    <LazyImage source={{ uri: b.imageUrl }} style={styles.popupAvatar} resizeMode="cover" />
+                    <LazyImage
+                      source={{ uri: b.imageUrl }}
+                      style={styles.popupAvatar}
+                      resizeMode="cover"
+                    />
                   ) : (
                     <View style={styles.popupAvatarFallback}>
-                      <Text style={styles.popupAvatarText}>{popupInitials}</Text>
+                      <Text style={styles.popupAvatarText}>
+                        {popupInitials}
+                      </Text>
                     </View>
                   )}
                   <View style={styles.popupHeaderInfo}>
-                    <Text style={[styles.popupName, styles.popupLink]}>{b.name || "—"}</Text>
+                    <Text style={[styles.popupName, styles.popupLink]}>
+                      {b.name || "—"}
+                    </Text>
                     {b.membership_no ? (
-                      <Text style={styles.popupMemberNo}>Member {b.membership_no}</Text>
+                      <Text style={styles.popupMemberNo}>
+                        Member {b.membership_no}
+                      </Text>
                     ) : null}
                     <View style={styles.popupBreederMeta}>
-                      {b.breederType ? (() => {
-                        const ts = tierBadgeStyles(b.breederType);
-                        return (
-                          <View style={[styles.badge, ts.bg]}>
-                            <Text style={[styles.badgeText, ts.text]}>{b.breederType}</Text>
-                          </View>
-                        );
-                      })() : null}
+                      {b.breederType
+                        ? (() => {
+                            const ts = tierBadgeStyles(b.breederType);
+                            return (
+                              <View style={[styles.badge, ts.bg]}>
+                                <Text style={[styles.badgeText, ts.text]}>
+                                  {b.breederType}
+                                </Text>
+                              </View>
+                            );
+                          })()
+                        : null}
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.primary} />
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={COLORS.primary}
+                  />
                 </TouchableOpacity>
 
                 <View style={styles.popupDivider} />
 
                 {/* Extra contact info */}
-                {(b.phone || b.email) ? (
+                {b.phone || b.email ? (
                   <View style={styles.popupInfoGrid}>
                     {b.phone ? (
                       <View style={styles.popupInfoRow}>
-                        <Ionicons name="call-outline" size={16} color={COLORS.primary} />
+                        <Ionicons
+                          name="call-outline"
+                          size={16}
+                          color={COLORS.primary}
+                        />
                         <Text style={styles.popupInfoText}>{b.phone}</Text>
                       </View>
                     ) : null}
                     {b.email ? (
                       <View style={styles.popupInfoRow}>
-                        <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
+                        <Ionicons
+                          name="mail-outline"
+                          size={16}
+                          color={COLORS.primary}
+                        />
                         <Text style={styles.popupInfoText}>{b.email}</Text>
                       </View>
                     ) : null}
@@ -417,123 +558,234 @@ export default function BreederDirectoryScreen() {
         visible={showInfoModal}
         onClose={() => setShowInfoModal(false)}
       >
-          <View style={styles.popupContent}>
-            <View style={styles.infoModalHeader}>
-              <Ionicons name="ribbon-outline" size={32} color={COLORS.primary} />
-              <Text style={styles.infoModalTitle}>Active Breeders</Text>
-            </View>
-            <Text style={styles.infoModalBody}>
-              This directory lists GSDCP registered kennel owners who are actively breeding German Shepherd Dogs.
-            </Text>
-            <View style={styles.infoTierList}>
-              <View style={styles.infoTierRow}>
-                <View style={[styles.badge, styles.badgeGold]}><Text style={[styles.badgeText, styles.badgeGoldText]}>Gold</Text></View>
-                <Text style={styles.infoTierDesc}>Top-tier breeders with 2 or more litters bred in a span of a year.</Text>
-              </View>
-              <View style={styles.infoTierRow}>
-                <View style={[styles.badge, styles.badgeSilver]}><Text style={[styles.badgeText, styles.badgeSilverText]}>Silver</Text></View>
-                <Text style={styles.infoTierDesc}>Established breeders with 2 or more litters bred in a span of 2 years.</Text>
-              </View>
-              <View style={styles.infoTierRow}>
-                <View style={[styles.badge, styles.badgeBronze]}><Text style={[styles.badgeText, styles.badgeBronzeText]}>Bronze</Text></View>
-                <Text style={styles.infoTierDesc}>Active breeders with 2 or more litters bred in a span of 3 years.</Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.infoModalClose}
-              onPress={() => setShowInfoModal(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.infoModalCloseText}>Got it</Text>
-            </TouchableOpacity>
+        <View style={styles.popupContent}>
+          <View style={styles.infoModalHeader}>
+            <Ionicons name="ribbon-outline" size={32} color={COLORS.primary} />
+            <Text style={styles.infoModalTitle}>Active Breeders</Text>
           </View>
+          <Text style={styles.infoModalBody}>
+            This directory lists GSDCP registered kennel owners who are actively
+            breeding German Shepherd Dogs.
+          </Text>
+          <View style={styles.infoTierList}>
+            <View style={styles.infoTierRow}>
+              <View style={[styles.badge, styles.badgeGold]}>
+                <Text style={[styles.badgeText, styles.badgeGoldText]}>
+                  Gold
+                </Text>
+              </View>
+              <Text style={styles.infoTierDesc}>
+                Top-tier breeders with 2 or more litters bred in a span of a
+                year.
+              </Text>
+            </View>
+            <View style={styles.infoTierRow}>
+              <View style={[styles.badge, styles.badgeSilver]}>
+                <Text style={[styles.badgeText, styles.badgeSilverText]}>
+                  Silver
+                </Text>
+              </View>
+              <Text style={styles.infoTierDesc}>
+                Established breeders with 2 or more litters bred in a span of 2
+                years.
+              </Text>
+            </View>
+            <View style={styles.infoTierRow}>
+              <View style={[styles.badge, styles.badgeBronze]}>
+                <Text style={[styles.badgeText, styles.badgeBronzeText]}>
+                  Bronze
+                </Text>
+              </View>
+              <Text style={styles.infoTierDesc}>
+                Active breeders with 2 or more litters bred in a span of 3
+                years.
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.infoModalClose}
+            onPress={() => setShowInfoModal(false)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.infoModalCloseText}>Got it</Text>
+          </TouchableOpacity>
+        </View>
       </BottomSheetModal>
 
       <BottomSheetModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
       >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filters</Text>
-              <TouchableOpacity onPress={resetFilters} data-testid="btn-reset-filters">
-                <Text style={styles.resetText}>Reset</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.filterSectionTitle}>Country</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
-              <TouchableOpacity
-                style={[styles.filterOption, tempCountry === "All" && styles.filterOptionActive]}
-                onPress={() => { setTempCountry("All"); setTempCity("All"); }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterOptionText, tempCountry === "All" && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {countries.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.filterOption, tempCountry === opt && styles.filterOptionActive]}
-                  onPress={() => { setTempCountry(opt); setTempCity("All"); }}
-                  activeOpacity={0.7}
-                  data-testid={`filter-country-${opt}`}
-                >
-                  <Text style={[styles.filterOptionText, tempCountry === opt && styles.filterOptionTextActive]}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.filterSectionTitle}>City</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
-              <TouchableOpacity
-                style={[styles.filterOption, tempCity === "All" && styles.filterOptionActive]}
-                onPress={() => setTempCity("All")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterOptionText, tempCity === "All" && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {filteredCities.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.filterOption, tempCity === opt && styles.filterOptionActive]}
-                  onPress={() => setTempCity(opt)}
-                  activeOpacity={0.7}
-                  data-testid={`filter-city-${opt}`}
-                >
-                  <Text style={[styles.filterOptionText, tempCity === opt && styles.filterOptionTextActive]}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={styles.filterSectionTitle}>Breeder Type</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterOptionsRow}>
-              <TouchableOpacity
-                style={[styles.filterOption, tempType === "All" && styles.filterOptionActive]}
-                onPress={() => setTempType("All")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterOptionText, tempType === "All" && styles.filterOptionTextActive]}>All</Text>
-              </TouchableOpacity>
-              {BREEDER_TYPES.map((opt) => {
-                const isActive = tempType === opt;
-                return (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[styles.filterOption, isActive && styles.filterOptionActive]}
-                    onPress={() => setTempType(opt)}
-                    activeOpacity={0.7}
-                    data-testid={`filter-type-${opt}`}
-                  >
-                    <Text style={[styles.filterOptionText, isActive && styles.filterOptionTextActive]}>{opt}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            <TouchableOpacity style={styles.applyButton} onPress={applyFilters} activeOpacity={0.8} data-testid="btn-apply-filters">
-              <Text style={styles.applyButtonText}>Apply Filters</Text>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Filters</Text>
+            <TouchableOpacity
+              onPress={resetFilters}
+              data-testid="btn-reset-filters"
+            >
+              <Text style={styles.resetText}>Reset</Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={styles.filterSectionTitle}>Country</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterOptionsRow}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterOption,
+                tempCountry === "All" && styles.filterOptionActive,
+              ]}
+              onPress={() => {
+                setTempCountry("All");
+                setTempCity("All");
+              }}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  tempCountry === "All" && styles.filterOptionTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {countries.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.filterOption,
+                  tempCountry === opt && styles.filterOptionActive,
+                ]}
+                onPress={() => {
+                  setTempCountry(opt);
+                  setTempCity("All");
+                }}
+                activeOpacity={0.7}
+                data-testid={`filter-country-${opt}`}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempCountry === opt && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterSectionTitle}>City</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterOptionsRow}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterOption,
+                tempCity === "All" && styles.filterOptionActive,
+              ]}
+              onPress={() => setTempCity("All")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  tempCity === "All" && styles.filterOptionTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {filteredCities.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.filterOption,
+                  tempCity === opt && styles.filterOptionActive,
+                ]}
+                onPress={() => setTempCity(opt)}
+                activeOpacity={0.7}
+                data-testid={`filter-city-${opt}`}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempCity === opt && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Text style={styles.filterSectionTitle}>Breeder Type</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterOptionsRow}
+          >
+            <TouchableOpacity
+              style={[
+                styles.filterOption,
+                tempType === "All" && styles.filterOptionActive,
+              ]}
+              onPress={() => setTempType("All")}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterOptionText,
+                  tempType === "All" && styles.filterOptionTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {BREEDER_TYPES.map((opt) => {
+              const isActive = tempType === opt;
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  style={[
+                    styles.filterOption,
+                    isActive && styles.filterOptionActive,
+                  ]}
+                  onPress={() => setTempType(opt)}
+                  activeOpacity={0.7}
+                  data-testid={`filter-type-${opt}`}
+                >
+                  <Text
+                    style={[
+                      styles.filterOptionText,
+                      isActive && styles.filterOptionTextActive,
+                    ]}
+                  >
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.applyButton}
+            onPress={applyFilters}
+            activeOpacity={0.8}
+            data-testid="btn-apply-filters"
+          >
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
       </BottomSheetModal>
     </View>
   );
@@ -889,8 +1141,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   popupLink: {
-    color: COLORS.primary,
-    textDecorationLine: "underline",
+    color: COLORS.text,
+    textDecorationLine: "none",
   },
   popupBreederMeta: {
     flexDirection: "row",
