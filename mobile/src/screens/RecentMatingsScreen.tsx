@@ -434,7 +434,12 @@ export default function RecentMatingsScreen() {
           (() => {
             const date = parseMatingDate(previewMating.mating_date);
             return (
-              <View style={styles.modalContent}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.modalContent}
+              >
                 {/* Header — tappable kennel row */}
                 <TouchableOpacity
                   style={styles.previewHeader}
@@ -722,7 +727,7 @@ export default function RecentMatingsScreen() {
                     </>
                   )}
 
-              </View>
+              </ScrollView>
             );
           })()}
       </BottomSheetModal>
@@ -1070,7 +1075,7 @@ const styles = StyleSheet.create({
   },
   retryText: { color: "#fff", fontSize: FONT_SIZES.md, fontWeight: "600" },
 
-  modalContent: { paddingHorizontal: 24 },
+  modalContent: { paddingHorizontal: 24, paddingBottom: 24 },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
