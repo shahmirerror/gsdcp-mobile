@@ -176,7 +176,9 @@ export default function RecentMatingsScreen() {
   const [litterFilter, setLitterFilter] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
-  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
+  const [expandedLitters, setExpandedLitters] = useState<Set<number>>(
+    new Set(),
+  );
   const [tempLitter, setTempLitter] = useState(false);
   const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
 
@@ -504,7 +506,11 @@ export default function RecentMatingsScreen() {
                       </View>
                     )}
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                  <Ionicons
+                    name="arrow-forward"
+                    size={16}
+                    color={COLORS.primary}
+                  />
                 </TouchableOpacity>
 
                 <View style={styles.previewDivider} />
@@ -647,8 +653,10 @@ export default function RecentMatingsScreen() {
                             .join(" - ");
 
                           if (
-                            (entry.type === "litter_pair" || entry.type === "litter_group") &&
-                            entry.dogs && entry.dogs.length > 0
+                            (entry.type === "litter_pair" ||
+                              entry.type === "litter_group") &&
+                            entry.dogs &&
+                            entry.dogs.length > 0
                           ) {
                             const isExpanded = expandedLitters.has(idx);
                             const toggleExpand = () => {
@@ -667,14 +675,25 @@ export default function RecentMatingsScreen() {
                                   onPress={toggleExpand}
                                 >
                                   <View style={styles.lbInfo}>
-                                    <Text style={styles.lbName} numberOfLines={1}>
+                                    <Text
+                                      style={styles.lbName}
+                                      numberOfLines={1}
+                                    >
                                       Litter {entry.litter_letter}
-                                      {entry.kennel ? ` from ${entry.kennel}` : ""}
+                                      {entry.kennel
+                                        ? ` from ${entry.kennel}`
+                                        : ""}
                                     </Text>
-                                    <Text style={styles.lbMeta}>{genLabel}</Text>
+                                    <Text style={styles.lbMeta}>
+                                      {genLabel}
+                                    </Text>
                                   </View>
                                   <Ionicons
-                                    name={isExpanded ? "chevron-down" : "chevron-forward"}
+                                    name={
+                                      isExpanded
+                                        ? "chevron-down"
+                                        : "chevron-forward"
+                                    }
                                     size={18}
                                     color="#94A3B8"
                                   />
@@ -689,12 +708,27 @@ export default function RecentMatingsScreen() {
                                         onPress={() => {
                                           setPreviewMating(null);
                                           setExpandedLitters(new Set());
-                                          navigation.push("DogProfile", { id: d.id });
+                                          navigation.push("DogProfile", {
+                                            id: d.id,
+                                          });
                                         }}
                                       >
-                                        <Ionicons name="paw" size={14} color={COLORS.primary} />
-                                        <Text style={styles.lbDogName} numberOfLines={1}>{d.dog_name}</Text>
-                                        <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                                        <Ionicons
+                                          name="paw"
+                                          size={14}
+                                          color={COLORS.primary}
+                                        />
+                                        <Text
+                                          style={styles.lbDogName}
+                                          numberOfLines={1}
+                                        >
+                                          {d.dog_name}
+                                        </Text>
+                                        <Ionicons
+                                          name="chevron-forward"
+                                          size={16}
+                                          color="#94A3B8"
+                                        />
                                       </TouchableOpacity>
                                     ))}
                                   </View>
@@ -711,22 +745,31 @@ export default function RecentMatingsScreen() {
                               onPress={() => {
                                 if (entry.id) {
                                   setPreviewMating(null);
-                                  navigation.push("DogProfile", { id: entry.id });
+                                  navigation.push("DogProfile", {
+                                    id: entry.id,
+                                  });
                                 }
                               }}
                             >
                               <View style={styles.lbInfo}>
-                                <Text style={styles.lbName} numberOfLines={1}>{entry.dog_name}</Text>
+                                <Text style={styles.lbName} numberOfLines={1}>
+                                  {entry.dog_name}
+                                </Text>
                                 <Text style={styles.lbMeta}>{genLabel}</Text>
                               </View>
-                              {entry.id && <Ionicons name="chevron-forward" size={18} color="#94A3B8" />}
+                              {entry.id && (
+                                <Ionicons
+                                  name="chevron-forward"
+                                  size={18}
+                                  color="#94A3B8"
+                                />
+                              )}
                             </TouchableOpacity>
                           );
                         })}
                       </View>
                     </>
                   )}
-
               </ScrollView>
             );
           })()}
@@ -1168,9 +1211,10 @@ const styles = StyleSheet.create({
 
   previewHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    gap: 14,
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    gap: 10,
   },
   previewKennelImage: {
     width: 64,
@@ -1308,12 +1352,47 @@ const styles = StyleSheet.create({
   },
 
   lbSection: { paddingVertical: 8, paddingHorizontal: 4 },
-  lbSectionTitle: { fontSize: 11, fontWeight: "700", color: COLORS.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
-  lbRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(15,92,59,0.05)" },
+  lbSectionTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  lbRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.05)",
+  },
   lbInfo: { flex: 1, marginRight: 8 },
-  lbName: { fontSize: 13, fontWeight: "600", color: COLORS.primary, marginBottom: 2 },
+  lbName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginBottom: 2,
+  },
   lbMeta: { fontSize: 12, color: "#94A3B8" },
-  lbDropdown: { marginLeft: 16, borderLeftWidth: 2, borderLeftColor: "rgba(15,92,58,0.12)", paddingLeft: 12, marginBottom: 4 },
-  lbDogRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, gap: 8 },
-  lbDogName: { flex: 1, fontSize: 13, fontWeight: "600", color: COLORS.primary },
+  lbDropdown: {
+    marginLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: "rgba(15,92,58,0.12)",
+    paddingLeft: 12,
+    marginBottom: 4,
+  },
+  lbDogRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    gap: 8,
+  },
+  lbDogName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.primary,
+  },
 });
