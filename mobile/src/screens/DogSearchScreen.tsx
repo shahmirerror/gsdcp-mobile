@@ -27,7 +27,7 @@ type Nav = NativeStackNavigationProp<DogsStackParamList, "DogSearch">;
 
 const GENDER_OPTIONS = ["All", "Male", "Female"] as const;
 const HAIR_OPTIONS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
-const TITLED_OPTIONS = ["All", "Yes", "No"] as const;
+const TITLED_OPTIONS = ["Yes", "No"] as const;
 
 export default function DogSearchScreen() {
   const navigation = useNavigation<Nav>();

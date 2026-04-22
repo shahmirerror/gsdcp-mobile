@@ -279,7 +279,7 @@ function DogListSection({
   }, [dogs, query, sex, titledFilter]);
 
   const SEX_OPTIONS: SexFilter[] = ["All", "Male", "Female"];
-  const TITLED_OPTIONS = ["All", "Yes", "No"] as const;
+  const TITLED_OPTIONS = ["Yes", "No"] as const;
   const hasActiveFilter = query.trim() !== "" || sex !== "All" || titledFilter !== "All";
 
   if (dogs.length === 0) {
