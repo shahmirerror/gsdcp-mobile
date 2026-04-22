@@ -631,23 +631,23 @@ export default function BreederProfileScreen() {
           </>
         )}
 
-        {activeTab === "bred" && (
+        <View style={activeTab === "bred" ? undefined : { display: "none" }}>
           <DogListSection
             dogs={dogsBred}
             emptyTitle="No Dogs Bred"
             emptyDesc="No dogs have been bred by this breeder yet."
             onDogPress={handleDogPress}
           />
-        )}
+        </View>
 
-        {activeTab === "owned" && (
+        <View style={activeTab === "owned" ? undefined : { display: "none" }}>
           <DogListSection
             dogs={dogsOwned}
             emptyTitle="No Dogs Owned"
             emptyDesc="No dogs are currently owned by this breeder."
             onDogPress={handleDogPress}
           />
-        )}
+        </View>
       </View>
 
       <View style={{ height: 32 }} />

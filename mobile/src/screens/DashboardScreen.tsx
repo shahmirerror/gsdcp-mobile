@@ -655,7 +655,7 @@ export default function DashboardScreen() {
                   </View>
                   <Ionicons
                     name="arrow-forward"
-                    size={16}
+                    size={14}
                     color={COLORS.primary}
                   />
                 </TouchableOpacity>
@@ -752,7 +752,7 @@ export default function DashboardScreen() {
                                         </Text>
                                         <Ionicons
                                           name="arrow-forward"
-                                          size={16}
+                                          size={14}
                                           color={COLORS.primary}
                                         />
                                       </TouchableOpacity>
@@ -787,9 +787,9 @@ export default function DashboardScreen() {
                               </View>
                               {entry.id && (
                                 <Ionicons
-                                  name="chevron-forward"
-                                  size={18}
-                                  color="#94A3B8"
+                                  name="arrow-forward"
+                                  size={14}
+                                  color={COLORS.primary}
                                 />
                               )}
                             </TouchableOpacity>
