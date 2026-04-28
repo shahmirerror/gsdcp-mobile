@@ -27,6 +27,7 @@ type Nav = NativeStackNavigationProp<DogsStackParamList, "DogSearch">;
 
 const GENDER_OPTIONS = ["All", "Male", "Female"] as const;
 const HAIR_OPTIONS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
+const TITLED_OPTIONS = ["Yes", "No"] as const;
 
 export default function DogSearchScreen() {
   const navigation = useNavigation<Nav>();
@@ -37,34 +38,44 @@ export default function DogSearchScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState<string>(route.params?.searchQuery || "");
   const [genderFilter, setGenderFilter]       = useState<string>("All");
   const [hairFilter,   setHairFilter]         = useState<string>("All");
+  const [titledFilter, setTitledFilter]       = useState<string>("All");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempGender, setTempGender]           = useState<string>("All");
   const [tempHair,   setTempHair]             = useState<string>("All");
+  const [tempTitled, setTempTitled]           = useState<string>("All");
   const [previewDog, setPreviewDog]           = useState<Dog | null>(null);
+  const [ownerDropdownOpen, setOwnerDropdownOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  useEffect(() => { setOwnerDropdownOpen(false); }, [previewDog?.id]);
+
   const activeFilterCount =
-    (genderFilter !== "All" ? 1 : 0) + (hairFilter !== "All" ? 1 : 0);
+    (genderFilter !== "All" ? 1 : 0) +
+    (hairFilter !== "All" ? 1 : 0) +
+    (titledFilter !== "All" ? 1 : 0);
 
   const openFilters = () => {
     setTempGender(genderFilter);
     setTempHair(hairFilter);
+    setTempTitled(titledFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setGenderFilter(tempGender);
     setHairFilter(tempHair);
+    setTitledFilter(tempTitled);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempGender("All");
     setTempHair("All");
+    setTempTitled("All");
   };
 
   const {
@@ -77,12 +88,13 @@ export default function DogSearchScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<DogsPage>({
-    queryKey: ["dogs", debouncedSearch, genderFilter, hairFilter],
+    queryKey: ["dogs", debouncedSearch, genderFilter, hairFilter, titledFilter],
     queryFn: ({ pageParam }) =>
       fetchDogsPage(pageParam as number, {
         search: debouncedSearch || undefined,
         gender: genderFilter,
         hair:   hairFilter,
+        titled: titledFilter,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
@@ -160,7 +172,15 @@ export default function DogSearchScreen() {
               </TouchableOpacity>
             </View>
           )}
-          <TouchableOpacity onPress={() => { setGenderFilter("All"); setHairFilter("All"); }}>
+          {titledFilter !== "All" && (
+            <View style={styles.activeChip}>
+              <Text style={styles.activeChipText}>Titled: {titledFilter}</Text>
+              <TouchableOpacity onPress={() => setTitledFilter("All")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <Ionicons name="close" size={13} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity onPress={() => { setGenderFilter("All"); setHairFilter("All"); setTitledFilter("All"); }}>
             <Text style={styles.clearAllText}>Clear all</Text>
           </TouchableOpacity>
         </View>
@@ -205,7 +225,11 @@ export default function DogSearchScreen() {
             />
           }
           renderItem={({ item }) => (
-            <DogListItem dog={item} onPress={() => setPreviewDog(item)} />
+            <DogListItem
+              dog={item}
+              onPress={() => setPreviewDog(item)}
+              onOwnerPress={(owner) => navigation.navigate("MemberProfile", { id: owner.member_id })}
+            />
           )}
           ListFooterComponent={
             isFetchingNextPage ? (
@@ -288,13 +312,6 @@ export default function DogSearchScreen() {
                 { label: "Sire",         value: previewDog.sire },
                 { label: "Dam",          value: previewDog.dam },
                 { label: "Breeder",      value: previewDog.breeder },
-                {
-                  label: "Owner",
-                  value:
-                    previewDog.owner && previewDog.owner.length > 0
-                      ? previewDog.owner.map((o) => o.name).join(", ")
-                      : null,
-                },
               ]
                 .filter((row) => row.value)
                 .map((row) => (
@@ -305,6 +322,59 @@ export default function DogSearchScreen() {
                     </Text>
                   </View>
                 ))}
+
+              {/* Owner row — interactive */}
+              {previewDog.owner && previewDog.owner.length > 0 && (
+                <View style={styles.dogPreviewRow}>
+                  <Text style={styles.dogPreviewRowLabel}>Owner</Text>
+                  <View style={styles.ownerSection}>
+                    {previewDog.owner.length === 1 ? (
+                      <TouchableOpacity
+                        style={styles.ownerSingleRow}
+                        onPress={() => {
+                          const ownerId = previewDog.owner![0].member_id;
+                          setPreviewDog(null);
+                          navigation.navigate("MemberProfile", { id: ownerId });
+                        }}
+                      >
+                        <Text style={styles.ownerLink}>{previewDog.owner[0].name}</Text>
+                        <Ionicons name="chevron-forward" size={14} color={COLORS.primary} />
+                      </TouchableOpacity>
+                    ) : (
+                      <View>
+                        <TouchableOpacity
+                          style={styles.ownerSingleRow}
+                          onPress={() => setOwnerDropdownOpen(!ownerDropdownOpen)}
+                        >
+                          <Text style={styles.ownerLink}>
+                            {previewDog.owner.length} owners
+                          </Text>
+                          <Ionicons
+                            name={ownerDropdownOpen ? "chevron-up" : "chevron-down"}
+                            size={14}
+                            color={COLORS.primary}
+                          />
+                        </TouchableOpacity>
+                        {ownerDropdownOpen && previewDog.owner.map((o) => (
+                          <TouchableOpacity
+                            key={o.member_id}
+                            style={styles.ownerDropdownItem}
+                            onPress={() => {
+                              const ownerId = o.member_id;
+                              setPreviewDog(null);
+                              navigation.navigate("MemberProfile", { id: ownerId });
+                            }}
+                          >
+                            <Ionicons name="person-circle-outline" size={15} color={COLORS.textMuted} />
+                            <Text style={styles.ownerDropdownItemText}>{o.name}</Text>
+                            <Ionicons name="chevron-forward" size={12} color={COLORS.textMuted} />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
             </View>
 
             <TouchableOpacity
@@ -378,6 +448,30 @@ export default function DogSearchScreen() {
                   style={[
                     styles.filterOptionText,
                     tempHair === opt && styles.filterOptionTextActive,
+                  ]}
+                >
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.filterSectionTitle}>Titled</Text>
+          <View style={styles.filterOptionsRow}>
+            {TITLED_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[
+                  styles.filterOption,
+                  tempTitled === opt && styles.filterOptionActive,
+                ]}
+                onPress={() => setTempTitled(tempTitled === opt ? "All" : opt)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.filterOptionText,
+                    tempTitled === opt && styles.filterOptionTextActive,
                   ]}
                 >
                   {opt}
@@ -680,5 +774,34 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "700",
+  },
+  ownerSection: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  ownerSingleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  ownerLink: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    color: COLORS.primary,
+    textAlign: "right",
+  },
+  ownerDropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingLeft: 4,
+  },
+  ownerDropdownItemText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text,
+    fontWeight: "500",
+    flex: 1,
+    textAlign: "right",
   },
 });

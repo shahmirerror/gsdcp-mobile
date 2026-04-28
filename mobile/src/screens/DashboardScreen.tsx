@@ -454,8 +454,27 @@ export default function DashboardScreen() {
           (() => {
             const date = parseMatingDate(previewMating.mating_date);
             return (
-              <View style={styles.modalContent}>
-                <View style={styles.previewHeader}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.modalContent}
+              >
+                <TouchableOpacity
+                  style={styles.previewHeader}
+                  activeOpacity={0.75}
+                  onPress={() => {
+                    setPreviewMating(null);
+                    setExpandedLitters(new Set());
+                    navigation.navigate("KennelDirectoryTab", {
+                      screen: "KennelProfile",
+                      params: {
+                        id: previewMating.kennel_id,
+                        name: previewMating.kennel_name,
+                      },
+                    });
+                  }}
+                >
                   {previewMating.kennel_image ? (
                     <LazyImage
                       source={{ uri: previewMating.kennel_image }}
@@ -508,7 +527,12 @@ export default function DashboardScreen() {
                       </View>
                     )}
                   </View>
-                </View>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={18}
+                    color={COLORS.primary}
+                  />
+                </TouchableOpacity>
 
                 <View style={styles.previewDivider} />
 
@@ -631,7 +655,7 @@ export default function DashboardScreen() {
                   </View>
                   <Ionicons
                     name="arrow-forward"
-                    size={16}
+                    size={14}
                     color={COLORS.primary}
                   />
                 </TouchableOpacity>
@@ -727,9 +751,9 @@ export default function DashboardScreen() {
                                           {d.dog_name}
                                         </Text>
                                         <Ionicons
-                                          name="chevron-forward"
-                                          size={16}
-                                          color="#94A3B8"
+                                          name="arrow-forward"
+                                          size={14}
+                                          color={COLORS.primary}
                                         />
                                       </TouchableOpacity>
                                     ))}
@@ -763,9 +787,9 @@ export default function DashboardScreen() {
                               </View>
                               {entry.id && (
                                 <Ionicons
-                                  name="chevron-forward"
-                                  size={18}
-                                  color="#94A3B8"
+                                  name="arrow-forward"
+                                  size={14}
+                                  color={COLORS.primary}
                                 />
                               )}
                             </TouchableOpacity>
@@ -774,30 +798,7 @@ export default function DashboardScreen() {
                       </View>
                     </>
                   )}
-
-                <View style={[styles.previewDivider, { marginTop: 16 }]} />
-
-                <TouchableOpacity
-                  style={styles.viewProfileBtn}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    setPreviewMating(null);
-                    setExpandedLitters(new Set());
-                    navigation.navigate("KennelDirectoryTab", {
-                      screen: "KennelProfile",
-                      params: {
-                        id: previewMating.kennel_id,
-                        name: previewMating.kennel_name,
-                      },
-                    });
-                  }}
-                >
-                  <Ionicons name="home" size={16} color="#fff" />
-                  <Text style={styles.viewProfileBtnText}>
-                    View Kennel Profile
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              </ScrollView>
             );
           })()}
       </BottomSheetModal>
@@ -1363,13 +1364,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  modalContent: { paddingHorizontal: 24 },
+  modalContent: { paddingHorizontal: 24, paddingBottom: 24 },
 
   previewHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 16,
-    gap: 14,
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
   },
   previewKennelImage: {
     width: 64,
