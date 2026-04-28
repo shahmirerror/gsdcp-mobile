@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Image, Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -43,6 +43,7 @@ import TeamMemberDetailScreen from "../screens/club/TeamMemberDetailScreen";
 import VirtualBreedingScreen from "../screens/VirtualBreedingScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import CustomTabBar from "./CustomTabBar";
+import { navigationRef } from "./navigationRef";
 
 export type DogsStackParamList = {
   DogSearch: undefined;
@@ -293,7 +294,6 @@ function TheClubStackNavigator() {
 }
 
 export default function AppNavigator() {
-  const navRef = useRef<any>(null);
   const [activeRouteName, setActiveRouteName] = useState("HomeTab");
 
   const statusBarStyle = useMemo<"light" | "dark">(
@@ -304,11 +304,13 @@ export default function AppNavigator() {
   return (
     <>
       <NavigationContainer
-        ref={navRef}
+        ref={navigationRef}
         onReady={() => {
-          const rootState = navRef.current?.getRootState?.();
-          if (rootState) {
-            setActiveRouteName(getActiveRouteName(rootState as NavTreeState));
+          if (navigationRef.isReady()) {
+            const rootState = navigationRef.getRootState();
+            if (rootState) {
+              setActiveRouteName(getActiveRouteName(rootState as NavTreeState));
+            }
           }
         }}
         onStateChange={(state) => {

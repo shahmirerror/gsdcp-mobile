@@ -7,9 +7,9 @@ buildscript {
   }
   dependencies {
     classpath 'com.google.gms:google-services:4.4.1'
-    classpath('com.android.tools.build:gradle:8.3.2')
+    classpath('com.android.tools.build:gradle:8.11.0')
     classpath('com.facebook.react:react-native-gradle-plugin')
-    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21')
   }
 }
 
@@ -18,6 +18,33 @@ allprojects {
     google()
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
+  }
+}
+
+// Debug: log whether com.android.library was applied and what AGP version each
+// native-module subproject ended up with.  Output appears in the "Run gradlew"
+// phase of EAS build logs, BEFORE the "FAILURE" block.
+gradle.afterProject { proj ->
+  def dominated = [
+    'react-native-async-storage_async-storage',
+    'react-native-gesture-handler',
+    'react-native-reanimated',
+    'react-native-safe-area-context',
+    'react-native-screens',
+    'react-native-worklets',
+  ]
+  if (dominated.contains(proj.name)) {
+    def hasLib = proj.plugins.hasPlugin('com.android.library')
+    def cfgCount = proj.configurations.size()
+    println "[AGP-DEBUG] ${proj.path}: com.android.library=${hasLib}, configurations=${cfgCount}"
+    if (hasLib) {
+      try {
+        def agp = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
+        println "[AGP-DEBUG] ${proj.path}: AGP version=${agp}"
+      } catch (e) {
+        println "[AGP-DEBUG] ${proj.path}: AGP version=UNKNOWN (${e.message})"
+      }
+    }
   }
 }
 

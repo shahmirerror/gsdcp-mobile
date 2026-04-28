@@ -49,7 +49,7 @@
     "scheme": "gsdcp",
     "extra": {
       "eas": {
-        "projectId": "1dbe2f8d-6c82-4071-b167-9e6e4d4621a4"
+        "projectId": "8bc67d8f-a681-4816-987d-3f6e3d6250ae"
       }
     },
     "plugins": [
@@ -70,6 +70,7 @@
           "sounds": []
         }
       ]
-    ]
+    ],
+    "owner": "shahmir-sindhus-organization"
   }
 }

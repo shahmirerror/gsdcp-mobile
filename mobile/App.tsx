@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet } from "react-native";
+import * as Notifications from "expo-notifications";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import AppNavigator from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/contexts/AuthContext";
+import { useAppUpdate } from "./src/lib/useAppUpdate";
+import { handleNotificationResponse } from "./src/lib/notifications";
+import WhatsNewModal from "./src/components/WhatsNewModal";
 
 const splashLogo = require("./assets/splash-logo.png");
 const ccmsLogo = require("./assets/ccms-logo.png");
@@ -107,18 +111,52 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
   );
 }
 
-export default function App() {
+/**
+ * Inner component so hooks run inside all providers.
+ */
+function AppContent() {
   const [splashDone, setSplashDone] = useState(false);
+  const { showWhatsNew, whatsNewVersion, whatsNewChanges, dismissWhatsNew } =
+    useAppUpdate();
 
+  // Handle notification taps (foreground + background + killed-state)
+  useEffect(() => {
+    // Tapped while app was running or backgrounded
+    const responseSub = Notifications.addNotificationResponseReceivedListener(
+      handleNotificationResponse,
+    );
+
+    // Tapped notification that launched the app from killed state
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) handleNotificationResponse(response);
+    });
+
+    return () => responseSub.remove();
+  }, []);
+
+  return (
+    <>
+      <AppNavigator />
+      {!splashDone && (
+        <SplashSequence onDone={() => setSplashDone(true)} />
+      )}
+      <WhatsNewModal
+        visible={showWhatsNew}
+        version={whatsNewVersion}
+        changes={whatsNewChanges}
+        onDismiss={dismissWhatsNew}
+      />
+    </>
+  );
+}
+
+export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <AppNavigator />
-            {!splashDone && (
-              <SplashSequence onDone={() => setSplashDone(true)} />
-            )}
+            <AppContent />
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
