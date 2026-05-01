@@ -9,7 +9,7 @@ buildscript {
     classpath 'com.google.gms:google-services:4.4.1'
     classpath('com.android.tools.build:gradle:8.11.0')
     classpath('com.facebook.react:react-native-gradle-plugin')
-    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20')
   }
 }
 
@@ -21,32 +21,24 @@ allprojects {
   }
 }
 
-// Debug: log whether com.android.library was applied and what AGP version each
-// native-module subproject ended up with.  Output appears in the "Run gradlew"
-// phase of EAS build logs, BEFORE the "FAILURE" block.
-gradle.afterProject { proj ->
-  def dominated = [
-    'react-native-async-storage_async-storage',
-    'react-native-gesture-handler',
-    'react-native-reanimated',
-    'react-native-safe-area-context',
-    'react-native-screens',
-    'react-native-worklets',
-  ]
-  if (dominated.contains(proj.name)) {
-    def hasLib = proj.plugins.hasPlugin('com.android.library')
-    def cfgCount = proj.configurations.size()
-    println "[AGP-DEBUG] ${proj.path}: com.android.library=${hasLib}, configurations=${cfgCount}"
-    if (hasLib) {
-      try {
-        def agp = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
-        println "[AGP-DEBUG] ${proj.path}: AGP version=${agp}"
-      } catch (e) {
-        println "[AGP-DEBUG] ${proj.path}: AGP version=UNKNOWN (${e.message})"
-      }
-    }
-  }
-}
+// Provide kotlinVersion in rootProject.ext so that library subproject buildscript
+// blocks find the correct Kotlin version via rootProject.ext.has('kotlinVersion').
+//
+// Without this, react-native-gesture-handler and react-native-safe-area-context
+// fall back to their RNGH_kotlinVersion / RNSAC_kotlinVersion gradle properties
+// which are undefined → kotlin_version = null → classpath("kotlin-gradle-plugin:null")
+// → Gradle throws ModuleVersionNotFoundException during buildscript resolution.
+// With parallel builds this aborts ALL parallel project configurations, causing
+// every React Native library subproject to report "No variants exist".
+//
+// react-native-screens falls back to Kotlin 1.8.0 (its hardcoded default).
+// @react-native-async-storage falls back to Kotlin 1.9.24.
+// Both create Kotlin version conflicts with the root's Kotlin 2.1.20 classpath.
+//
+// Setting ext.kotlinVersion = '2.1.20' here (root project is always evaluated
+// first, before any subproject buildscript runs) ensures all libraries resolve
+// to the same Kotlin version already present in the root classpath.
+ext.kotlinVersion = '2.1.20'
 
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"

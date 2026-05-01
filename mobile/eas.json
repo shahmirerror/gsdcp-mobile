@@ -17,10 +17,14 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "aab"
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease --stacktrace",
+        "env": {
+          "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,armeabi-v7a"
+        }
       },
       "cache": {
-        "key": "v9"
+        "key": "v13"
       }
     }
   },
