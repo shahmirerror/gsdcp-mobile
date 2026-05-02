@@ -1,4 +1,7 @@
 .expo/
+credentials.json
+*.keystore
+*.jks
 android/.gradle/
 android/build/
 android/app/build/

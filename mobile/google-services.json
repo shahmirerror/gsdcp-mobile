@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:384303481015:android:5cbcf7c9fca094c37a0d32",
+        "mobilesdk_app_id": "1:384303481015:android:319821a2a60fff8f7a0d32",
         "android_client_info": {
-          "package_name": "org.gsdcp.mobile"
+          "package_name": "com.gsdcp.ccms.inspedium"
         }
       },
       "oauth_client": [],
