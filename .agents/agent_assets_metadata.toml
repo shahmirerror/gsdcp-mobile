@@ -6,3 +6,9 @@ id = "MvXsO8Y9CHXlGfPiL3Z1W"
 uri = "file://API_RESPONSE_TEMPLATES.md"
 type = "text"
 title = "GSDCP Mobile — API Response Templates"
+
+[[outputs]]
+id = "e7Yx042yiHzcJ3f8JsL1v"
+uri = "file://gsdcp-play-store-screenshots.tar.gz"
+type = "unspecified"
+title = "GSDCP Play Store Screenshots"
