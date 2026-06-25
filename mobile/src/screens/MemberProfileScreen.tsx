@@ -84,14 +84,16 @@ function DetailItem({
   label,
   value,
   valueColor,
+  half,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   valueColor?: string;
+  half?: boolean;
 }) {
   return (
-    <View style={styles.detailItem}>
+    <View style={[styles.detailItem, half && styles.detailItemHalf]}>
       <View style={styles.detailIconWrap}>
         <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
@@ -107,12 +109,14 @@ function DetailItem({
 function LockedDetailItem({
   icon,
   label,
+  half,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  half?: boolean;
 }) {
   return (
-    <View style={styles.detailItem}>
+    <View style={[styles.detailItem, half && styles.detailItemHalf]}>
       <View style={styles.detailIconWrap}>
         <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
@@ -143,28 +147,28 @@ function DetailTab({ detail, passedMember }: { detail: MemberDetail | undefined;
   return (
     <View style={styles.card}>
       <Text style={styles.cardHeading}>Membership Status</Text>
-      <View style={styles.detailsGrid}>
-        <DetailItem icon="card"             label="Membership Number" value={member.membership_no} />
-        <DetailItem icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
-        {member.city    ? <DetailItem icon="location" label="City"    value={member.city!}    /> : null}
-        {member.country ? <DetailItem icon="flag"     label="Country" value={member.country!} /> : null}
+      <View style={styles.detailsGridCols}>
+        <DetailItem half icon="card"             label="Membership Number" value={member.membership_no} />
+        <DetailItem half icon="checkmark-circle" label="Status"            value={statusLabel} valueColor={statusColor} />
+        {member.city    ? <DetailItem half icon="location" label="City"    value={member.city!}    /> : null}
+        {member.country ? <DetailItem half icon="flag"     label="Country" value={member.country!} /> : null}
 
         {checkPhone === "Show" && dm?.phone
-          ? <DetailItem icon="call" label="Phone" value={dm.phone} />
+          ? <DetailItem half icon="call" label="Phone" value={dm.phone} />
           : checkPhone === "Hide"
-          ? <LockedDetailItem icon="call" label="Phone" />
+          ? <LockedDetailItem half icon="call" label="Phone" />
           : null}
 
         {checkEmail === "Show" && dm?.email
-          ? <DetailItem icon="mail" label="Email" value={dm.email} />
+          ? <DetailItem half icon="mail" label="Email" value={dm.email} />
           : checkEmail === "Hide"
-          ? <LockedDetailItem icon="mail" label="Email" />
+          ? <LockedDetailItem half icon="mail" label="Email" />
           : null}
 
         {checkAddress === "Show" && dm?.address
-          ? <DetailItem icon="home" label="Address" value={dm.address} />
+          ? <DetailItem half icon="home" label="Address" value={dm.address} />
           : checkAddress === "Hide"
-          ? <LockedDetailItem icon="home" label="Address" />
+          ? <LockedDetailItem half icon="home" label="Address" />
           : null}
       </View>
     </View>
@@ -233,21 +237,21 @@ function KennelTab({ kennel, navigation }: { kennel: MemberKennel | null | undef
       <View style={styles.divider} />
 
       <Text style={styles.cardHeading}>Kennel Details</Text>
-      <View style={styles.detailsGrid}>
+      <View style={styles.detailsGridCols}>
         {kennel.prefix ? (
-          <DetailItem icon="text-outline" label="Prefix" value={kennel.prefix} />
+          <DetailItem half icon="text-outline" label="Prefix" value={kennel.prefix} />
         ) : null}
         {phone ? (
-          <DetailItem icon="call-outline" label="Phone" value={phone} />
+          <DetailItem half icon="call-outline" label="Phone" value={phone} />
         ) : null}
         {kennel.email ? (
-          <DetailItem icon="mail-outline" label="Email" value={kennel.email} />
+          <DetailItem half icon="mail-outline" label="Email" value={kennel.email} />
         ) : null}
         {kennel.location ? (
-          <DetailItem icon="location-outline" label="Location" value={kennel.location} />
+          <DetailItem half icon="location-outline" label="Location" value={kennel.location} />
         ) : null}
         {activeSince ? (
-          <DetailItem icon="calendar-outline" label="Active Since" value={activeSince} />
+          <DetailItem half icon="calendar-outline" label="Active Since" value={activeSince} />
         ) : null}
       </View>
 
@@ -387,9 +391,13 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
 
       {/* Dog list */}
       {filtered.length > 0 ? (
-        filtered.map((dog) => (
-          <DogListItem key={dog.id} dog={toListDog(dog)} onPress={() => onDogPress(dog)} />
-        ))
+        <View style={styles.twoColWrap}>
+          {filtered.map((dog) => (
+            <View key={dog.id} style={styles.recordCell}>
+              <DogListItem dog={toListDog(dog)} onPress={() => onDogPress(dog)} />
+            </View>
+          ))}
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <View style={styles.emptyIconWrap}>
@@ -698,6 +706,21 @@ const styles = StyleSheet.create({
 
   /* DetailItem — matches DogProfileScreen */
   detailsGrid: { gap: 20 },
+  detailsGridCols: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    rowGap: 20,
+  },
+  detailItemHalf: { width: "48%" },
+  twoColWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+  },
+  recordCell: { width: "48%" },
   detailItem: { flexDirection: "row", alignItems: "center", gap: 16 },
   detailIconWrap: {
     width: 40, height: 40, borderRadius: 10,

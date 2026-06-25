@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import {
   ScrollView,
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
@@ -13,10 +15,42 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, BORDER_RADIUS } from "../../lib/theme";
-import { stripHtml } from "../../lib/api";
+import { parseRichContent } from "../../lib/api";
 import type { TheClubStackParamList } from "../../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<TheClubStackParamList>;
+
+/** Renders a content image at full width, sizing its height from the real aspect ratio. */
+function ContentImage({ uri }: { uri: string }) {
+  const [aspectRatio, setAspectRatio] = useState(16 / 9);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    Image.getSize(
+      uri,
+      (w, h) => {
+        if (active && w > 0 && h > 0) setAspectRatio(w / h);
+      },
+      () => {
+        if (active) setFailed(true);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [uri]);
+
+  if (failed) return null;
+
+  return (
+    <Image
+      source={{ uri }}
+      style={[styles.contentImage, { aspectRatio }]}
+      resizeMode="cover"
+    />
+  );
+}
 
 export default function NewsDetailScreen() {
   const navigation = useNavigation<Nav>();
@@ -24,10 +58,7 @@ export default function NewsDetailScreen() {
   const route = useRoute<RouteProp<TheClubStackParamList, "NewsDetail">>();
   const { item } = route.params;
 
-  const paragraphs = stripHtml(item.content)
-    .split("\n\n")
-    .map((p) => p.replace(/\n/g, " ").trim())
-    .filter((p) => p.length > 0);
+  const blocks = parseRichContent(item.content);
 
   return (
     <ScrollView
@@ -56,14 +87,17 @@ export default function NewsDetailScreen() {
       </LinearGradient>
 
       <View style={styles.card}>
-        {paragraphs.map((para, i) => (
-          <Text
-            key={i}
-            style={[styles.bodyText, i < paragraphs.length - 1 && styles.bodyPara]}
-          >
-            {para}
-          </Text>
-        ))}
+        {blocks.map((block, bi) =>
+          block.type === "image" ? (
+            <ContentImage key={`img-${bi}`} uri={block.uri} />
+          ) : (
+            block.paragraphs.map((para, i) => (
+              <Text key={`t-${bi}-${i}`} style={[styles.bodyText, styles.bodyPara]}>
+                {para}
+              </Text>
+            ))
+          ),
+        )}
       </View>
     </ScrollView>
   );
@@ -112,4 +146,10 @@ const styles = StyleSheet.create({
   },
   bodyText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 23 },
   bodyPara: { marginBottom: 14 },
+  contentImage: {
+    width: "100%",
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: 14,
+    backgroundColor: COLORS.border,
+  },
 });

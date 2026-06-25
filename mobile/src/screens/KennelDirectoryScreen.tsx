@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { useResponsive } from "../lib/useResponsive";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -147,6 +148,8 @@ function KennelListItem({
 
 export default function KennelDirectoryScreen() {
   const navigation = useNavigation<Nav>();
+  const { isTablet, isWide } = useResponsive();
+  const numColumns = isWide ? 3 : isTablet ? 2 : 1;
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
@@ -309,9 +312,12 @@ export default function KennelDirectoryScreen() {
         </View>
       ) : (
         <FlatList
+          key={`kennels-cols-${numColumns}`}
           data={filtered}
           keyExtractor={(item, index) => `${item.id}-${index}`}
-          contentContainerStyle={styles.list}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.list, isTablet && styles.listWide]}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -321,10 +327,12 @@ export default function KennelDirectoryScreen() {
             />
           }
           renderItem={({ item }) => (
-            <KennelListItem
-              kennel={item}
-              onPress={() => { setPreviewImgErr(false); setPreviewKennel(item); }}
-            />
+            <View style={numColumns > 1 ? styles.gridCell : undefined}>
+              <KennelListItem
+                kennel={item}
+                onPress={() => { setPreviewImgErr(false); setPreviewKennel(item); }}
+              />
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
@@ -613,6 +621,9 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     paddingTop: SPACING.sm,
   },
+  listWide: { width: "100%", maxWidth: 1100, alignSelf: "center" },
+  columnWrapper: { gap: SPACING.md },
+  gridCell: { flex: 1 },
   listItem: {
     flexDirection: "row",
     alignItems: "center",

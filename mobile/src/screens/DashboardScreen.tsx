@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { useResponsive } from "../lib/useResponsive";
 import { formatDate } from "../lib/dateUtils";
 import {
   fetchDashboard,
@@ -86,6 +87,7 @@ export default function DashboardScreen() {
     new Set(),
   );
   const [showLegal, setShowLegal] = useState(false);
+  const { isTablet } = useResponsive();
 
   const {
     data: dashboard,
@@ -109,7 +111,7 @@ export default function DashboardScreen() {
 
   const statCards = [
     {
-      label: "Registered Dogs in Club",
+      label: "Dogs in Database",
       value: dashboard ? `${dashboard.totalDogs.toLocaleString()}` : "—",
       icon: "paw" as const,
     },
@@ -124,6 +126,276 @@ export default function DashboardScreen() {
       icon: "trophy" as const,
     },
   ];
+
+  const nextShow = dashboard?.upcomingShows?.[0];
+
+  const statsBlock = (
+    <View style={[styles.statsSection, isTablet && styles.statsFlush]}>
+      {statCards.map((stat) => (
+        <View key={stat.label} style={styles.statCard}>
+          <View style={styles.statIconWrap}>
+            <Ionicons name={stat.icon} size={18} color={COLORS.primary} />
+          </View>
+          <Text
+            style={styles.statValue}
+            data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
+          >
+            {stat.value}
+          </Text>
+          <Text style={styles.statLabel}>{stat.label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  const heroSection =
+    isTablet && nextShow ? (
+      <TouchableOpacity
+        style={styles.heroCard}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate("ShowsTab")}
+        data-testid="card-featured-show"
+      >
+        <View style={styles.heroBand}>
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>NEXT SHOW</Text>
+          </View>
+          <Ionicons
+            name="trophy"
+            size={46}
+            color="rgba(199,164,92,0.30)"
+            style={styles.heroTrophy}
+          />
+          <Text style={styles.heroTitle} numberOfLines={2}>
+            {nextShow.name}
+          </Text>
+          <Text style={styles.heroSub}>
+            {formatDate(nextShow.dates[0])}
+            {nextShow.location ? ` · ${nextShow.location}` : ""}
+          </Text>
+        </View>
+        <View style={styles.heroFooter}>
+          <View style={styles.heroFooterItem}>
+            <Ionicons name="ribbon-outline" size={14} color={COLORS.textMuted} />
+            <Text style={styles.heroFooterText}>{nextShow.event_type}</Text>
+          </View>
+          <View style={styles.heroFooterItem}>
+            <Text style={styles.heroCta}>View details</Text>
+            <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    ) : null;
+
+  const matingsSection = (
+    <View style={[styles.section, isTablet && styles.sectionFlush]}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Recent Matings</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("RecentMatingsTab")}
+          activeOpacity={0.7}
+          data-testid="link-view-all-matings"
+        >
+          <Text style={styles.seeAllText}>See All</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loadingCard}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        </View>
+      ) : recentMatings.length > 0 ? (
+        <View style={styles.activityCard}>
+          {recentMatings.map((mating, i) => {
+            const date = parseMatingDate(mating.mating_date);
+            return (
+              <TouchableOpacity
+                key={mating.id}
+                style={[
+                  styles.litterItem,
+                  i < recentMatings.length - 1 && styles.litterItemBorder,
+                ]}
+                activeOpacity={0.7}
+                onPress={() => setPreviewMating(mating)}
+                data-testid={`card-litter-${i}`}
+              >
+                <View style={styles.litterIconWrap}>
+                  <Ionicons name="heart" size={14} color={COLORS.accent} />
+                </View>
+                <View style={styles.litterTextWrap}>
+                  <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
+                  <Text style={styles.litterPairing}>
+                    {mating.sire.name.trim()} × {mating.dam.name.trim()}
+                  </Text>
+                  <View style={styles.litterMeta}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={11}
+                      color={COLORS.textMuted}
+                    />
+                    <Text style={styles.litterMetaText}>{date.full}</Text>
+                    {mating.city ? (
+                      <>
+                        <Text style={styles.litterMetaDot}>·</Text>
+                        <Ionicons
+                          name="location-outline"
+                          size={11}
+                          color={COLORS.textMuted}
+                        />
+                        <Text style={styles.litterMetaText}>{mating.city}</Text>
+                      </>
+                    ) : null}
+                  </View>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={14}
+                  color={COLORS.textMuted}
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={styles.activityCard}>
+          <Text style={styles.emptyText}>No recent matings found.</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const eventsSection = (
+    <View style={[styles.section, isTablet && styles.sectionFlush]}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Upcoming Events</Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("ShowsTab")}
+          activeOpacity={0.7}
+          data-testid="link-view-all-events"
+        >
+          <Text style={styles.seeAllText}>See All</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isLoading ? (
+        <View style={styles.loadingCard}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        </View>
+      ) : dashboard?.upcomingShows && dashboard.upcomingShows.length > 0 ? (
+        dashboard.upcomingShows.map((show) => {
+          const date = new Date(show.dates[0]);
+          const day = date.getDate().toString();
+          const month = date
+            .toLocaleString("en-GB", { month: "short" })
+            .toUpperCase();
+          return (
+            <TouchableOpacity
+              key={show.id}
+              style={styles.eventCard}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate("ShowsTab")}
+              data-testid={`card-event-${show.id}`}
+            >
+              <View style={styles.eventDateBox}>
+                <Text style={styles.eventDay}>{day}</Text>
+                <Text style={styles.eventMonth}>{month}</Text>
+              </View>
+              <View style={styles.eventInfo}>
+                <View style={styles.eventMeta}>
+                  <View style={styles.eventBadge}>
+                    <Text style={styles.eventBadgeText}>{show.event_type}</Text>
+                  </View>
+                </View>
+                <Text style={styles.eventTitle}>{show.name}</Text>
+                {show.location ? (
+                  <View style={styles.eventLocationRow}>
+                    <Ionicons
+                      name="location-outline"
+                      size={12}
+                      color={COLORS.textMuted}
+                    />
+                    <Text style={styles.eventLocation}>{show.location}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={COLORS.textMuted}
+              />
+            </TouchableOpacity>
+          );
+        })
+      ) : (
+        <View style={styles.eventCard}>
+          <Text style={styles.emptyText}>No upcoming events.</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const newsSection = (
+    <View style={[styles.section, isTablet && styles.sectionFlush]}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>News & Updates</Text>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("TheClubTab", { screen: "NewsUpdates" })
+          }
+          activeOpacity={0.7}
+          data-testid="link-view-all-news"
+        >
+          <Text style={styles.seeAllText}>See All</Text>
+        </TouchableOpacity>
+      </View>
+
+      {newsLoading ? (
+        <View style={styles.loadingCard}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        </View>
+      ) : recentNews.length > 0 ? (
+        <View style={styles.activityCard}>
+          {recentNews.map((item: NewsItem, i: number) => (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.newsItem,
+                i < recentNews.length - 1 && styles.newsItemBorder,
+              ]}
+              activeOpacity={0.7}
+              onPress={() =>
+                navigation.navigate("TheClubTab", {
+                  screen: "NewsDetail",
+                  params: { item },
+                })
+              }
+              data-testid={`card-news-dash-${item.id}`}
+            >
+              <View style={styles.newsIconWrap}>
+                <Ionicons
+                  name="megaphone-outline"
+                  size={14}
+                  color={COLORS.accent}
+                />
+              </View>
+              <View style={styles.newsTextWrap}>
+                <Text style={styles.newsTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.newsBody} numberOfLines={2}>
+                  {stripHtml(item.content)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.activityCard}>
+          <Text style={styles.emptyText}>No news at this time.</Text>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -212,234 +484,26 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </LinearGradient>
 
-        <View style={styles.statsSection}>
-          {statCards.map((stat) => (
-            <View key={stat.label} style={styles.statCard}>
-              <View style={styles.statIconWrap}>
-                <Ionicons name={stat.icon} size={18} color={COLORS.primary} />
+        {isTablet ? (
+          <View style={styles.tabletWrap}>
+            {statsBlock}
+            {heroSection}
+            <View style={styles.twoCol}>
+              <View style={styles.colLeft}>{matingsSection}</View>
+              <View style={styles.colRight}>
+                {eventsSection}
+                {newsSection}
               </View>
-              <Text
-                style={styles.statValue}
-                data-testid={`text-stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
-              >
-                {stat.value}
-              </Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
             </View>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Matings</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("RecentMatingsTab")}
-              activeOpacity={0.7}
-              data-testid="link-view-all-matings"
-            >
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
           </View>
-
-          {isLoading ? (
-            <View style={styles.loadingCard}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            </View>
-          ) : recentMatings.length > 0 ? (
-            <View style={styles.activityCard}>
-              {recentMatings.map((mating, i) => {
-                const date = parseMatingDate(mating.mating_date);
-                return (
-                  <TouchableOpacity
-                    key={mating.id}
-                    style={[
-                      styles.litterItem,
-                      i < recentMatings.length - 1 && styles.litterItemBorder,
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => setPreviewMating(mating)}
-                    data-testid={`card-litter-${i}`}
-                  >
-                    <View style={styles.litterIconWrap}>
-                      <Ionicons name="heart" size={14} color={COLORS.accent} />
-                    </View>
-                    <View style={styles.litterTextWrap}>
-                      <Text style={styles.litterKennel}>
-                        {mating.kennel_name}
-                      </Text>
-                      <Text style={styles.litterPairing}>
-                        {mating.sire.name.trim()} × {mating.dam.name.trim()}
-                      </Text>
-                      <View style={styles.litterMeta}>
-                        <Ionicons
-                          name="calendar-outline"
-                          size={11}
-                          color={COLORS.textMuted}
-                        />
-                        <Text style={styles.litterMetaText}>{date.full}</Text>
-                        {mating.city ? (
-                          <>
-                            <Text style={styles.litterMetaDot}>·</Text>
-                            <Ionicons
-                              name="location-outline"
-                              size={11}
-                              color={COLORS.textMuted}
-                            />
-                            <Text style={styles.litterMetaText}>
-                              {mating.city}
-                            </Text>
-                          </>
-                        ) : null}
-                      </View>
-                    </View>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={14}
-                      color={COLORS.textMuted}
-                    />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : (
-            <View style={styles.activityCard}>
-              <Text style={styles.emptyText}>No recent matings found.</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate("ShowsTab")}
-              activeOpacity={0.7}
-              data-testid="link-view-all-events"
-            >
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.loadingCard}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            </View>
-          ) : dashboard?.upcomingShows && dashboard.upcomingShows.length > 0 ? (
-            dashboard.upcomingShows.map((show) => {
-              const date = new Date(show.dates[0]);
-              const day = date.getDate().toString();
-              const month = date
-                .toLocaleString("en-GB", { month: "short" })
-                .toUpperCase();
-              return (
-                <TouchableOpacity
-                  key={show.id}
-                  style={styles.eventCard}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate("ShowsTab")}
-                  data-testid={`card-event-${show.id}`}
-                >
-                  <View style={styles.eventDateBox}>
-                    <Text style={styles.eventDay}>{day}</Text>
-                    <Text style={styles.eventMonth}>{month}</Text>
-                  </View>
-                  <View style={styles.eventInfo}>
-                    <View style={styles.eventMeta}>
-                      <View style={styles.eventBadge}>
-                        <Text style={styles.eventBadgeText}>
-                          {show.event_type}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={styles.eventTitle}>{show.name}</Text>
-                    {show.location ? (
-                      <View style={styles.eventLocationRow}>
-                        <Ionicons
-                          name="location-outline"
-                          size={12}
-                          color={COLORS.textMuted}
-                        />
-                        <Text style={styles.eventLocation}>
-                          {show.location}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={COLORS.textMuted}
-                  />
-                </TouchableOpacity>
-              );
-            })
-          ) : (
-            <View style={styles.eventCard}>
-              <Text style={styles.emptyText}>No upcoming events.</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>News & Updates</Text>
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("TheClubTab", { screen: "NewsUpdates" })
-              }
-              activeOpacity={0.7}
-              data-testid="link-view-all-news"
-            >
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {newsLoading ? (
-            <View style={styles.loadingCard}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-            </View>
-          ) : recentNews.length > 0 ? (
-            <View style={styles.activityCard}>
-              {recentNews.map((item: NewsItem, i: number) => (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[
-                    styles.newsItem,
-                    i < recentNews.length - 1 && styles.newsItemBorder,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    navigation.navigate("TheClubTab", {
-                      screen: "NewsDetail",
-                      params: { item },
-                    })
-                  }
-                  data-testid={`card-news-dash-${item.id}`}
-                >
-                  <View style={styles.newsIconWrap}>
-                    <Ionicons
-                      name="megaphone-outline"
-                      size={14}
-                      color={COLORS.accent}
-                    />
-                  </View>
-                  <View style={styles.newsTextWrap}>
-                    <Text style={styles.newsTitle} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <Text style={styles.newsBody} numberOfLines={2}>
-                      {stripHtml(item.content)}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.activityCard}>
-              <Text style={styles.emptyText}>No news at this time.</Text>
-            </View>
-          )}
-        </View>
+        ) : (
+          <>
+            {statsBlock}
+            {matingsSection}
+            {eventsSection}
+            {newsSection}
+          </>
+        )}
       </ScrollView>
 
       {/* Mating preview modal */}
@@ -1164,6 +1228,94 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: COLORS.textMuted,
     textAlign: "center",
+  },
+  tabletWrap: {
+    width: "100%",
+    maxWidth: 1040,
+    alignSelf: "center",
+    paddingHorizontal: 24,
+  },
+  statsFlush: {
+    paddingHorizontal: 0,
+  },
+  sectionFlush: {
+    paddingHorizontal: 0,
+  },
+  twoCol: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 20,
+  },
+  colLeft: {
+    flex: 1.5,
+  },
+  colRight: {
+    flex: 1,
+  },
+  heroCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+    marginTop: 20,
+  },
+  heroBand: {
+    backgroundColor: COLORS.primaryDark,
+    padding: 16,
+    minHeight: 124,
+    justifyContent: "flex-end",
+  },
+  heroBadge: {
+    position: "absolute",
+    top: 14,
+    left: 16,
+    backgroundColor: COLORS.accent,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  heroBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#3A2A06",
+    letterSpacing: 0.5,
+  },
+  heroTrophy: {
+    position: "absolute",
+    top: 30,
+    right: 18,
+  },
+  heroTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  heroSub: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  heroFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  heroFooterItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  heroFooterText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  heroCta: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
   section: {
     paddingHorizontal: 20,

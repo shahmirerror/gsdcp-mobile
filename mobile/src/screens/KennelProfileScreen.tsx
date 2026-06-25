@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,18 @@ import {
   Linking,
   ImageBackground,
   RefreshControl,
+  LayoutChangeEvent,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { useResponsive } from "../lib/useResponsive";
 import { formatDate } from "../lib/dateUtils";
 import { fetchKennelDetail, KennelDetail, KennelMating, KennelBreeder, Breeder } from "../lib/api";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
@@ -38,13 +43,15 @@ function DetailItem({
   icon,
   label,
   value,
+  half,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
+  half?: boolean;
 }) {
   return (
-    <View style={styles.detailItem}>
+    <View style={[styles.detailItem, half && styles.detailItemHalf]}>
       <View style={styles.detailIconWrap}>
         <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
@@ -130,13 +137,33 @@ function MatingRow({
   );
 }
 
-type TabKey = "info" | "litters";
+type TabKey = "details" | "breeders" | "litters";
 
 export default function KennelProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<Nav>();
   const { id } = route.params as { id: string; name?: string };
-  const [activeTab, setActiveTab] = useState<TabKey>("info");
+  const insets = useSafeAreaInsets();
+  const { isTablet } = useResponsive();
+  const [activeTab, setActiveTab] = useState<TabKey>("details");
+
+  const tabScrollRef = useRef<ScrollView>(null);
+  const tabXs = useRef<Record<string, number>>({});
+  const tabSizes = useRef({ container: 0, content: 0, x: 0 });
+  const [showTabFade, setShowTabFade] = useState(false);
+
+  // Reset to the first tab when navigating to a different kennel.
+  useEffect(() => {
+    setActiveTab("details");
+  }, [id]);
+
+  // Keep the selected tab visible when the bar overflows.
+  useEffect(() => {
+    const x = tabXs.current[activeTab];
+    if (x != null) {
+      tabScrollRef.current?.scrollTo({ x: Math.max(0, x - 16), animated: true });
+    }
+  }, [activeTab]);
 
   const { data, isLoading, isError, refetch, isRefetching } =
     useQuery<KennelDetail>({
@@ -193,16 +220,28 @@ export default function KennelProfileScreen() {
         : null;
   const showEmail = kennel.email || primaryBreeder?.email || null;
 
-  const tabs: { key: TabKey; label: string; count?: number }[] = [
-    { key: "info", label: "Info" },
-    { key: "litters", label: "Litters", count: matings.length },
+  // Only show tabs that have content; Details is always present.
+  const tabs: { key: TabKey; label: string; icon: string; count?: number }[] = [
+    { key: "details" as const, label: "Details", icon: "information-circle-outline" as const },
+    ...(breeders.length > 0
+      ? [{ key: "breeders" as const, label: "Breeders", icon: "people-outline" as const, count: breeders.length }]
+      : []),
+    ...(matings.length > 0
+      ? [{ key: "litters" as const, label: "Litters", icon: "heart-outline" as const, count: matings.length }]
+      : []),
   ];
+
+  const recomputeTabFade = () => {
+    const { container, content, x } = tabSizes.current;
+    setShowTabFade(content - container > 4 && content - (x + container) > 4);
+  };
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      stickyHeaderIndices={[2]}
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
@@ -255,51 +294,101 @@ export default function KennelProfileScreen() {
         </Text>
       </View>
 
-      <View style={styles.tabBar}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-            onPressIn={() => setActiveTab(tab.key)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab.key && styles.tabTextActive,
-              ]}
-            >
-              {tab.label}
-              {tab.count != null ? ` (${tab.count})` : ""}
-            </Text>
-            {activeTab === tab.key && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-        ))}
+      <View style={[styles.tabBarWrap, { paddingTop: insets.top + 6 }]}>
+        <ScrollView
+          ref={tabScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.tabBarContent,
+            isTablet && styles.tabBarContentWide,
+          ]}
+          scrollEventThrottle={16}
+          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            tabSizes.current.x = e.nativeEvent.contentOffset.x;
+            recomputeTabFade();
+          }}
+          onLayout={(e: LayoutChangeEvent) => {
+            tabSizes.current.container = e.nativeEvent.layout.width;
+            recomputeTabFade();
+          }}
+          onContentSizeChange={(w) => {
+            tabSizes.current.content = w;
+            recomputeTabFade();
+          }}
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, isActive && styles.tabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                onLayout={(e: LayoutChangeEvent) => {
+                  tabXs.current[tab.key] = e.nativeEvent.layout.x;
+                }}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name={tab.icon as any}
+                  size={15}
+                  color={isActive ? "#fff" : COLORS.textMuted}
+                  style={{ marginRight: 5 }}
+                />
+                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+                {tab.count != null && tab.count > 0 && (
+                  <View style={[styles.tabBadge, isActive && styles.tabBadgeActive]}>
+                    <Text
+                      style={[
+                        styles.tabBadgeText,
+                        isActive && styles.tabBadgeTextActive,
+                      ]}
+                    >
+                      {tab.count}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        {showTabFade && (
+          <LinearGradient
+            colors={["rgba(246,248,247,0)", "#f6f8f7"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.tabFade}
+            pointerEvents="none"
+          />
+        )}
       </View>
 
       <View style={styles.contentArea}>
-        {activeTab === "info" && (
+        {activeTab === "details" && (
           <>
             <View style={styles.card}>
               <Text style={styles.cardHeading}>Kennel Details</Text>
-              <View style={styles.detailsGrid}>
-                <DetailItem icon="home" label="Kennel Name" value={kennel.kennelName} />
+              <View style={styles.detailsGridCols}>
+                <DetailItem half icon="home" label="Kennel Name" value={kennel.kennelName} />
                 {kennel.suffix ? (
-                  <DetailItem icon="text" label="Suffix" value={kennel.suffix} />
+                  <DetailItem half icon="text" label="Suffix" value={kennel.suffix} />
                 ) : null}
                 {kennel.prefix ? (
-                  <DetailItem icon="text" label="Prefix" value={kennel.prefix} />
+                  <DetailItem half icon="text" label="Prefix" value={kennel.prefix} />
                 ) : null}
                 {kennel.city ? (
-                  <DetailItem icon="business" label="City" value={kennel.city} />
+                  <DetailItem half icon="business" label="City" value={kennel.city} />
                 ) : null}
                 {kennel.country ? (
-                  <DetailItem icon="globe" label="Country" value={kennel.country} />
+                  <DetailItem half icon="globe" label="Country" value={kennel.country} />
                 ) : null}
                 {year ? (
-                  <DetailItem icon="calendar" label="Active Since" value={year} />
+                  <DetailItem half icon="calendar" label="Active Since" value={year} />
                 ) : null}
                 <DetailItem
+                  half
                   icon="heart"
                   label="Total Litters"
                   value={String(matings.length)}
@@ -341,23 +430,27 @@ export default function KennelProfileScreen() {
                     </TouchableOpacity>
                   ) : null}
                 </View>
-                <View style={styles.detailsGrid}>
+                <View style={styles.detailsGridCols}>
                   {showPhone ? (
-                    <DetailItem icon="call" label="Phone" value={showPhone} />
+                    <DetailItem half icon="call" label="Phone" value={showPhone} />
                   ) : null}
                   {showEmail ? (
-                    <DetailItem icon="mail" label="Email" value={showEmail} />
+                    <DetailItem half icon="mail" label="Email" value={showEmail} />
                   ) : null}
                 </View>
               </View>
             )}
+          </>
+        )}
 
+        {activeTab === "breeders" && (
+          <>
             {breeders.length > 0 && (
               <View style={styles.card}>
                 <Text style={styles.cardHeading}>
                   {breeders.length === 1 ? "Breeder" : "Breeders"}
                 </Text>
-                <View style={styles.detailsGrid}>
+                <View style={styles.twoColWrap}>
                   {breeders.map((breeder, i) => {
                     const canLink = !!breeder.breeder_id;
                     const hasImg = !!(breeder.imageUrl && !breeder.imageUrl.includes("user-not-found"));
@@ -394,10 +487,7 @@ export default function KennelProfileScreen() {
                     return canLink ? (
                       <TouchableOpacity
                         key={i}
-                        style={[
-                          styles.ownerRow,
-                          i < breeders.length - 1 && styles.ownerRowBorder,
-                        ]}
+                        style={[styles.ownerRow, styles.recordCell]}
                         onPress={() =>
                           navigation.navigate("BreederProfile", {
                             id: breeder.breeder_id!,
@@ -428,10 +518,7 @@ export default function KennelProfileScreen() {
                     ) : (
                       <View
                         key={i}
-                        style={[
-                          styles.ownerRow,
-                          i < breeders.length - 1 && styles.ownerRowBorder,
-                        ]}
+                        style={[styles.ownerRow, styles.recordCell]}
                       >
                         {inner}
                       </View>
@@ -445,24 +532,25 @@ export default function KennelProfileScreen() {
 
         {activeTab === "litters" &&
           (matings.length > 0 ? (
-            <View style={{ gap: 12 }}>
+            <View style={styles.twoColWrap}>
               {matings.map((m, i) => (
-                <MatingRow
-                  key={i}
-                  mating={m}
-                  onSirePress={() =>
-                    navigation.navigate("DogProfile", {
-                      id: m.sire_dog_id,
-                      name: m.sire_name.trim(),
-                    })
-                  }
-                  onDamPress={() =>
-                    navigation.navigate("DogProfile", {
-                      id: m.dam_dog_id,
-                      name: m.dam_name.trim(),
-                    })
-                  }
-                />
+                <View key={i} style={styles.recordCell}>
+                  <MatingRow
+                    mating={m}
+                    onSirePress={() =>
+                      navigation.navigate("DogProfile", {
+                        id: m.sire_dog_id,
+                        name: m.sire_name.trim(),
+                      })
+                    }
+                    onDamPress={() =>
+                      navigation.navigate("DogProfile", {
+                        id: m.dam_dog_id,
+                        name: m.dam_name.trim(),
+                      })
+                    }
+                  />
+                </View>
               ))}
             </View>
           ) : (
@@ -588,36 +676,72 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 4,
   },
-  tabBar: {
+  tabBarWrap: {
+    backgroundColor: "#f6f8f7",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    marginBottom: 8,
+    position: "relative",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  tabFade: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 36,
+  },
+  tabBarContent: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(15,92,59,0.1)",
-    marginHorizontal: 16,
-    marginBottom: 24,
+    gap: 8,
+    paddingVertical: 4,
+    paddingRight: 4,
+  },
+  tabBarContentWide: {
+    flexGrow: 1,
+    justifyContent: "space-between",
+    paddingRight: 0,
   },
   tab: {
-    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    position: "relative",
+    paddingHorizontal: 14,
+    height: 38,
+    borderRadius: 9999,
+    backgroundColor: "rgba(15,92,59,0.07)",
   },
-  tabActive: {},
+  tabActive: {
+    backgroundColor: COLORS.primary,
+  },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#94A3B8",
+    color: COLORS.textMuted,
   },
   tabTextActive: {
+    color: "#fff",
+  },
+  tabBadge: {
+    marginLeft: 6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "rgba(15,92,59,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  tabBadgeActive: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
     color: COLORS.primary,
   },
-  tabIndicator: {
-    position: "absolute",
-    bottom: -1,
-    left: 16,
-    right: 16,
-    height: 3,
-    borderRadius: 9999,
-    backgroundColor: COLORS.accent,
+  tabBadgeTextActive: {
+    color: "#fff",
   },
   contentArea: {
     paddingHorizontal: 16,
@@ -643,6 +767,25 @@ const styles = StyleSheet.create({
   },
   detailsGrid: {
     gap: 20,
+  },
+  detailsGridCols: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    rowGap: 20,
+  },
+  detailItemHalf: {
+    width: "48%",
+  },
+  twoColWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+  },
+  recordCell: {
+    width: "48%",
   },
   detailItem: {
     flexDirection: "row",

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { useResponsive } from "../lib/useResponsive";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
@@ -171,6 +172,8 @@ function MatingRow({
 export default function RecentMatingsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { isTablet, isWide } = useResponsive();
+  const numColumns = isWide ? 3 : isTablet ? 2 : 1;
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
   const [litterFilter, setLitterFilter] = useState(false);
@@ -382,9 +385,12 @@ export default function RecentMatingsScreen() {
         </View>
       ) : (
         <FlatList
+          key={`matings-cols-${numColumns}`}
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.list, isTablet && styles.listWide]}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -394,7 +400,9 @@ export default function RecentMatingsScreen() {
             />
           }
           renderItem={({ item }) => (
-            <MatingRow mating={item} onPress={() => setPreviewMating(item)} />
+            <View style={numColumns > 1 ? styles.gridCell : undefined}>
+              <MatingRow mating={item} onPress={() => setPreviewMating(item)} />
+            </View>
           )}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.3}
@@ -996,6 +1004,9 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 10,
   },
+  listWide: { width: "100%", maxWidth: 1100, alignSelf: "center" },
+  columnWrapper: { gap: SPACING.md },
+  gridCell: { flex: 1 },
 
   listItem: {
     flexDirection: "row",

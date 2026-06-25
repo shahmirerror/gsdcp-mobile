@@ -112,7 +112,7 @@ export default function ImageCropModal({
 
   return (
     <Modal visible={visible} animationType="fade" statusBarTranslucent>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar barStyle="light-content" />
       <View style={s.root}>
         <Text style={s.hint}>Drag to reposition</Text>
 

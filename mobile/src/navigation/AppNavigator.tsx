@@ -336,11 +336,7 @@ export default function AppNavigator() {
           <Tab.Screen name="VirtualBreedingTab" component={VirtualBreedingScreen} />
         </Tab.Navigator>
       </NavigationContainer>
-      <StatusBar
-        style={statusBarStyle}
-        backgroundColor={COLORS.background}
-        translucent={false}
-      />
+      <StatusBar style={statusBarStyle} />
     </>
   );
 }

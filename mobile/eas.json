@@ -16,13 +16,16 @@
     },
     "production": {
       "autoIncrement": true,
-      "credentialsSource": "local",
       "android": {
+        "credentialsSource": "local",
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease --stacktrace",
         "env": {
           "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,armeabi-v7a"
         }
+      },
+      "ios": {
+        "credentialsSource": "remote"
       },
       "cache": {
         "key": "v14"

@@ -16,13 +16,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  signInWithPhoneNumber,
-  RecaptchaVerifier,
-  ConfirmationResult,
-} from "firebase/auth";
-import { firebaseAuth } from "../lib/firebase";
+import { sendOtp, OtpConfirmation } from "../lib/firebaseOtp";
 import { checkPhoneRegistered } from "../lib/api";
+import { getInitialCountry, Country } from "../lib/countries";
+import CountryPickerModal from "../components/CountryPickerModal";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -97,6 +94,55 @@ function toApiPhone(raw: string): string {
   return e164;
 }
 
+/**
+ * Groups national phone digits into readable chunks as the user types, e.g.
+ * "3001234567" → "300 123 4567". Keeps leading zeros for display (they're
+ * stripped later when building the international number). A lone trailing digit
+ * is merged into the previous group so we never show a stray single digit.
+ */
+function formatNationalNumber(input: string): string {
+  const digits = input.replace(/\D/g, "");
+  if (!digits) return "";
+  const groups: string[] = [];
+  for (let i = 0; i < digits.length; i += 3) {
+    groups.push(digits.slice(i, i + 3));
+  }
+  if (groups.length >= 2 && groups[groups.length - 1].length === 1) {
+    groups[groups.length - 2] += groups.pop();
+  }
+  return groups.join(" ");
+}
+
+/**
+ * Maps Firebase Phone Auth error codes (and GSDCP API errors) to friendly,
+ * user-facing copy. Falls back to the raw message when the code is unknown.
+ */
+function friendlyOtpError(e: any): string {
+  const code: string | undefined = e?.code;
+  switch (code) {
+    case "auth/invalid-phone-number":
+      return "That phone number looks invalid. Include your country code (e.g. +92…).";
+    case "auth/missing-phone-number":
+      return "Please enter your phone number.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a while and try again.";
+    case "auth/quota-exceeded":
+      return "SMS limit reached for now. Please try again later.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection and try again.";
+    case "auth/missing-client-identifier":
+    case "auth/app-not-authorized":
+      return "This app build isn't authorized for OTP yet. Please contact support.";
+    case "auth/session-expired":
+    case "auth/code-expired":
+      return "The code expired. Please request a new one.";
+    case "auth/invalid-verification-code":
+      return "Incorrect code. Please check it and try again.";
+    default:
+      return e?.message ?? "Something went wrong. Please try again.";
+  }
+}
+
 /** Live status for the membership field */
 function memberNoStatus(
   value: string,
@@ -141,13 +187,14 @@ export default function LoginRegisterScreen() {
   const [showUserPassword, setShowUserPassword] = useState(false);
 
   // Mode 3 — phone OTP
+  const [country, setCountry] = useState<Country>(() => getInitialCountry());
+  const [countryPickerOpen, setCountryPickerOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [confirmationResult, setConfirmationResult] =
-    useState<ConfirmationResult | null>(null);
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+    useState<OtpConfirmation | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -163,8 +210,13 @@ export default function LoginRegisterScreen() {
     setMemberNo(formatted);
   };
 
+  // National digits only (drop spaces/dashes and any leading 0), then prefix the
+  // selected country's dial code to build the full international number.
+  const nationalDigits = phone.replace(/\D/g, "").replace(/^0+/, "");
+  const fullPhone = `${country.dialCode}${nationalDigits}`;
+
   const handleSendOtp = async () => {
-    if (!phone.trim()) {
+    if (!nationalDigits) {
       setError("Please enter your phone number");
       return;
     }
@@ -172,35 +224,30 @@ export default function LoginRegisterScreen() {
     setSendingOtp(true);
     try {
       // Step 1: Confirm phone is registered with GSDCP (API format: +92-300-000-0000)
-      await checkPhoneRegistered(toApiPhone(phone.trim()));
+      await checkPhoneRegistered(toApiPhone(fullPhone));
 
-      // Step 2: Send OTP via Firebase Phone Auth (Firebase needs E.164: +923001234567)
-      if (Platform.OS === "web") {
-        if (!recaptchaVerifierRef.current) {
-          recaptchaVerifierRef.current = new RecaptchaVerifier(
-            firebaseAuth,
-            "recaptcha-container",
-            { size: "invisible" },
-          );
-        }
-        const result = await signInWithPhoneNumber(
-          firebaseAuth,
-          toE164(phone.trim()),
-          recaptchaVerifierRef.current,
-        );
-        setConfirmationResult(result);
-      }
+      // Step 2: Send the SMS OTP via Firebase Phone Auth (Firebase needs E.164).
+      // Native uses @react-native-firebase (Play Integrity / APNs — no reCAPTCHA
+      // UI); web falls back to the JS SDK invisible reCAPTCHA. See lib/firebaseOtp.
+      const result = await sendOtp(toE164(fullPhone));
+      setConfirmationResult(result);
 
       setOtpSent(true);
-      otpRef.current?.focus();
+      setOtpCode("");
+      // Defer focus until the OTP field has rendered.
+      setTimeout(() => otpRef.current?.focus(), 250);
     } catch (e: any) {
-      // Clean up the reCAPTCHA so it can be retried
-      recaptchaVerifierRef.current?.clear();
-      recaptchaVerifierRef.current = null;
-      setError(e.message ?? "Failed to send OTP. Please try again.");
+      setError(friendlyOtpError(e));
     } finally {
       setSendingOtp(false);
     }
+  };
+
+  const handleChangeNumber = () => {
+    setOtpSent(false);
+    setOtpCode("");
+    setConfirmationResult(null);
+    setError("");
   };
 
   const handleLogin = async () => {
@@ -236,7 +283,7 @@ export default function LoginRegisterScreen() {
         await handleSendOtp();
         return;
       }
-      if (!phone.trim()) {
+      if (!nationalDigits) {
         setError("Please enter your phone number");
         return;
       }
@@ -255,7 +302,7 @@ export default function LoginRegisterScreen() {
         await confirmationResult.confirm(otpCode.trim());
         // Step 3b: Tell authorize API the OTP was verified → get auth user back
         // API expects phone in +92-300-000-0000 format
-        await login(toApiPhone(phone.trim()), "verified", "otp");
+        await login(toApiPhone(fullPhone), "verified", "otp");
       } else {
         const identifier = mode === "membership" ? memberNo : username.trim();
         const credential =
@@ -265,7 +312,11 @@ export default function LoginRegisterScreen() {
       // Auth state drives navigation — when isLoggedIn becomes true the
       // ProfileStackNavigator automatically shows ProfileHome instead of LoginRegister.
     } catch (e: any) {
-      setError(e.message ?? "Sign in failed. Please try again.");
+      setError(
+        mode === "otp"
+          ? friendlyOtpError(e)
+          : e.message ?? "Sign in failed. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -277,8 +328,6 @@ export default function LoginRegisterScreen() {
     setOtpSent(false);
     setOtpCode("");
     setConfirmationResult(null);
-    recaptchaVerifierRef.current?.clear();
-    recaptchaVerifierRef.current = null;
   };
 
   return (
@@ -561,7 +610,7 @@ export default function LoginRegisterScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.forgotRow}
+                style={styles.forgotRow2}
                 onPress={() => navigation.navigate("ForgotPassword")}
                 data-testid="btn-forgot-password-user"
               >
@@ -570,28 +619,116 @@ export default function LoginRegisterScreen() {
             </>
           )}
 
-          {/* ── MODE 3: Phone OTP (Coming Soon) ── */}
+          {/* ── MODE 3: Phone OTP ── */}
           {mode === "otp" && (
             <>
-              {/* Hidden reCAPTCHA anchor — kept for when this feature goes live */}
+              {/* Hidden reCAPTCHA anchor — used by the web JS SDK fallback only */}
               <View
                 nativeID="recaptcha-container"
                 style={{ width: 0, height: 0 }}
               />
 
-              <View style={styles.comingSoonBox}>
-                <Ionicons
-                  name="phone-portrait-outline"
-                  size={40}
-                  color={COLORS.primary}
-                  style={{ marginBottom: 12 }}
-                />
-                <Text style={styles.comingSoonTitle}>Phone OTP Sign In</Text>
-                <Text style={styles.comingSoonText}>
-                  SMS-based one-time password sign in is coming soon.{"\n"}
-                  Please use your Membership Number or Username in the meantime.
-                </Text>
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>PHONE NUMBER</Text>
+                <View style={styles.fieldRow}>
+                  <TouchableOpacity
+                    style={styles.dialCodeBtn}
+                    onPress={() => setCountryPickerOpen(true)}
+                    disabled={otpSent || sendingOtp}
+                    activeOpacity={0.7}
+                    data-testid="btn-country-code"
+                  >
+                    <Text style={styles.dialCodeIso}>{country.iso2}</Text>
+                    <Text style={styles.dialCodeText}>{country.dialCode}</Text>
+                    {!otpSent && (
+                      <Ionicons
+                        name="chevron-down"
+                        size={14}
+                        color={COLORS.textMuted}
+                      />
+                    )}
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[styles.fieldInput, { marginLeft: 8 }]}
+                    placeholder="300 123 4567"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                    textContentType="telephoneNumber"
+                    autoCorrect={false}
+                    maxLength={18}
+                    value={phone}
+                    onChangeText={(t) => setPhone(formatNationalNumber(t))}
+                    editable={!otpSent && !sendingOtp}
+                    returnKeyType={otpSent ? "done" : "send"}
+                    onSubmitEditing={otpSent ? handleLogin : handleSendOtp}
+                    data-testid="input-phone"
+                  />
+                  {otpSent && (
+                    <TouchableOpacity
+                      onPress={handleChangeNumber}
+                      style={styles.otpSendBtn}
+                      data-testid="btn-change-number"
+                    >
+                      <Text style={styles.otpSendBtnText}>Change</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {!otpSent && (
+                  <View style={styles.liveHint}>
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={13}
+                      color={COLORS.textMuted}
+                    />
+                    <Text
+                      style={[styles.liveHintText, { color: COLORS.textMuted }]}
+                    >
+                      Tap the code to change country. Use the number registered
+                      with GSDCP.
+                    </Text>
+                  </View>
+                )}
               </View>
+
+              {otpSent && (
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>VERIFICATION CODE</Text>
+                  <View style={styles.fieldRow}>
+                    <Ionicons
+                      name="keypad-outline"
+                      size={18}
+                      color={COLORS.textMuted}
+                      style={styles.fieldIcon}
+                    />
+                    <TextInput
+                      ref={otpRef}
+                      style={[styles.fieldInput, styles.otpInput]}
+                      placeholder="••••••"
+                      placeholderTextColor={COLORS.textMuted}
+                      keyboardType="number-pad"
+                      autoComplete="sms-otp"
+                      textContentType="oneTimeCode"
+                      maxLength={6}
+                      value={otpCode}
+                      onChangeText={(t) => setOtpCode(t.replace(/\D/g, ""))}
+                      returnKeyType="done"
+                      onSubmitEditing={handleLogin}
+                      data-testid="input-otp"
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.forgotRow, { marginTop: 12 }]}
+                    onPress={handleSendOtp}
+                    disabled={sendingOtp}
+                    data-testid="btn-resend-otp"
+                  >
+                    <Text style={styles.forgotText}>
+                      {sendingOtp ? "Sending…" : "Resend code"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </>
           )}
 
@@ -599,15 +736,14 @@ export default function LoginRegisterScreen() {
           <TouchableOpacity
             style={[
               styles.signInBtn,
-              loading && { opacity: 0.65 },
-              mode === "otp" && { display: "none" },
+              (loading || sendingOtp) && { opacity: 0.65 },
             ]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loading || sendingOtp}
             activeOpacity={0.85}
             data-testid="btn-sign-in"
           >
-            {loading ? (
+            {loading || sendingOtp ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <>
@@ -636,6 +772,13 @@ export default function LoginRegisterScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <CountryPickerModal
+        visible={countryPickerOpen}
+        selectedIso={country.iso2}
+        onSelect={setCountry}
+        onClose={() => setCountryPickerOpen(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -847,6 +990,27 @@ const styles = StyleSheet.create({
   },
   eyeBtn: { padding: 8 },
 
+  dialCodeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingRight: 10,
+    marginRight: 2,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+    height: 36,
+  },
+  dialCodeIso: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: COLORS.primary,
+    letterSpacing: 0.3,
+  },
+  dialCodeText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
   otpSendBtn: {
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -866,6 +1030,11 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     marginTop: -6,
     marginBottom: 24,
+  },
+  forgotRow2: {
+    alignSelf: "flex-end",
+    marginTop: -2,
+    marginBottom: 20,
   },
   forgotText: {
     fontSize: FONT_SIZES.sm,

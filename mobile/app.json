@@ -2,8 +2,8 @@
   "expo": {
     "name": "GSDCP",
     "slug": "gsdcp-mobile",
-    "version": "1.0.0",
-    "orientation": "portrait",
+    "version": "1.0.1",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
@@ -16,7 +16,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.gsdcp.mobile",
+      "bundleIdentifier": "com.gsdcp.ccms.inspedium",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take a new profile photo.",
         "NSPhotoLibraryUsageDescription": "Used to select a profile photo from your library.",
@@ -33,9 +34,6 @@
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
@@ -47,6 +45,10 @@
     },
     "scheme": "gsdcp",
     "extra": {
+      "errorReporting": {
+        "supportEmail": "your-email@example.com",
+        "webhookUrl": "https://gsdcp.org/api/mobile/report-error"
+      },
       "eas": {
         "projectId": "8bc67d8f-a681-4816-987d-3f6e3d6250ae"
       }
@@ -58,9 +60,11 @@
         "expo-image-picker",
         {
           "photosPermission": "Used to select a profile photo from your library.",
-          "cameraPermission": "Used to take a new profile photo."
+          "cameraPermission": "Used to take a new profile photo.",
+          "microphonePermission": false
         }
       ],
+      "./plugins/withBlockedMediaPermissions.js",
       [
         "expo-notifications",
         {
@@ -68,7 +72,18 @@
           "color": "#0F5C3A",
           "sounds": []
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      "react-native-edge-to-edge"
     ],
     "owner": "shahmir-sindhus-organization"
   }

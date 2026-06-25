@@ -8,7 +8,7 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import { useAppUpdate } from "./src/lib/useAppUpdate";
 import { handleNotificationResponse } from "./src/lib/notifications";
-import WhatsNewModal from "./src/components/WhatsNewModal";
+import { initGlobalErrorReporting, flushPendingErrorReport } from "./src/lib/errorReporting";
 
 const splashLogo = require("./assets/splash-logo.png");
 const ccmsLogo = require("./assets/ccms-logo.png");
@@ -116,8 +116,13 @@ function SplashSequence({ onDone }: { onDone: () => void }) {
  */
 function AppContent() {
   const [splashDone, setSplashDone] = useState(false);
-  const { showWhatsNew, whatsNewVersion, whatsNewChanges, dismissWhatsNew } =
-    useAppUpdate();
+  // Keeps the Play Store / App Store update check running on launch.
+  useAppUpdate();
+
+  useEffect(() => {
+    initGlobalErrorReporting();
+    flushPendingErrorReport();
+  }, []);
 
   // Handle notification taps (foreground + background + killed-state)
   useEffect(() => {
@@ -140,12 +145,6 @@ function AppContent() {
       {!splashDone && (
         <SplashSequence onDone={() => setSplashDone(true)} />
       )}
-      <WhatsNewModal
-        visible={showWhatsNew}
-        version={whatsNewVersion}
-        changes={whatsNewChanges}
-        onDismiss={dismissWhatsNew}
-      />
     </>
   );
 }
