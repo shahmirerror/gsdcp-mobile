@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { gradeIndex } from "../lib/gradeUtils";
 import {
   View,
@@ -12,13 +12,18 @@ import {
   RefreshControl,
   Platform,
   Alert,
+  LayoutChangeEvent,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
+import { useResponsive } from "../lib/useResponsive";
 import ErrorView from "../components/ErrorView";
 import { formatDate } from "../lib/dateUtils";
 import {
@@ -49,16 +54,31 @@ function DetailItem({
   label,
   value,
   onPress,
+  half,
+  compact,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   onPress?: () => void;
+  half?: boolean;
+  compact?: boolean;
 }) {
   return (
-    <View style={styles.detailItem}>
-      <View style={styles.detailIconWrap}>
-        <Ionicons name={icon} size={18} color={COLORS.primary} />
+    <View
+      style={[
+        styles.detailItem,
+        half && styles.detailItemHalf,
+        compact && styles.detailItemCompact,
+      ]}
+    >
+      <View
+        style={[
+          styles.detailIconWrap,
+          compact && styles.detailIconWrapCompact,
+        ]}
+      >
+        <Ionicons name={icon} size={compact ? 14 : 18} color={COLORS.primary} />
       </View>
       <View style={styles.detailTextWrap}>
         <Text style={styles.detailLabel}>{label}</Text>
@@ -276,6 +296,8 @@ export default function DogProfileScreen() {
   const dogId = route.params?.id;
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
+  const { isTablet } = useResponsive();
   const [activeTab, setActiveTab] = useState<TabKey>("details");
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(
     new Set(),
@@ -286,6 +308,27 @@ export default function DogProfileScreen() {
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [showTransferForm, setShowTransferForm] = useState(false);
+
+  // Tab bar: ref + per-tab x positions for auto-scrolling the active tab into
+  // view, and a right-edge fade shown only while the bar can still scroll right.
+  const tabScrollRef = useRef<ScrollView>(null);
+  const tabXs = useRef<Record<string, number>>({});
+  const tabSizes = useRef({ container: 0, content: 0, x: 0 });
+  const [showTabFade, setShowTabFade] = useState(false);
+
+  // Reset to Details whenever the dog changes (the screen can be reused when
+  // tapping through ancestors), so we never land on a tab the new dog lacks.
+  useEffect(() => {
+    setActiveTab("details");
+  }, [dogId]);
+
+  // Keep the selected tab visible even when the bar overflows.
+  useEffect(() => {
+    const x = tabXs.current[activeTab];
+    if (x != null) {
+      tabScrollRef.current?.scrollTo({ x: Math.max(0, x - 16), animated: true });
+    }
+  }, [activeTab]);
 
   const { data, isLoading, isError, refetch, isRefetching } =
     useQuery<DogDetail>({
@@ -343,8 +386,7 @@ export default function DogProfileScreen() {
       {
         text: "Photo Library",
         onPress: async () => {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          // Android Photo Picker (and iOS limited picker) needs no media permission.
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
           if (!result.canceled && result.assets[0]) upload(result.assets[0]);
         },
@@ -383,6 +425,7 @@ export default function DogProfileScreen() {
   const lineBreeding = data.line_breeding ?? [];
   const progeny = data.progeny ?? [];
   const viewerIsOwner = data.viewer_is_owner === true;
+  const showStudBookTwo = String(dog.studbook ?? "").trim() === "2";
   const breedSurvey: BreedSurveyData | null =
     data.breedSurvey && !Array.isArray(data.breedSurvey) ? data.breedSurvey : null;
 
@@ -408,15 +451,37 @@ export default function DogProfileScreen() {
     return months > 0 ? `${months}m` : "< 1m";
   })();
 
+  // Only surface tabs that actually have content, with counts on the data tabs,
+  // so most dogs fit without a horizontal scroll and never land on an empty tab.
+  // Details is always present; the rest appear only when there's something to show.
   const tabs: { key: TabKey; label: string; icon: string; count?: number }[] = [
-    { key: "details", label: "Details", icon: "list-outline" as const },
-    { key: "pedigree", label: "Pedigree", icon: "git-branch-outline" as const },
-    { key: "breedSurvey" as const, label: "Breed Survey", icon: "clipboard-outline" as const },
-    { key: "siblings", label: "Siblings", icon: "people-outline" as const },
-    { key: "progeny", label: "Progeny", icon: "paw-outline" as const },
-    { key: "shows", label: "Shows", icon: "ribbon-outline" as const },
-    { key: "health", label: "HD/ED", icon: "medkit-outline" as const },
+    { key: "details" as const, label: "Details", icon: "list-outline" as const },
+    ...(hasPedigree
+      ? [{ key: "pedigree" as const, label: "Pedigree", icon: "git-branch-outline" as const }]
+      : []),
+    ...(breedSurvey
+      ? [{ key: "breedSurvey" as const, label: "Breed Survey", icon: "clipboard-outline" as const }]
+      : []),
+    ...(siblings.length > 0
+      ? [{ key: "siblings" as const, label: "Siblings", icon: "people-outline" as const, count: siblings.length }]
+      : []),
+    ...(progeny.length > 0
+      ? [{ key: "progeny" as const, label: "Progeny", icon: "paw-outline" as const, count: progeny.length }]
+      : []),
+    ...(showResults.length > 0
+      ? [{ key: "shows" as const, label: "Shows", icon: "ribbon-outline" as const, count: showResults.length }]
+      : []),
+    ...(hasHealth
+      ? [{ key: "health" as const, label: "HD/ED", icon: "medkit-outline" as const }]
+      : []),
   ];
+
+  // Show the right-edge fade only while the tab bar overflows and isn't scrolled
+  // to the end — a cue that there are more tabs off to the right.
+  const recomputeTabFade = () => {
+    const { container, content, x } = tabSizes.current;
+    setShowTabFade(content - container > 4 && content - (x + container) > 4);
+  };
 
   // ── HD/ED tab helpers (defined outside JSX to avoid IIFE-inside-JSX parser issues) ──
 
@@ -566,6 +631,7 @@ export default function DogProfileScreen() {
       showsVerticalScrollIndicator={false}
       bounces={true}
       overScrollMode="always"
+      stickyHeaderIndices={[2]}
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
@@ -664,59 +730,93 @@ export default function DogProfileScreen() {
               ? dog.foreign_reg_no
               : "-"}
         </Text>
+        {showStudBookTwo ? (
+          <Text style={styles.studBookMark}>Stud Book 2</Text>
+        ) : null}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabBar}
-        contentContainerStyle={styles.tabBarContent}
-      >
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, isActive && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
-              activeOpacity={0.75}
-            >
-              <Ionicons
-                name={tab.icon as any}
-                size={15}
-                color={isActive ? "#fff" : COLORS.textMuted}
-                style={{ marginRight: 5 }}
-              />
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                {tab.label}
-              </Text>
-              {tab.count != null && tab.count > 0 && (
-                <View
-                  style={[styles.tabBadge, isActive && styles.tabBadgeActive]}
-                >
-                  <Text
-                    style={[
-                      styles.tabBadgeText,
-                      isActive && styles.tabBadgeTextActive,
-                    ]}
+      <View style={[styles.tabBarWrap, { paddingTop: insets.top + 6 }]}>
+        <ScrollView
+          ref={tabScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.tabBarContent,
+            isTablet && styles.tabBarContentWide,
+          ]}
+          scrollEventThrottle={16}
+          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            tabSizes.current.x = e.nativeEvent.contentOffset.x;
+            recomputeTabFade();
+          }}
+          onLayout={(e: LayoutChangeEvent) => {
+            tabSizes.current.container = e.nativeEvent.layout.width;
+            recomputeTabFade();
+          }}
+          onContentSizeChange={(w) => {
+            tabSizes.current.content = w;
+            recomputeTabFade();
+          }}
+        >
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, isActive && styles.tabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                onLayout={(e: LayoutChangeEvent) => {
+                  tabXs.current[tab.key] = e.nativeEvent.layout.x;
+                }}
+                activeOpacity={0.75}
+              >
+                <Ionicons
+                  name={tab.icon as any}
+                  size={15}
+                  color={isActive ? "#fff" : COLORS.textMuted}
+                  style={{ marginRight: 5 }}
+                />
+                <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+                {tab.count != null && tab.count > 0 && (
+                  <View
+                    style={[styles.tabBadge, isActive && styles.tabBadgeActive]}
                   >
-                    {tab.count}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+                    <Text
+                      style={[
+                        styles.tabBadgeText,
+                        isActive && styles.tabBadgeTextActive,
+                      ]}
+                    >
+                      {tab.count}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        {showTabFade && (
+          <LinearGradient
+            colors={["rgba(246,248,247,0)", "#f6f8f7"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.tabFade}
+            pointerEvents="none"
+          />
+        )}
+      </View>
 
       <View style={styles.contentArea}>
         {activeTab === "details" && (
           <>
             <View style={styles.card}>
               <Text style={styles.cardHeading}>General</Text>
-              <View style={styles.detailsGrid}>
-                <DetailItem icon="male-female" label="Gender" value={dog.sex} />
+              <View style={styles.detailsGridCols}>
+                <DetailItem half icon="male-female" label="Gender" value={dog.sex} />
                 <DetailItem
+                  half
                   icon="calendar"
                   label="Date of Birth"
                   value={
@@ -726,16 +826,19 @@ export default function DogProfileScreen() {
                   }
                 />
                 <DetailItem
+                  half
                   icon="color-palette"
                   label="Color"
                   value={dog.color || "Unknown"}
                 />
                 <DetailItem
+                  half
                   icon="cut"
                   label="Coat Type"
                   value={dog.hair || "Unknown"}
                 />
                 <DetailItem
+                  half
                   icon="document-text"
                   label="Stud Book Number"
                   value={
@@ -747,26 +850,13 @@ export default function DogProfileScreen() {
                   }
                 />
                 <DetailItem
+                  half
                   icon="hardware-chip"
                   label="Microchip"
                   value={dog.microchip || "-"}
                 />
-                <OwnerSection owners={dog.owner} navigation={navigation} />
-                {viewerIsOwner && (
-                  <TouchableOpacity
-                    style={styles.transferBtn}
-                    activeOpacity={0.85}
-                    onPress={() => setShowTransferForm(true)}
-                  >
-                    <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
-                    <Text style={styles.transferBtnText}>Transfer / Lease Ownership</Text>
-                  </TouchableOpacity>
-                )}
-                <DetailItem
-                  icon="build"
-                  label="Breeder"
-                  value={dog.breeder || "-"}
-                />
+              </View>
+              <View style={styles.detailsGrid}>
                 <DetailItem
                   icon="arrow-up-circle"
                   label="Sire"
@@ -787,6 +877,22 @@ export default function DogProfileScreen() {
                       : undefined
                   }
                 />
+                <DetailItem
+                  icon="build"
+                  label="Breeder"
+                  value={dog.breeder || "-"}
+                />
+                <OwnerSection owners={dog.owner} navigation={navigation} />
+                {viewerIsOwner && (
+                  <TouchableOpacity
+                    style={styles.transferBtn}
+                    activeOpacity={0.85}
+                    onPress={() => setShowTransferForm(true)}
+                  >
+                    <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
+                    <Text style={styles.transferBtnText}>Transfer / Lease Ownership</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               <View style={styles.cardDivider} />
               <Text style={styles.cardSubHeading}>Line Breeding</Text>
@@ -915,48 +1021,56 @@ export default function DogProfileScreen() {
               )}
             </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardHeading}>Ratings</Text>
-              <View style={styles.detailsGrid}>
-                <DetailItem
-                  icon="calendar-number"
-                  label="Breed Survey Period"
-                  value={dog.breed_survey_period || "-"}
-                />
-                <DetailItem
-                  icon="star"
-                  label="Show Rating"
-                  value={
-                    dog.show_rating ||
-                    (dog.titles.length > 0 ? dog.titles.join(", ") : "-")
-                  }
-                />
-                <DetailItem
-                  icon="ribbon"
-                  label="Working Title"
-                  value={(dog.working_title && dog.working_title.trim()) || "-"}
-                />
+            <View style={styles.sideBySide}>
+              <View style={[styles.card, styles.sideCard]}>
+                <Text style={styles.cardHeading}>Ratings</Text>
+                <View style={styles.detailsGrid}>
+                  <DetailItem
+                    compact
+                    icon="calendar-number"
+                    label="Breed Survey Period"
+                    value={dog.breed_survey_period || "-"}
+                  />
+                  <DetailItem
+                    compact
+                    icon="star"
+                    label="Show Rating"
+                    value={
+                      dog.show_rating ||
+                      (dog.titles.length > 0 ? dog.titles.join(", ") : "-")
+                    }
+                  />
+                  <DetailItem
+                    compact
+                    icon="ribbon"
+                    label="Working Title"
+                    value={(dog.working_title && dog.working_title.trim()) || "-"}
+                  />
+                </View>
               </View>
-            </View>
 
-            <View style={styles.card}>
-              <Text style={styles.cardHeading}>Examinations</Text>
-              <View style={styles.detailsGrid}>
-                <DetailItem
-                  icon="fitness"
-                  label="HD Rating"
-                  value={dog.hd || "-"}
-                />
-                <DetailItem
-                  icon="body"
-                  label="ED Rating"
-                  value={dog.ed || "-"}
-                />
-                <DetailItem
-                  icon="flask"
-                  label="DNA Status"
-                  value={dog.dna_status || "-"}
-                />
+              <View style={[styles.card, styles.sideCard]}>
+                <Text style={styles.cardHeading}>Examinations</Text>
+                <View style={styles.detailsGrid}>
+                  <DetailItem
+                    compact
+                    icon="fitness"
+                    label="HD Rating"
+                    value={dog.hd || "-"}
+                  />
+                  <DetailItem
+                    compact
+                    icon="body"
+                    label="ED Rating"
+                    value={dog.ed || "-"}
+                  />
+                  <DetailItem
+                    compact
+                    icon="flask"
+                    label="DNA Status"
+                    value={dog.dna_status || "-"}
+                  />
+                </View>
               </View>
             </View>
           </>
@@ -965,7 +1079,7 @@ export default function DogProfileScreen() {
         {activeTab === "pedigree" &&
           (hasPedigree ? (
             <View style={styles.card}>
-              <Text style={styles.cardHeading}>4-Generation Pedigree</Text>
+              <Text style={styles.cardHeading}>5-Generation Pedigree</Text>
               <PedigreeTree pedigree={pedigree} />
             </View>
           ) : (
@@ -986,18 +1100,22 @@ export default function DogProfileScreen() {
 
         {activeTab === "siblings" &&
           (siblings.length > 0 ? (
-            <View>
+            <View style={isTablet ? styles.twoColWrap : undefined}>
               {siblings.map((sibling: Dog) => (
-                <DogListItem
+                <View
                   key={sibling.id}
-                  dog={sibling}
-                  onPress={() =>
-                    navigation.push("DogProfile", {
-                      id: sibling.id,
-                      name: sibling.dog_name,
-                    })
-                  }
-                />
+                  style={isTablet ? styles.recordCell : undefined}
+                >
+                  <DogListItem
+                    dog={sibling}
+                    onPress={() =>
+                      navigation.push("DogProfile", {
+                        id: sibling.id,
+                        name: sibling.dog_name,
+                      })
+                    }
+                  />
+                </View>
               ))}
             </View>
           ) : (
@@ -1018,7 +1136,7 @@ export default function DogProfileScreen() {
 
         {activeTab === "progeny" &&
           (progeny.length > 0 ? (
-            <View style={{ gap: 14 }}>
+            <View style={isTablet ? styles.twoColWrap : { gap: 14 }}>
               {progeny.map((entry: ProgenyEntry, i: number) => {
                 const partner = entry.partner;
                 const isSire = entry.partner_type === "sire";
@@ -1052,7 +1170,10 @@ export default function DogProfileScreen() {
                 const singleLitterDob =
                   uniqueDobs.length === 1 ? (uniqueDobs[0] as string) : null;
                 return (
-                  <View key={`${partner.id}-${i}`} style={styles.litterCard}>
+                  <View
+                    key={`${partner.id}-${i}`}
+                    style={[styles.litterCard, isTablet && styles.recordCell]}
+                  >
                     <TouchableOpacity
                       style={styles.litterPartner}
                       onPress={() =>
@@ -1232,7 +1353,7 @@ export default function DogProfileScreen() {
 
         {activeTab === "shows" &&
           (showResults.length > 0 ? (
-            <View style={{ gap: 12 }}>
+            <View style={isTablet ? styles.twoColWrap : { gap: 12 }}>
               {[...showResults].sort((a, b) => gradeIndex(a.grading) - gradeIndex(b.grading)).map((result) => {
                 const g = (result.grading || "").toLowerCase();
                 const gradingColor = g.startsWith("exc")
@@ -1247,7 +1368,7 @@ export default function DogProfileScreen() {
                 return (
                   <TouchableOpacity
                     key={result.id}
-                    style={styles.showCard}
+                    style={[styles.showCard, isTablet && styles.recordCell]}
                     activeOpacity={result.showEventId ? 0.75 : 1}
                     onPress={() => {
                       if (result.showEventId) {
@@ -1418,24 +1539,24 @@ export default function DogProfileScreen() {
               {(hasHeight || hasDepth || hasChest || hasWeight || !isNA(gi["color_&_markings"]) || !isNA(gi.hair)) && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>General Information</Text>
-                  <View style={styles.detailsGrid}>
+                  <View style={styles.detailsGridCols}>
                     {hasHeight && (
-                      <DetailItem icon="resize-outline" label="Height at Withers" value={`${parseFloat(gi.height_at_withers!).toFixed(1)} cm`} />
+                      <DetailItem half icon="resize-outline" label="Height at Withers" value={`${parseFloat(gi.height_at_withers!).toFixed(1)} cm`} />
                     )}
                     {hasDepth && (
-                      <DetailItem icon="arrow-down-outline" label="Depth of Chest" value={`${parseFloat(gi.depth_of_chest!).toFixed(1)} cm`} />
+                      <DetailItem half icon="arrow-down-outline" label="Depth of Chest" value={`${parseFloat(gi.depth_of_chest!).toFixed(1)} cm`} />
                     )}
                     {hasChest && (
-                      <DetailItem icon="ellipse-outline" label="Chest Circumference" value={`${gi.chest_circumference} cm`} />
+                      <DetailItem half icon="ellipse-outline" label="Chest Circumference" value={`${gi.chest_circumference} cm`} />
                     )}
                     {hasWeight && (
-                      <DetailItem icon="barbell-outline" label="Weight" value={`${parseFloat(gi.weight!).toFixed(1)} kg`} />
+                      <DetailItem half icon="barbell-outline" label="Weight" value={`${parseFloat(gi.weight!).toFixed(1)} kg`} />
                     )}
                     {!isNA(gi["color_&_markings"]) && (
-                      <DetailItem icon="color-palette-outline" label="Color & Markings" value={gi["color_&_markings"]!} />
+                      <DetailItem half icon="color-palette-outline" label="Color & Markings" value={gi["color_&_markings"]!} />
                     )}
                     {!isNA(gi.hair) && (
-                      <DetailItem icon="sparkles-outline" label="Hair" value={gi.hair!} />
+                      <DetailItem half icon="sparkles-outline" label="Hair" value={gi.hair!} />
                     )}
                   </View>
                 </View>
@@ -1461,15 +1582,16 @@ export default function DogProfileScreen() {
               {assessmentEntries.length > 0 && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>Assessment (Stand & Movement)</Text>
-                  {assessmentEntries.map(([key, val], i) => (
-                    <View
-                      key={key}
-                      style={[styles.bsAssessRow, i < assessmentEntries.length - 1 && styles.bsAssessRowBorder]}
-                    >
-                      <Text style={styles.bsAssessKey}>{labelMap[key] ?? key.replace(/_/g, " ")}</Text>
-                      <Text style={styles.bsAssessVal}>{String(val)}</Text>
-                    </View>
-                  ))}
+                  <View style={styles.twoColWrap}>
+                    {assessmentEntries.map(([key, val]) => (
+                      <View key={key} style={styles.recordCell}>
+                        <Text style={styles.bsCellLabel}>
+                          {labelMap[key] ?? key.replace(/_/g, " ")}
+                        </Text>
+                        <Text style={styles.bsCellValue}>{String(val)}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               )}
 
@@ -1477,16 +1599,18 @@ export default function DogProfileScreen() {
               {(!isNA(breedSurvey.hip) || !isNA(breedSurvey.elbows) || !isNA(breedSurvey.dna_status)) && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>Health Ratings</Text>
-                  {[
-                    { label: "Hip", value: breedSurvey.hip },
-                    { label: "Elbows", value: breedSurvey.elbows },
-                    { label: "DNA Status", value: breedSurvey.dna_status },
-                  ].filter(({ value }) => !isNA(value)).map(({ label, value }, i, arr) => (
-                    <View key={label} style={[styles.bsTableRow, i < arr.length - 1 && styles.bsTableRowBorder]}>
-                      <Text style={styles.bsTableKey}>{label}</Text>
-                      <Text style={styles.bsTableVal}>{value}</Text>
-                    </View>
-                  ))}
+                  <View style={styles.twoColWrap}>
+                    {[
+                      { label: "Hip", value: breedSurvey.hip },
+                      { label: "Elbows", value: breedSurvey.elbows },
+                      { label: "DNA Status", value: breedSurvey.dna_status },
+                    ].filter(({ value }) => !isNA(value)).map(({ label, value }) => (
+                      <View key={label} style={styles.recordCell}>
+                        <Text style={styles.bsCellLabel}>{label}</Text>
+                        <Text style={styles.bsCellValueStrong}>{value}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               )}
 
@@ -1680,14 +1804,39 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 4,
   },
-  tabBar: {
-    marginHorizontal: 16,
-    marginBottom: 20,
+  studBookMark: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#DC2626",
+    marginTop: 3,
+    textAlign: "center",
+  },
+  tabBarWrap: {
+    backgroundColor: "#f6f8f7",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    marginBottom: 8,
+    position: "relative",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  tabFade: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 36,
   },
   tabBarContent: {
     flexDirection: "row",
     gap: 8,
     paddingVertical: 4,
+    paddingRight: 4,
+  },
+  tabBarContentWide: {
+    flexGrow: 1,
+    justifyContent: "space-between",
+    paddingRight: 0,
   },
   tab: {
     flexDirection: "row",
@@ -1762,10 +1911,63 @@ const styles = StyleSheet.create({
   detailsGrid: {
     gap: 20,
   },
+  detailsGridCols: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    rowGap: 20,
+    marginBottom: 20,
+  },
+  detailItemHalf: {
+    width: "48%",
+  },
+  detailItemCompact: {
+    gap: 10,
+    alignItems: "flex-start",
+  },
+  detailIconWrapCompact: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+  },
+  sideBySide: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  sideCard: {
+    flex: 1,
+    padding: 16,
+  },
+  twoColWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
+  },
+  recordCell: {
+    width: "48%",
+  },
+  bsCellLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textTransform: "capitalize",
+    marginBottom: 3,
+  },
+  bsCellValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  bsCellValueStrong: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.primaryDark,
+  },
   cardDivider: {
     height: 1,
     backgroundColor: "rgba(15,92,58,0.08)",
-    marginVertical: 20,
+    marginVertical: 26,
   },
   cardSubHeading: {
     fontSize: 15,

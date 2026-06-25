@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
+import { useResponsive } from "../lib/useResponsive";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { fetchMembersPage, Member, MembersPage } from "../lib/api";
@@ -77,6 +78,8 @@ const keyExtractor = (item: Member) => item.id;
 
 export default function MemberDirectoryScreen() {
   const insets = useSafeAreaInsets();
+  const { isTablet, isWide } = useResponsive();
+  const numColumns = isWide ? 3 : isTablet ? 2 : 1;
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [search, setSearch] = useState("");
@@ -199,17 +202,19 @@ export default function MemberDirectoryScreen() {
   const totalLoaded = allMembers.length;
 
   const renderItem = useCallback(({ item }: { item: Member }) => (
-    <MemberListItem
-      member={item}
-      onPress={() => {
-        if (user && item.id === user.member_id) {
-          navigation.navigate("ProfileTab");
-        } else {
-          navigation.push("MemberProfile", { id: item.id, member: item });
-        }
-      }}
-    />
-  ), [user, navigation]);
+    <View style={numColumns > 1 ? styles.gridCell : undefined}>
+      <MemberListItem
+        member={item}
+        onPress={() => {
+          if (user && item.id === user.member_id) {
+            navigation.navigate("ProfileTab");
+          } else {
+            navigation.push("MemberProfile", { id: item.id, member: item });
+          }
+        }}
+      />
+    </View>
+  ), [user, navigation, numColumns]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -313,9 +318,12 @@ export default function MemberDirectoryScreen() {
         </View>
       ) : (
         <FlatList
+          key={`members-cols-${numColumns}`}
           data={filtered}
           keyExtractor={keyExtractor}
-          contentContainerStyle={styles.list}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.list, isTablet && styles.listWide]}
           showsVerticalScrollIndicator={false}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.4}
@@ -493,6 +501,9 @@ const styles = StyleSheet.create({
   count: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted },
 
   list: { padding: SPACING.lg, paddingTop: SPACING.sm },
+  listWide: { width: "100%", maxWidth: 1100, alignSelf: "center" },
+  columnWrapper: { gap: SPACING.md },
+  gridCell: { flex: 1 },
 
   listItem: {
     flexDirection: "row",

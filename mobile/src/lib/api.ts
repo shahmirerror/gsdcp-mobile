@@ -158,6 +158,7 @@ export type Dog = {
   id: string;
   dog_name: string;
   KP: string | null;
+  studbook?: number | string | null;
   breed: string;
   sex: string;
   dob: string | null;
@@ -230,6 +231,7 @@ export type Pedigree = {
   gen2: PedigreeGen;
   gen3: PedigreeGen;
   gen4: PedigreeGen;
+  gen5?: PedigreeGen;
 };
 
 export type ProgenyPartner = {
@@ -1045,7 +1047,7 @@ export async function fetchKennelDetail(id: string): Promise<KennelDetail> {
   return json.data;
 }
 
-export function stripHtml(html: string): string {
+function decodeHtmlEntities(html: string): string {
   return html
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -1070,7 +1072,12 @@ export function stripHtml(html: string): string {
     .replace(/&agrave;/g, "à")
     .replace(/&ccedil;/g, "ç")
     .replace(/&ntilde;/g, "ñ")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)));
+}
+
+/** Strips tags from an (already entity-decoded) HTML chunk into plain paragraphs. */
+function htmlChunkToParagraphs(chunk: string): string[] {
+  const text = chunk
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
@@ -1083,6 +1090,62 @@ export function stripHtml(html: string): string {
     .replace(/<[^>]+>/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+  return text
+    .split("\n\n")
+    .map((p) => p.replace(/\n/g, " ").trim())
+    .filter((p) => p.length > 0);
+}
+
+export function stripHtml(html: string): string {
+  return htmlChunkToParagraphs(decodeHtmlEntities(html)).join("\n\n");
+}
+
+const SITE_ORIGIN = "https://gsdcp.org";
+
+/** Resolves an <img src> (absolute, protocol-relative, or site-relative) to a full URL. */
+function resolveContentImageUrl(src: string): string {
+  const s = src.trim();
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith("//")) return `https:${s}`;
+  if (s.startsWith("/")) return `${SITE_ORIGIN}${s}`;
+  return `${SITE_ORIGIN}/${s}`;
+}
+
+export type ContentBlock =
+  | { type: "text"; paragraphs: string[] }
+  | { type: "image"; uri: string };
+
+/**
+ * Parses rich HTML content (e.g. a news article) into an ordered list of text
+ * and image blocks, so embedded <img> tags render as real images instead of
+ * being stripped away. Text segments keep the same paragraph formatting as
+ * stripHtml().
+ */
+export function parseRichContent(html: string): ContentBlock[] {
+  if (!html) return [];
+  const decoded = decodeHtmlEntities(html);
+  const blocks: ContentBlock[] = [];
+  const imgRe = /<img\b[^>]*>/gi;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  const pushText = (raw: string) => {
+    const paragraphs = htmlChunkToParagraphs(raw);
+    if (paragraphs.length > 0) blocks.push({ type: "text", paragraphs });
+  };
+
+  while ((match = imgRe.exec(decoded)) !== null) {
+    pushText(decoded.slice(lastIndex, match.index));
+    const srcMatch = match[0].match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+    if (srcMatch?.[1]) {
+      blocks.push({ type: "image", uri: resolveContentImageUrl(srcMatch[1]) });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  pushText(decoded.slice(lastIndex));
+
+  return blocks;
 }
 
 export type JudgeItem = {
@@ -1747,8 +1810,29 @@ export type DogSearchResult = {
   foreign_reg_no: string | null;
   sex: string;
   color: string;
-  owner: string;
+  // The API returns owners as an array of objects (NOT a plain string). Render
+  // it via ownerLabel() — passing the array straight to a <Text> child crashes
+  // with "Objects are not valid as a React child".
+  owner: DogOwner[];
 };
+
+/**
+ * Collapses a dog's owner field (array of objects, or legacy string) into a
+ * compact, render-safe label, e.g. "Ali Ahmed" or "Ali Ahmed +2".
+ */
+export function ownerLabel(
+  owner: DogOwner[] | string | null | undefined,
+): string {
+  if (!owner) return "";
+  if (typeof owner === "string") return owner;
+  if (!Array.isArray(owner)) return "";
+  const names = owner
+    .map((o) => (typeof o === "string" ? o : o?.name))
+    .filter((n): n is string => Boolean(n));
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0];
+  return `${names[0]} +${names.length - 1}`;
+}
 
 export async function searchDogs(query: string, page = 1, perPage = 10, sex?: string): Promise<DogSearchResult[]> {
   const params: Record<string, string> = { q: query, page: String(page), per_page: String(perPage) };

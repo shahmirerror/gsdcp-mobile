@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
+import { useResponsive } from "../lib/useResponsive";
 import { formatDate } from "../lib/dateUtils";
 import { fetchDogsPage, Dog, DogsPage } from "../lib/api";
 import { DogListItem } from "../components/DogListItem";
@@ -33,6 +34,8 @@ export default function DogSearchScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+  const { isTablet, isWide } = useResponsive();
+  const numColumns = isWide ? 3 : isTablet ? 2 : 1;
 
   const [searchQuery, setSearchQuery]         = useState<string>(route.params?.searchQuery || "");
   const [debouncedSearch, setDebouncedSearch] = useState<string>(route.params?.searchQuery || "");
@@ -211,9 +214,12 @@ export default function DogSearchScreen() {
         />
       ) : (
         <FlatList
+          key={`dogs-cols-${numColumns}`}
           data={allDogs}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.list, isTablet && styles.listWide]}
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           refreshControl={
@@ -225,11 +231,9 @@ export default function DogSearchScreen() {
             />
           }
           renderItem={({ item }) => (
-            <DogListItem
-              dog={item}
-              onPress={() => setPreviewDog(item)}
-              onOwnerPress={(owner) => navigation.navigate("MemberProfile", { id: owner.member_id })}
-            />
+            <View style={numColumns > 1 ? styles.gridCell : undefined}>
+              <DogListItem dog={item} onPress={() => setPreviewDog(item)} />
+            </View>
           )}
           ListFooterComponent={
             isFetchingNextPage ? (
@@ -595,6 +599,17 @@ const styles = StyleSheet.create({
   list: {
     padding: SPACING.lg,
     paddingTop: SPACING.sm,
+  },
+  listWide: {
+    width: "100%",
+    maxWidth: 1100,
+    alignSelf: "center",
+  },
+  columnWrapper: {
+    gap: SPACING.md,
+  },
+  gridCell: {
+    flex: 1,
   },
   emptyState: {
     alignItems: "center",

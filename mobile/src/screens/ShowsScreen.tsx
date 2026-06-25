@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { useResponsive } from "../lib/useResponsive";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
@@ -186,6 +187,8 @@ function ShowListItem({ show, onPress }: { show: Show; onPress: () => void }) {
 
 export default function ShowsScreen() {
   const navigation = useNavigation<any>();
+  const { isTablet, isWide } = useResponsive();
+  const numColumns = isWide ? 3 : isTablet ? 2 : 1;
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -426,9 +429,12 @@ export default function ShowsScreen() {
         </View>
       ) : (
         <FlatList
+          key={`shows-cols-${numColumns}`}
           data={filtered}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.list, isTablet && styles.listWide]}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -438,7 +444,9 @@ export default function ShowsScreen() {
             />
           }
           renderItem={({ item }) => (
-            <ShowListItem show={item} onPress={() => setPreviewShow(item)} />
+            <View style={numColumns > 1 ? styles.gridCell : undefined}>
+              <ShowListItem show={item} onPress={() => setPreviewShow(item)} />
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
@@ -862,6 +870,9 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     paddingTop: SPACING.sm,
   },
+  listWide: { width: "100%", maxWidth: 1100, alignSelf: "center" },
+  columnWrapper: { gap: SPACING.md },
+  gridCell: { flex: 1 },
   listItem: {
     flexDirection: "row",
     alignItems: "center",

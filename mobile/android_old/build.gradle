@@ -1,0 +1,44 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.google.gms:google-services:4.4.1'
+    classpath('com.android.tools.build:gradle:8.11.0')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20')
+  }
+}
+
+allprojects {
+  repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
+}
+
+// Provide kotlinVersion in rootProject.ext so that library subproject buildscript
+// blocks find the correct Kotlin version via rootProject.ext.has('kotlinVersion').
+//
+// Without this, react-native-gesture-handler and react-native-safe-area-context
+// fall back to their RNGH_kotlinVersion / RNSAC_kotlinVersion gradle properties
+// which are undefined → kotlin_version = null → classpath("kotlin-gradle-plugin:null")
+// → Gradle throws ModuleVersionNotFoundException during buildscript resolution.
+// With parallel builds this aborts ALL parallel project configurations, causing
+// every React Native library subproject to report "No variants exist".
+//
+// react-native-screens falls back to Kotlin 1.8.0 (its hardcoded default).
+// @react-native-async-storage falls back to Kotlin 1.9.24.
+// Both create Kotlin version conflicts with the root's Kotlin 2.1.20 classpath.
+//
+// Setting ext.kotlinVersion = '2.1.20' here (root project is always evaluated
+// first, before any subproject buildscript runs) ensures all libraries resolve
+// to the same Kotlin version already present in the root classpath.
+ext.kotlinVersion = '2.1.20'
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"

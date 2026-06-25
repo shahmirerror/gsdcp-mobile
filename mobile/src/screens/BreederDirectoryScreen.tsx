@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { useResponsive } from "../lib/useResponsive";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -119,6 +120,8 @@ function BreederListItem({
 export default function BreederDirectoryScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
+  const { isTablet, isWide } = useResponsive();
+  const numColumns = isWide ? 3 : isTablet ? 2 : 1;
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
   const [countryFilter, setCountryFilter] = useState<string>("All");
@@ -366,9 +369,12 @@ export default function BreederDirectoryScreen() {
         </View>
       ) : (
         <FlatList
+          key={`breeders-cols-${numColumns}`}
           data={filtered}
           keyExtractor={(item, index) => `${item.id}-${index}`}
-          contentContainerStyle={styles.list}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.columnWrapper : undefined}
+          contentContainerStyle={[styles.list, isTablet && styles.listWide]}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -378,10 +384,12 @@ export default function BreederDirectoryScreen() {
             />
           }
           renderItem={({ item }) => (
-            <BreederListItem
-              breeder={item}
-              onPress={() => setSelectedBreeder(item)}
-            />
+            <View style={numColumns > 1 ? styles.gridCell : undefined}>
+              <BreederListItem
+                breeder={item}
+                onPress={() => setSelectedBreeder(item)}
+              />
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
@@ -893,6 +901,9 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     paddingTop: SPACING.sm,
   },
+  listWide: { width: "100%", maxWidth: 1100, alignSelf: "center" },
+  columnWrapper: { gap: SPACING.md },
+  gridCell: { flex: 1 },
   listItem: {
     flexDirection: "row",
     alignItems: "center",

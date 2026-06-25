@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
-import type { Dog, DogOwner } from "../lib/api";
+import type { Dog } from "../lib/api";
 import LazyImage from "./LazyImage";
 
 function hasImage(url: string | null): url is string {
@@ -12,12 +11,9 @@ function hasImage(url: string | null): url is string {
 interface DogListItemProps {
   dog: Dog;
   onPress: () => void;
-  onOwnerPress?: (owner: DogOwner) => void;
 }
 
-export function DogListItem({ dog, onPress, onOwnerPress }: DogListItemProps) {
-  const [ownerOpen, setOwnerOpen] = useState(false);
-
+export function DogListItem({ dog, onPress }: DogListItemProps) {
   const initials = (dog.dog_name || "")
     .trim()
     .split(" ")
@@ -49,41 +45,14 @@ export function DogListItem({ dog, onPress, onOwnerPress }: DogListItemProps) {
               ? dog.foreign_reg_no
               : "-"}
         </Text>
-        {owners.length === 1 && (
-          <TouchableOpacity
-            style={styles.ownerRow}
-            onPress={() => onOwnerPress?.(owners[0])}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.ownerLink} numberOfLines={1}>{owners[0].name}</Text>
-            <Ionicons name="chevron-forward" size={11} color={COLORS.primary} />
-          </TouchableOpacity>
-        )}
-        {owners.length > 1 && (
-          <View>
-            <TouchableOpacity
-              style={styles.ownerRow}
-              onPress={() => setOwnerOpen(!ownerOpen)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.ownerLink}>{owners.length} owners</Text>
-              <Ionicons
-                name={ownerOpen ? "chevron-up" : "chevron-down"}
-                size={11}
-                color={COLORS.primary}
-              />
-            </TouchableOpacity>
-            {ownerOpen && owners.map((o) => (
-              <TouchableOpacity
-                key={o.member_id}
-                style={styles.ownerDropdownItem}
-                onPress={() => onOwnerPress?.(o)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="person-outline" size={11} color={COLORS.textMuted} />
-                <Text style={styles.ownerDropdownText} numberOfLines={1}>{o.name}</Text>
-              </TouchableOpacity>
-            ))}
+        {owners.length > 0 && (
+          <View style={styles.ownerRow}>
+            <Ionicons name="person-outline" size={11} color={COLORS.textMuted} />
+            <Text style={styles.ownerText} numberOfLines={1}>
+              {owners.length === 1
+                ? owners[0].name
+                : `${owners[0].name} +${owners.length - 1}`}
+            </Text>
           </View>
         )}
         {dog.microchip ? <Text style={styles.kp}>Microchip: {dog.microchip}</Text> : null}
@@ -164,25 +133,13 @@ const styles = StyleSheet.create({
   ownerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-    marginTop: 1,
-  },
-  ownerLink: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-  ownerDropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 4,
     marginTop: 2,
-    paddingLeft: 2,
   },
-  ownerDropdownText: {
+  ownerText: {
     fontSize: FONT_SIZES.xs,
     color: COLORS.textSecondary,
-    flex: 1,
+    flexShrink: 1,
   },
   badges: {
     flexDirection: "row",

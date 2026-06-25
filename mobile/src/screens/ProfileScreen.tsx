@@ -53,6 +53,7 @@ import {
   LitterPuppy,
   searchDogs,
   DogSearchResult,
+  ownerLabel,
   verifySire,
   verifyDam,
   SireVerification,
@@ -1056,8 +1057,7 @@ function KennelTab({
       {
         text: "Photo Library",
         onPress: async () => {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          // Android Photo Picker (and iOS limited picker) needs no media permission.
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
           if (!result.canceled && result.assets[0]) setImage(result.assets[0]);
         },
@@ -2253,7 +2253,7 @@ function DogDropdown({
               name: d.dog_name,
               KP: d.KP,
               foreign_reg_no: d.foreign_reg_no ?? null,
-              owner: d.owner,
+              owner: ownerLabel(d.owner),
               sex: d.sex,
               color: d.color,
             })),
@@ -6647,8 +6647,7 @@ export default function ProfileScreen() {
       {
         text: "Photo Library",
         onPress: async () => {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert("Permission required", "Photo library access is needed."); return; }
+          // Android Photo Picker (and iOS limited picker) needs no media permission.
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
           if (!result.canceled && result.assets[0]) doUpload(result.assets[0].uri);
         },

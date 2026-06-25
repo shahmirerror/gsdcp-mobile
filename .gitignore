@@ -6,3 +6,7 @@ mobile/.expo/
 server/public
 vite.config.ts.*
 *.tar.gz
+mobile/android_old/
+mobile/credentials.json
+hs_err_pid*.log
+replay_pid*.log

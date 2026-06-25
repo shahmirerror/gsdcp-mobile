@@ -15,7 +15,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS } from "../lib/theme";
-import { searchDogs, fetchVirtualBreeding } from "../lib/api";
+import { searchDogs, fetchVirtualBreeding, ownerLabel } from "../lib/api";
 import type { DogSearchResult, LineBreedingEntry, VirtualBreedingResult } from "../lib/api";
 import { PedigreeTree } from "../components/PedigreeTree";
 
@@ -134,7 +134,7 @@ function DogSearchField({
               style={[styles.dropRow, i < results.length - 1 && styles.dropRowBorder]}
               onPress={() => {
                 if (blurRef.current) clearTimeout(blurRef.current);
-                onSelect({ id: dog.id, name: dog.dog_name, KP: dog.KP, foreign_reg_no: dog.foreign_reg_no, sex: dog.sex, color: dog.color, owner: dog.owner });
+                onSelect({ id: dog.id, name: dog.dog_name, KP: dog.KP, foreign_reg_no: dog.foreign_reg_no, sex: dog.sex, color: dog.color, owner: ownerLabel(dog.owner) });
                 setOpen(false); setQuery("");
               }}
               activeOpacity={0.65}
@@ -145,7 +145,7 @@ function DogSearchField({
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={styles.dropName} numberOfLines={1}>{dog.dog_name}</Text>
                 <Text style={styles.dropSub} numberOfLines={1}>
-                  {kpLabel(dog.KP, dog.foreign_reg_no)}{dog.color ? ` · ${dog.color}` : ""}{dog.owner ? ` · ${dog.owner}` : ""}
+                  {kpLabel(dog.KP, dog.foreign_reg_no)}{dog.color ? ` · ${dog.color}` : ""}{ownerLabel(dog.owner) ? ` · ${ownerLabel(dog.owner)}` : ""}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={13} color="#CBD5E1" />
@@ -162,7 +162,11 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
   const navigation = useNavigation<Nav>();
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(new Set());
 
-  if (entries.length === 0) {
+  const safeEntries = Array.isArray(entries)
+    ? entries.filter((entry): entry is LineBreedingEntry => Boolean(entry))
+    : [];
+
+  if (safeEntries.length === 0) {
     return (
       <Text style={styles.lineBreedEmpty}>No common ancestry found in 5 generations</Text>
     );
@@ -170,13 +174,17 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
 
   return (
     <>
-      {entries.map((entry, idx) => {
+      {safeEntries.map((entry, idx) => {
         // Use positions_by_side if available (more accurate), otherwise fall back to positions+sides zip
         const pbs = entry.positions_by_side;
-        const sirePositions: string[] = pbs?.father?.map(String) ??
-          entry.positions.filter((_, i) => entry.sides[i] === "father");
-        const damPositions: string[] = pbs?.mother?.map(String) ??
-          entry.positions.filter((_, i) => entry.sides[i] === "mother");
+        const positions = Array.isArray(entry.positions) ? entry.positions.map(String) : [];
+        const sides = Array.isArray(entry.sides) ? entry.sides.map(String) : [];
+        const sirePositions: string[] = Array.isArray(pbs?.father)
+          ? pbs.father.map(String)
+          : positions.filter((_, i) => sides[i] === "father");
+        const damPositions: string[] = Array.isArray(pbs?.mother)
+          ? pbs.mother.map(String)
+          : positions.filter((_, i) => sides[i] === "mother");
 
         const genLabel = `${sirePositions.join(",")} - ${damPositions.join(",")} (Sire - Dam)`;
 
@@ -184,7 +192,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
           ? entry.line_breeding_pattern.replace(/_/g, " ")
           : null;
 
-        if ((entry.type === "litter_pair" || entry.type === "litter_group") && entry.dogs && entry.dogs.length > 0) {
+        if ((entry.type === "litter_pair" || entry.type === "litter_group") && Array.isArray(entry.dogs) && entry.dogs.length > 0) {
           const isExpanded = expandedLitters.has(idx);
           return (
             <View key={`litter-${idx}`}>
@@ -209,10 +217,10 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
                 <View style={styles.litterDropdown}>
                   {entry.dogs.map((d) => (
                     <TouchableOpacity
-                      key={d.id}
+                      key={String(d.id ?? `${idx}-${d.dog_name}`)}
                       style={styles.litterDogRow}
                       activeOpacity={0.7}
-                      onPress={() => navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: d.id, name: d.dog_name } })}
+                      onPress={() => navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: String(d.id), name: d.dog_name } })}
                     >
                       <Ionicons name="paw" size={14} color={COLORS.primary} />
                       <Text style={styles.litterDogName} numberOfLines={1}>{d.dog_name}</Text>
@@ -230,7 +238,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
             key={`${entry.id ?? "e"}-${idx}`}
             style={styles.lineBreedRow}
             activeOpacity={0.7}
-            onPress={() => entry.id ? navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: entry.id, name: entry.dog_name } }) : undefined}
+            onPress={() => entry.id ? navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: String(entry.id), name: entry.dog_name } }) : undefined}
           >
             <View style={styles.lineBreedInfo}>
               <View style={styles.lineBreedNameRow}>
@@ -416,7 +424,7 @@ export default function VirtualBreedingScreen() {
             }}
           >
             {/* Line Breeding */}
-            <View style={styles.card}>
+            <View style={[styles.card, { marginTop: 12 }]}>
               <View style={styles.pedigreeHeader}>
                 <Ionicons name="git-merge-outline" size={16} color={COLORS.primary} />
                 <Text style={styles.pedigreeTitle}>Line Breeding</Text>
@@ -431,7 +439,7 @@ export default function VirtualBreedingScreen() {
                 <Text style={styles.pedigreeTitle}>Virtual Offspring Pedigree</Text>
               </View>
               <Text style={styles.pedigreeNote}>
-                4-generation pedigree for a theoretical offspring of{" "}
+                5-generation pedigree for a theoretical offspring of{" "}
                 <Text style={{ fontWeight: "700" }}>{sire?.name}</Text>{" "}
                 × <Text style={{ fontWeight: "700" }}>{dam?.name}</Text>
               </Text>
