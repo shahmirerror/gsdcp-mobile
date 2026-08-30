@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 48,
     height: 48,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 14,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",
@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: 48,
     height: 48,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 14,
     marginRight: SPACING.md,
     backgroundColor: "#E8F5E9",
   },
@@ -1191,13 +1191,13 @@ const styles = StyleSheet.create({
   popupAvatar: {
     width: 72,
     height: 72,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 18,
     backgroundColor: "#E8F5E9",
   },
   popupAvatarFallback: {
     width: 72,
     height: 72,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 18,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",

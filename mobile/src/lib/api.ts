@@ -319,6 +319,15 @@ export type DogDetail = {
   hd_hereditary?: HereditaryData | null;
   ed_hereditary?: HereditaryData | null;
   viewer_is_owner?: boolean | null;
+  /**
+   * Server-computed gate for the Club-Members-only DNA & HD/ED records, decided
+   * per request from the `user_id` sent to `fetchDog`. When the backend returns
+   * this, it is the single source of truth for the display lock — the rule for
+   * "who may see health records" then lives entirely server-side and can change
+   * with no app build. When absent (backend hasn't shipped it yet) the client
+   * falls back to its local `isClubMember` heuristic.
+   */
+  viewer_can_view_health?: boolean | null;
 };
 
 export type ShowJudge = {
@@ -345,10 +354,12 @@ export type ShowResultEntry = {
   dog_id: string;
   dog_name: string;
   sex: string;
-  KP: string | null;
-  foreign_reg_no: string | null;
+  // KP / placement come from integer DB columns, so the API sends them as
+  // numbers — never call string methods (.trim()/.toLowerCase()) without String().
+  KP: string | number | null;
+  foreign_reg_no: string | number | null;
   grading: string;
-  placement: string;
+  placement: string | number;
   class: string;
   imageUrl: string | null;
   hair: string | null;
@@ -602,6 +613,7 @@ export type ProfileShowResult = {
   country: string | null;
   membership_no: string | null;
   membership_type: string | null;
+  status: string | null;
   role: string | null;
   role_id: string | null;
   myDogs: any[];
@@ -632,6 +644,7 @@ export async function fetchProfileShow(
       country:         p.country ?? p.user_city?.country ?? null,
       membership_no:   p.membership_no   ?? null,
       membership_type: p.membership_type ?? null,
+      status:          p.status ?? p.account_status ?? p.membership_status ?? null,
       role:            p.role ?? p.user_role?.name ?? null,
       role_id:         String(p.role_id ?? ""),
       myDogs:          json.data?.myDogs  ?? [],

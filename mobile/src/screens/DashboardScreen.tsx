@@ -1582,10 +1582,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 4,
   },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
   previewDogImage: {
-    width: 48,
+    width: 71,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     flexShrink: 0,

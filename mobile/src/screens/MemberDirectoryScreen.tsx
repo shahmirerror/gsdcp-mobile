@@ -517,12 +517,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   avatar: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 44, height: 44, borderRadius: 13,
     backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center", alignItems: "center",
     borderWidth: 1.5, borderColor: "rgba(15,92,59,0.15)",
   },
-  avatarImage: { width: 44, height: 44, borderRadius: 22 },
+  avatarImage: { width: 44, height: 44, borderRadius: 13 },
   avatarText: { fontSize: 14, fontWeight: "800", color: COLORS.primary },
 
   itemInfo: { flex: 1 },

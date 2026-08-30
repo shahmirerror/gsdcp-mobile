@@ -92,7 +92,7 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
         <Text style={styles.gradingText}>{gradingPlacement}</Text>
       </View>
       <View style={styles.resultInfo}>
-        <Text style={styles.resultName} numberOfLines={1}>{entry.dog_name.trim()}</Text>
+        <Text style={styles.resultName} numberOfLines={1}>{(entry.dog_name || "").trim() || "Unnamed Dog"}</Text>
         {entry.KP && (
           <Text style={styles.resultKp}>KP {entry.KP}</Text>
         )}
@@ -153,9 +153,14 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile, onViewOwner }: {
     .trim().split(" ").filter((w) => w.length > 0)
     .map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
 
-  const ids  = entry.owner_ids?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
-  const names = entry.owner_names?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
-  const nos  = entry.owner_membership_nos?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  // owner_ids / owner_membership_nos come from integer DB columns, so a
+  // single-owner dog arrives as a number — coerce to String() before .split()
+  // or it throws "split is not a function" and crashes the screen.
+  const splitCsv = (v: string | number | null | undefined) =>
+    v == null ? [] : String(v).split(",").map((s) => s.trim()).filter(Boolean);
+  const ids   = splitCsv(entry.owner_ids);
+  const names = splitCsv(entry.owner_names);
+  const nos   = splitCsv(entry.owner_membership_nos);
 
   const gridRows = [
     { label: "Sex",       value: entry.sex },
@@ -182,7 +187,7 @@ function DogPopupSheet({ entry, kpLine, onClose, onViewProfile, onViewOwner }: {
           </View>
         )}
         <View style={styles.dpHeadInfo}>
-          <Text style={styles.dpName} numberOfLines={2}>{entry.dog_name.trim()}</Text>
+          <Text style={styles.dpName} numberOfLines={2}>{(entry.dog_name || "").trim() || "Unnamed Dog"}</Text>
           {kpLine ? <Text style={styles.dpKP}>{kpLine}</Text> : null}
           <View style={styles.dpBadgesRow}>
             {entry.class ? (
@@ -411,7 +416,8 @@ function EntryFormTab({ show }: { show: ShowDetail }) {
     const unselected = availableDogs.filter(d => !selectedIds.has(d.id));
     if (!q) return unselected;
     return unselected.filter(d =>
-      d.dog_name.toLowerCase().includes(q) || d.KP.toLowerCase().includes(q)
+      String(d.dog_name ?? "").toLowerCase().includes(q) ||
+      String(d.KP ?? "").toLowerCase().includes(q)
     );
   }, [searchQuery, availableDogs, selectedIds]);
 
@@ -802,7 +808,7 @@ export default function ShowDetailScreen() {
       arr.sort((a, b) => {
         const gd = gradeIndex(a.grading) - gradeIndex(b.grading);
         if (gd !== 0) return gd;
-        return parseInt(a.placement || "0") - parseInt(b.placement || "0");
+        return parseInt(String(a.placement || "0")) - parseInt(String(b.placement || "0"));
       })
     );
     return groups;
@@ -863,9 +869,11 @@ export default function ShowDetailScreen() {
 
   const dogKpLine = (entry: ShowResultEntry | null) => {
     if (!entry) return "";
-    const k = (entry.KP ?? "").trim();
+    // The API can return KP / foreign_reg_no as numbers, so coerce before
+    // trimming — calling .trim() on a number crashes the whole screen.
+    const k = String(entry.KP ?? "").trim();
     if (k && k !== "0") return `KP ${k}`;
-    const f = (entry.foreign_reg_no ?? "").trim();
+    const f = String(entry.foreign_reg_no ?? "").trim();
     return f || "";
   };
 
@@ -899,7 +907,7 @@ export default function ShowDetailScreen() {
           onClose={() => setPopupDog(null)}
           onViewProfile={() => {
             setPopupDog(null);
-            navigation.push("DogProfile", { id: popupDog.dog_id, name: popupDog.dog_name.trim() });
+            navigation.push("DogProfile", { id: popupDog.dog_id, name: (popupDog.dog_name || "").trim() });
           }}
           onViewOwner={(id) => {
             setPopupDog(null);
@@ -1982,14 +1990,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 14,
   },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
   dpImage: {
-    width: 72,
+    width: 107,
     height: 72,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#E8F5E9",
   },
   dpAvatar: {
-    width: 72,
+    width: 107,
     height: 72,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#E8F5E9",

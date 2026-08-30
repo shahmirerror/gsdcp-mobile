@@ -1076,10 +1076,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 6,
   },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
   dogAvatar: {
-    width: 30,
+    width: 44,
     height: 30,
-    borderRadius: 15,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -1284,10 +1285,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 4,
   },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
   previewDogImage: {
-    width: 48,
+    width: 71,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
     flexShrink: 0,
