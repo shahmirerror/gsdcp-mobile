@@ -82,6 +82,7 @@ import { DogListItem } from "../components/DogListItem";
 import { useAuth } from "../contexts/AuthContext";
 import { Switch } from "react-native";
 import LazyImage from "../components/LazyImage";
+import ImageCropModal from "../components/ImageCropModal";
 import BottomSheetModal from "../components/BottomSheetModal";
 import TransferDogModal from "../components/TransferDogModal";
 import { CalendarDatePicker } from "../components/CalendarDatePicker";
@@ -508,6 +509,7 @@ function DetailTab({
           country: fresh.country,
           membership_no: fresh.membership_no,
           membership_type: fresh.membership_type,
+          status: fresh.status,
           role: fresh.role,
           role_id: fresh.role_id,
           myDogs: fresh.myDogs,
@@ -1833,14 +1835,15 @@ const dStyles = StyleSheet.create({
     marginBottom: 16,
     gap: 14,
   },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
   previewImage: {
-    width: 72,
+    width: 107,
     height: 72,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#E8F5E9",
   },
   previewAvatar: {
-    width: 72,
+    width: 107,
     height: 72,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#E8F5E9",
@@ -6612,6 +6615,11 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabId>("detail");
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoVersion, setPhotoVersion] = useState(() => Date.now());
+  // Chosen photo awaiting the crop step (member photos crop to 640:432, matching
+  // the on-screen preview frame).
+  const [cropState, setCropState] = useState<
+    { uri: string; width: number; height: number } | null
+  >(null);
 
   const {
     data: detail,
@@ -6625,13 +6633,21 @@ export default function ProfileScreen() {
     retry: 1,
   });
 
+  // Open the crop step; the cropped (JPEG) result is what gets uploaded.
+  const openCrop = (asset: ImagePicker.ImagePickerAsset) =>
+    setCropState({
+      uri: asset.uri,
+      width: asset.width ?? 0,
+      height: asset.height ?? 0,
+    });
+
   async function handleChangePhoto() {
     const pickerOptions: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"], allowsEditing: false, quality: 1,
     };
     if (Platform.OS === "web") {
       const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-      if (!result.canceled && result.assets[0]) doUpload(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
       return;
     }
     Alert.alert("Change Profile Photo", "Choose a source", [
@@ -6641,7 +6657,7 @@ export default function ProfileScreen() {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
           const result = await ImagePicker.launchCameraAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) doUpload(result.assets[0].uri);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       {
@@ -6649,7 +6665,7 @@ export default function ProfileScreen() {
         onPress: async () => {
           // Android Photo Picker (and iOS limited picker) needs no media permission.
           const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
-          if (!result.canceled && result.assets[0]) doUpload(result.assets[0].uri);
+          if (!result.canceled && result.assets[0]) openCrop(result.assets[0]);
         },
       },
       { text: "Cancel", style: "cancel" },
@@ -6746,6 +6762,7 @@ export default function ProfileScreen() {
   }
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
@@ -6868,6 +6885,22 @@ export default function ProfileScreen() {
 
       <View style={{ height: 48 }} />
     </ScrollView>
+
+    {cropState && (
+      <ImageCropModal
+        visible
+        uri={cropState.uri}
+        imageWidth={cropState.width}
+        imageHeight={cropState.height}
+        aspect={1}
+        onCancel={() => setCropState(null)}
+        onCrop={(croppedUri) => {
+          setCropState(null);
+          doUpload(croppedUri);
+        }}
+      />
+    )}
+    </>
   );
 }
 
@@ -7087,13 +7120,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 24,
   },
+  // Square photo box (160×160), matching the web app's member photo (width 160, square crop).
+  // padding creates the white mat between the accent frame and the photo, matching
+  // the dog / judge / breeder profile boxes.
   avatarOuter: {
-    width: 136,
-    height: 136,
-    borderRadius: 68,
+    width: 160,
+    height: 160,
+    borderRadius: 22,
     borderWidth: 4,
     borderColor: COLORS.accent,
     backgroundColor: "#fff",
+    padding: 8,
     overflow: "hidden",
     marginBottom: SPACING.sm,
     shadowColor: "#000",
@@ -7104,18 +7141,21 @@ const styles = StyleSheet.create({
   },
   avatarInner: {
     flex: 1,
+    borderRadius: 14,
     backgroundColor: "rgba(15,92,59,0.08)",
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarImage: { width: "100%", height: "100%" },
+  avatarImage: { flex: 1, width: "100%", borderRadius: 14 },
   avatarInitials: { fontSize: 42, fontWeight: "800", color: COLORS.primary },
   avatarCameraOverlay: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 36,
+    bottom: 8,
+    left: 8,
+    right: 8,
+    height: 32,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
     backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center",
     alignItems: "center",

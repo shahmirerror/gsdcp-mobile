@@ -696,14 +696,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 14,
   },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
   dogPreviewImage: {
-    width: 72,
+    width: 107,
     height: 72,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#E8F5E9",
   },
   dogPreviewAvatar: {
-    width: 72,
+    width: 107,
     height: 72,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#E8F5E9",

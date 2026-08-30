@@ -45,6 +45,8 @@ import { PedigreeTree } from "../components/PedigreeTree";
 import { DogListItem } from "../components/DogListItem";
 import LazyImage from "../components/LazyImage";
 import TransferDogModal from "../components/TransferDogModal";
+import LockedRecord from "../components/LockedRecord";
+import ImageCropModal from "../components/ImageCropModal";
 
 const heroBg = require("../../assets/hero-bg.png");
 
@@ -64,11 +66,13 @@ function DetailItem({
   half?: boolean;
   compact?: boolean;
 }) {
+  // Two-up (48%) only on tablets; on phones each field is full-width (1 column).
+  const { isTablet } = useResponsive();
   return (
     <View
       style={[
         styles.detailItem,
-        half && styles.detailItemHalf,
+        half && (isTablet ? styles.detailItemHalf : styles.detailItemFull),
         compact && styles.detailItemCompact,
       ]}
     >
@@ -294,7 +298,11 @@ export default function DogProfileScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const dogId = route.params?.id;
-  const { user } = useAuth();
+  const { user, isClubMember } = useAuth();
+  // DNA and HD/ED records are Club-Members-only; the lock lifts for an active
+  // signed-in member. Signed-out viewers get a "Sign In" CTA that jumps to the
+  // Profile tab (which shows the login screen while logged out).
+  const goToSignIn = () => navigation.getParent()?.navigate("ProfileTab");
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
@@ -308,6 +316,11 @@ export default function DogProfileScreen() {
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [showTransferForm, setShowTransferForm] = useState(false);
+  // Chosen photo awaiting the crop step (dog photos crop to 640:432, matching
+  // the web app cropper and the on-screen preview frame).
+  const [cropState, setCropState] = useState<
+    { uri: string; width: number; height: number } | null
+  >(null);
 
   // Tab bar: ref + per-tab x positions for auto-scrolling the active tab into
   // view, and a right-edge fade shown only while the bar can still scroll right.
@@ -364,8 +377,13 @@ export default function DogProfileScreen() {
       exif: false,
     };
 
+    // Open the crop step; the cropped (JPEG) result is what gets uploaded.
     const upload = (asset: ImagePicker.ImagePickerAsset) =>
-      doUploadDogPhoto(asset.uri, asset.mimeType);
+      setCropState({
+        uri: asset.uri,
+        width: asset.width ?? 0,
+        height: asset.height ?? 0,
+      });
 
     if (Platform.OS === "web") {
       const result = await ImagePicker.launchImageLibraryAsync(pickerOptions);
@@ -425,6 +443,13 @@ export default function DogProfileScreen() {
   const lineBreeding = data.line_breeding ?? [];
   const progeny = data.progeny ?? [];
   const viewerIsOwner = data.viewer_is_owner === true;
+  // DNA & HD/ED records are Club-Members-only. The backend decides visibility
+  // per request (it already knows the viewer from the user_id fetchDog sends),
+  // so its flag is the source of truth and the rule can change with no app
+  // build. Only fall back to the local isClubMember gate when the backend
+  // hasn't sent the flag yet. The owner always sees their own dog's records.
+  const canViewHealth =
+    data.viewer_can_view_health ?? (isClubMember || viewerIsOwner);
   const showStudBookTwo = String(dog.studbook ?? "").trim() === "2";
   const breedSurvey: BreedSurveyData | null =
     data.breedSurvey && !Array.isArray(data.breedSurvey) ? data.breedSurvey : null;
@@ -551,6 +576,10 @@ export default function DogProfileScreen() {
   };
 
   const renderHealthContent = () => {
+    // HD/ED records are Club-Members-only; visibility is decided by canViewHealth.
+    if (!canViewHealth) {
+      return <LockedRecord title="HD/ED records" onSignIn={goToSignIn} />;
+    }
     const hasThisDog = !!(dog.hd || dog.ed || hdHereditary?.kids || edHereditary?.kids);
     const hasSire    = !!(hdHereditary?.sire || edHereditary?.sire);
     const hasDam     = !!(hdHereditary?.dam  || edHereditary?.dam);
@@ -1021,7 +1050,7 @@ export default function DogProfileScreen() {
               )}
             </View>
 
-            <View style={styles.sideBySide}>
+            <View style={[styles.sideBySide, !isTablet && styles.sideStack]}>
               <View style={[styles.card, styles.sideCard]}>
                 <Text style={styles.cardHeading}>Ratings</Text>
                 <View style={styles.detailsGrid}>
@@ -1051,26 +1080,30 @@ export default function DogProfileScreen() {
 
               <View style={[styles.card, styles.sideCard]}>
                 <Text style={styles.cardHeading}>Examinations</Text>
-                <View style={styles.detailsGrid}>
-                  <DetailItem
-                    compact
-                    icon="fitness"
-                    label="HD Rating"
-                    value={dog.hd || "-"}
-                  />
-                  <DetailItem
-                    compact
-                    icon="body"
-                    label="ED Rating"
-                    value={dog.ed || "-"}
-                  />
-                  <DetailItem
-                    compact
-                    icon="flask"
-                    label="DNA Status"
-                    value={dog.dna_status || "-"}
-                  />
-                </View>
+                {canViewHealth ? (
+                  <View style={styles.detailsGrid}>
+                    <DetailItem
+                      compact
+                      icon="fitness"
+                      label="HD Rating"
+                      value={dog.hd || "-"}
+                    />
+                    <DetailItem
+                      compact
+                      icon="body"
+                      label="ED Rating"
+                      value={dog.ed || "-"}
+                    />
+                    <DetailItem
+                      compact
+                      icon="flask"
+                      label="DNA Status"
+                      value={dog.dna_status || "-"}
+                    />
+                  </View>
+                ) : (
+                  <LockedRecord compact title="HD/ED ratings and DNA status" onSignIn={goToSignIn} />
+                )}
               </View>
             </View>
           </>
@@ -1582,9 +1615,9 @@ export default function DogProfileScreen() {
               {assessmentEntries.length > 0 && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>Assessment (Stand & Movement)</Text>
-                  <View style={styles.twoColWrap}>
+                  <View style={isTablet ? styles.twoColWrap : { gap: 12 }}>
                     {assessmentEntries.map(([key, val]) => (
-                      <View key={key} style={styles.recordCell}>
+                      <View key={key} style={isTablet ? styles.recordCell : undefined}>
                         <Text style={styles.bsCellLabel}>
                           {labelMap[key] ?? key.replace(/_/g, " ")}
                         </Text>
@@ -1595,22 +1628,26 @@ export default function DogProfileScreen() {
                 </View>
               )}
 
-              {/* 5. Hip / Elbows / DNA */}
+              {/* 5. Hip / Elbows / DNA — Club-Members-only (DNA & HD/ED records) */}
               {(!isNA(breedSurvey.hip) || !isNA(breedSurvey.elbows) || !isNA(breedSurvey.dna_status)) && (
                 <View style={styles.card}>
                   <Text style={styles.cardHeading}>Health Ratings</Text>
-                  <View style={styles.twoColWrap}>
-                    {[
-                      { label: "Hip", value: breedSurvey.hip },
-                      { label: "Elbows", value: breedSurvey.elbows },
-                      { label: "DNA Status", value: breedSurvey.dna_status },
-                    ].filter(({ value }) => !isNA(value)).map(({ label, value }) => (
-                      <View key={label} style={styles.recordCell}>
-                        <Text style={styles.bsCellLabel}>{label}</Text>
-                        <Text style={styles.bsCellValueStrong}>{value}</Text>
-                      </View>
-                    ))}
-                  </View>
+                  {canViewHealth ? (
+                    <View style={isTablet ? styles.twoColWrap : { gap: 12 }}>
+                      {[
+                        { label: "Hip", value: breedSurvey.hip },
+                        { label: "Elbows", value: breedSurvey.elbows },
+                        { label: "DNA Status", value: breedSurvey.dna_status },
+                      ].filter(({ value }) => !isNA(value)).map(({ label, value }) => (
+                        <View key={label} style={isTablet ? styles.recordCell : undefined}>
+                          <Text style={styles.bsCellLabel}>{label}</Text>
+                          <Text style={styles.bsCellValueStrong}>{value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <LockedRecord compact title="Hip, elbow and DNA ratings" onSignIn={goToSignIn} />
+                  )}
                 </View>
               )}
 
@@ -1665,6 +1702,21 @@ export default function DogProfileScreen() {
       userId={String(user?.id ?? "")}
       onSuccess={() => queryClient.invalidateQueries({ queryKey: ["dog", dogId] })}
     />
+
+    {cropState && (
+      <ImageCropModal
+        visible
+        uri={cropState.uri}
+        imageWidth={cropState.width}
+        imageHeight={cropState.height}
+        aspect={640 / 432}
+        onCancel={() => setCropState(null)}
+        onCrop={(croppedUri) => {
+          setCropState(null);
+          doUploadDogPhoto(croppedUri, "image/jpeg");
+        }}
+      />
+    )}
     </>
   );
 }
@@ -1717,10 +1769,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 24,
   },
+  // Landscape rounded-rectangle frame mirroring the web preview, which renders
+  // the dog photo at a 640:432 aspect ratio with rounded corners (not a circle).
   avatarOuter: {
-    width: 144,
-    height: 144,
-    borderRadius: 72,
+    width: "100%",
+    maxWidth: 360,
+    aspectRatio: 640 / 432,
+    borderRadius: 18,
     borderWidth: 4,
     borderColor: COLORS.accent,
     backgroundColor: "#fff",
@@ -1733,11 +1788,11 @@ const styles = StyleSheet.create({
   },
   avatarPhoto: {
     flex: 1,
-    borderRadius: 9999,
+    borderRadius: 10,
   },
   avatarInner: {
     flex: 1,
-    borderRadius: 9999,
+    borderRadius: 10,
     backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center",
     alignItems: "center",
@@ -1749,8 +1804,8 @@ const styles = StyleSheet.create({
   },
   avatarEditBadge: {
     position: "absolute",
-    bottom: 6,
-    right: 6,
+    bottom: 12,
+    right: 12,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -1922,6 +1977,9 @@ const styles = StyleSheet.create({
   detailItemHalf: {
     width: "48%",
   },
+  detailItemFull: {
+    width: "100%",
+  },
   detailItemCompact: {
     gap: 10,
     alignItems: "flex-start",
@@ -1934,6 +1992,9 @@ const styles = StyleSheet.create({
   sideBySide: {
     flexDirection: "row",
     gap: 12,
+  },
+  sideStack: {
+    flexDirection: "column",
   },
   sideCard: {
     flex: 1,

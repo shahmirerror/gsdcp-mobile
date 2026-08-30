@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
+import { useResponsive } from "../lib/useResponsive";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -92,8 +93,11 @@ function DetailItem({
   valueColor?: string;
   half?: boolean;
 }) {
+  // Two-up (48%) only on tablets; on phones each field is full-width (1 column),
+  // matching DogProfileScreen.
+  const { isTablet } = useResponsive();
   return (
-    <View style={[styles.detailItem, half && styles.detailItemHalf]}>
+    <View style={[styles.detailItem, half && (isTablet ? styles.detailItemHalf : styles.detailItemFull)]}>
       <View style={styles.detailIconWrap}>
         <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
@@ -115,8 +119,9 @@ function LockedDetailItem({
   label: string;
   half?: boolean;
 }) {
+  const { isTablet } = useResponsive();
   return (
-    <View style={[styles.detailItem, half && styles.detailItemHalf]}>
+    <View style={[styles.detailItem, half && (isTablet ? styles.detailItemHalf : styles.detailItemFull)]}>
       <View style={styles.detailIconWrap}>
         <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
@@ -312,7 +317,7 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
   }
 
   const showSearch = dogs.length > 10;
-
+const { isTablet } = useResponsive();
   return (
     <View>
       {showSearch && (
@@ -391,9 +396,9 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
 
       {/* Dog list */}
       {filtered.length > 0 ? (
-        <View style={styles.twoColWrap}>
+        <View style={isTablet ? styles.twoColWrap : undefined}>
           {filtered.map((dog) => (
-            <View key={dog.id} style={styles.recordCell}>
+            <View key={dog.id} style={isTablet ? styles.recordCell : undefined}>
               <DogListItem dog={toListDog(dog)} onPress={() => onDogPress(dog)} />
             </View>
           ))}
@@ -584,20 +589,23 @@ const styles = StyleSheet.create({
 
   /* Profile section — matches DogProfileScreen */
   profileSection: { alignItems: "center", marginTop: -80, paddingHorizontal: 16, marginBottom: 24 },
+  // Square photo box (160×160), matching the web app's member photo (width 160, square crop).
+  // padding creates the white mat between the accent frame and the photo, matching
+  // the dog / judge / breeder profile boxes.
   avatarOuter: {
-    width: 136, height: 136, borderRadius: 68,
+    width: 160, height: 160, borderRadius: 22,
     borderWidth: 4, borderColor: COLORS.accent,
-    backgroundColor: "#fff", overflow: "hidden",
+    backgroundColor: "#fff", padding: 8, overflow: "hidden",
     marginBottom: SPACING.sm,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15, shadowRadius: 10, elevation: 8,
   },
   avatarInner: {
-    flex: 1, backgroundColor: "rgba(15,92,59,0.08)",
+    flex: 1, borderRadius: 14, backgroundColor: "rgba(15,92,59,0.08)",
     justifyContent: "center", alignItems: "center",
   },
-  avatarImage: { width: "100%", height: "100%" },
+  avatarImage: { flex: 1, width: "100%", borderRadius: 14 },
   avatarInitials: { fontSize: 42, fontWeight: "800", color: COLORS.primary },
   memberName: {
     fontSize: 24, fontWeight: "800", color: "#0F172A",
@@ -714,6 +722,7 @@ const styles = StyleSheet.create({
     rowGap: 20,
   },
   detailItemHalf: { width: "48%" },
+  detailItemFull: { width: "100%" },
   twoColWrap: {
     flexDirection: "row",
     flexWrap: "wrap",

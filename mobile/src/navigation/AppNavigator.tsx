@@ -117,6 +117,8 @@ export type TheClubStackParamList = {
   JudgeDetail: { id: string; backLabel?: string };
   TeamMemberDetail: { id: string };
   ShowDetail: { id: string; name?: string };
+  DogProfile: { id: string; name?: string };
+  MemberProfile: { id: string; member?: any };
 };
 
 export type RootTabParamList = {
@@ -289,6 +291,11 @@ function TheClubStackNavigator() {
       <TheClubStack.Screen name="JudgeDetail" component={JudgeDetailScreen} />
       <TheClubStack.Screen name="TeamMemberDetail" component={TeamMemberDetailScreen} />
       <TheClubStack.Screen name="ShowDetail" component={ShowDetailScreen} />
+      {/* ShowDetail's dog popup pushes DogProfile / MemberProfile — they must be
+          registered in this stack too, or the push crashes (e.g. The Club →
+          Judges → Judge → Show → tap dog → View Profile). */}
+      <TheClubStack.Screen name="DogProfile" component={DogProfileScreen} />
+      <TheClubStack.Screen name="MemberProfile" component={MemberProfileScreen} />
     </TheClubStack.Navigator>
   );
 }

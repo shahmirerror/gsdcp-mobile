@@ -18,6 +18,8 @@ export type AuthUser = {
   name: string;
   membership_no: string | null;
   membership_type: string | null;
+  /** Account status as reported by the backend, e.g. "Active" / "Inactive". */
+  status: string | null;
   photo: string | null;
   email: string | null;
   phone: string | null;
@@ -34,6 +36,12 @@ export type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   isLoggedIn: boolean;
+  /**
+   * True when the signed-in user is an active club member. This is the gate
+   * that unlocks Club-Members-only information (e.g. DNA and HD/ED records).
+   * See {@link isClubMemberActive} for the exact rule.
+   */
+  isClubMember: boolean;
   isLoading: boolean;
   login: (identifier: string, credential: string, mode?: "membership" | "username" | "otp") => Promise<void>;
   logout: () => void;
@@ -41,6 +49,26 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+/**
+ * Whether a signed-in user counts as an active club member — the condition
+ * that lifts the display lock on Club-Members-only records (DNA, HD/ED).
+ *
+ * Rule: the user must be signed in AND their account status must be "Active".
+ * The backend account status is honoured when present; when it isn't reported
+ * yet, a temporary/pending membership (membership_no beginning with "T-") is
+ * treated as not-yet-active, and any other successful login counts as active.
+ * Keeping the rule here means every locked surface stays consistent and the
+ * definition only ever has to change in one place.
+ */
+export function isClubMemberActive(user: AuthUser | null): boolean {
+  if (!user) return false;
+  const status = user.status?.trim().toLowerCase();
+  if (status) return status === "active";
+  // No explicit status from the backend: fall back to membership number.
+  // "T-" is a temporary/pending member; everyone else who logged in is active.
+  return !user.membership_no?.startsWith("T-");
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -113,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name:            [p.first_name, p.last_name].filter(Boolean).join(" "),
       membership_no:   p.membership_no ?? null,
       membership_type: p.membership_type ?? null,
+      status:          p.status ?? p.account_status ?? p.membership_status ?? null,
       photo:           p.photo ?? null,
       email:           p.email ?? null,
       phone:           p.phone ?? null,
@@ -152,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isClubMember: isClubMemberActive(user), isLoading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

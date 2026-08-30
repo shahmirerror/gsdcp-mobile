@@ -41,15 +41,22 @@ function DetailItem({
   icon,
   label,
   value,
+  onPress,
   half,
+  compact,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-  half?: boolean;
-}) {
+    label: string;
+    value: string;
+    onPress?: () => void;
+    half?: boolean;
+    compact?: boolean;
+}
+) { const { isTablet } = useResponsive();
   return (
-    <View style={[styles.detailItem, half && styles.detailItemHalf]}>
+    <View style={[styles.detailItem,
+        half && (isTablet ? styles.detailItemHalf : styles.detailItemFull),
+        compact && styles.detailItemCompact,]}>
       <View style={styles.detailIconWrap}>
         <Ionicons name={icon} size={18} color={COLORS.primary} />
       </View>
@@ -230,9 +237,10 @@ function DogQuickView({
 const qStyles = StyleSheet.create({
   content: { paddingHorizontal: 24 },
   header: { flexDirection: "row", alignItems: "flex-start", marginBottom: 16, gap: 14 },
-  image: { width: 72, height: 72, borderRadius: BORDER_RADIUS.md, backgroundColor: "#E8F5E9" },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
+  image: { width: 107, height: 72, borderRadius: BORDER_RADIUS.md, backgroundColor: "#E8F5E9" },
   avatar: {
-    width: 72, height: 72, borderRadius: BORDER_RADIUS.md,
+    width: 107, height: 72, borderRadius: BORDER_RADIUS.md,
     backgroundColor: "#E8F5E9", justifyContent: "center", alignItems: "center", flexShrink: 0,
   },
   avatarText: { color: COLORS.primary, fontWeight: "700", fontSize: 22 },
@@ -292,7 +300,7 @@ function DogListSection({
   const SEX_OPTIONS: SexFilter[] = ["All", "Male", "Female"];
   const TITLED_OPTIONS = ["Yes", "No"] as const;
   const hasActiveFilter = query.trim() !== "" || sex !== "All" || titledFilter !== "All";
-
+const { isTablet } = useResponsive();
   if (dogs.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -400,9 +408,9 @@ function DogListSection({
 
       {/* Dog list */}
       {filtered.length > 0 ? (
-        <View style={styles.twoColWrap}>
+        <View style={isTablet ? styles.twoColWrap : undefined}>
           {filtered.map((dog) => (
-            <View key={dog.id} style={styles.recordCell}>
+            <View key={dog.id} style={isTablet ? styles.recordCell : undefined}>
               <BreederDogItem dog={dog} onPress={() => setSelectedDog(dog)} />
             </View>
           ))}
@@ -670,7 +678,7 @@ export default function BreederProfileScreen() {
                 <DetailItem half icon="person" label="Name" value={breeder.name} />
                 {breeder.kennelName ? (
                   <TouchableOpacity
-                    style={styles.detailItemHalf}
+                    style={isTablet ? styles.detailItemHalf : styles.detailItemFull}
                     onPress={() => navigation.navigate("KennelProfile", { id: breeder.id, name: breeder.kennelName })}
                     activeOpacity={0.7}
                   >
@@ -824,10 +832,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 24,
   },
+  // Square photo box (160×160), matching the web app's member/breeder photo box.
   avatarOuter: {
-    width: 144,
-    height: 144,
-    borderRadius: 72,
+    width: 160,
+    height: 160,
+    borderRadius: 22,
     borderWidth: 4,
     borderColor: COLORS.accent,
     backgroundColor: "#fff",
@@ -840,11 +849,11 @@ const styles = StyleSheet.create({
   },
   avatarPhoto: {
     flex: 1,
-    borderRadius: 9999,
+    borderRadius: 14,
   },
   avatarInner: {
     flex: 1,
-    borderRadius: 9999,
+    borderRadius: 14,
     backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center",
     alignItems: "center",
@@ -956,6 +965,7 @@ const styles = StyleSheet.create({
   },
   contentArea: {
     paddingHorizontal: 16,
+    minHeight: 480,
   },
   card: {
     backgroundColor: "#FFFFFF",
@@ -985,9 +995,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     rowGap: 20,
+    marginBottom: 20,
   },
   detailItemHalf: {
     width: "48%",
+  },
+  detailItemFull: {
+    width: "100%",
+  },
+  detailItemCompact: {
+    gap: 10,
+    alignItems: "flex-start",
   },
   twoColWrap: {
     flexDirection: "row",
@@ -1061,17 +1079,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  // Landscape 640:432 thumbnail, matching the dog profile photo shape.
   dogAvatar: {
-    width: 44,
+    width: 65,
     height: 44,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 10,
     marginRight: SPACING.md,
     backgroundColor: "#E8F5E9",
   },
   dogAvatarFallback: {
-    width: 44,
+    width: 65,
     height: 44,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: 10,
     backgroundColor: "#E8F5E9",
     justifyContent: "center",
     alignItems: "center",

@@ -193,8 +193,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 8,
   },
+  // Square photo box (160×160) with white mat, matching the member/judge/breeder profile boxes.
   avatarOuter: {
-    width: 144, height: 144, borderRadius: 72,
+    width: 160, height: 160, borderRadius: 22,
     borderWidth: 4,
     backgroundColor: "#fff",
     padding: 8,
@@ -204,9 +205,9 @@ const styles = StyleSheet.create({
     shadowRadius: 25,
     elevation: 8,
   },
-  avatarPhoto: { flex: 1, borderRadius: 9999 },
+  avatarPhoto: { flex: 1, borderRadius: 14 },
   avatarInner: {
-    flex: 1, borderRadius: 9999,
+    flex: 1, borderRadius: 14,
     justifyContent: "center", alignItems: "center",
   },
   avatarInitials: { fontSize: 36, fontWeight: "800" },

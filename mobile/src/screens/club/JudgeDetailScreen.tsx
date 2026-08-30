@@ -239,8 +239,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
   },
+  // Square photo box (160×160), matching the web app's member photo box.
   avatarOuter: {
-    width: 144, height: 144, borderRadius: 72,
+    width: 160, height: 160, borderRadius: 22,
     borderWidth: 4, borderColor: COLORS.accent,
     backgroundColor: "#fff",
     padding: 8,
@@ -251,9 +252,9 @@ const styles = StyleSheet.create({
     elevation: 8,
     position: "relative",
   },
-  avatarPhoto: { flex: 1, borderRadius: 9999 },
+  avatarPhoto: { flex: 1, borderRadius: 14 },
   avatarInner: {
-    flex: 1, borderRadius: 9999,
+    flex: 1, borderRadius: 14,
     backgroundColor: "rgba(15,92,59,0.1)",
     justifyContent: "center", alignItems: "center",
   },
