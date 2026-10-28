@@ -885,10 +885,15 @@ export default function ShowDetailScreen() {
     return sections;
   }, [catalog, catalogSearch]);
 
+  // Results tab only appears once results data has actually arrived. The
+  // Catalog tab is the pre-results view, so it hides as soon as Results shows.
+  const hasResults = isShowType && results.length > 0;
+  const showCatalogTab = catalog.length > 0 && !hasResults;
+
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
-    ...(isShowType ? [{ key: "results" as TabKey, label: "Results", count: results.length }] : []),
-    ...(catalog.length ? [{ key: "catalog" as TabKey, label: "Catalog", count: catalog.length }] : []),
+    ...(hasResults ? [{ key: "results" as TabKey, label: "Results", count: results.length }] : []),
+    ...(showCatalogTab ? [{ key: "catalog" as TabKey, label: "Catalog", count: catalog.length }] : []),
     ...(user ? [{ key: "entry" as TabKey, label: "Entry Form" }] : []),
   ];
 
