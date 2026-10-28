@@ -888,7 +888,22 @@ export default function ShowDetailScreen() {
   // Results tab only appears once results data has actually arrived. The
   // Catalog tab is the pre-results view, so it hides as soon as Results shows.
   const hasResults = isShowType && results.length > 0;
-  const showCatalogTab = catalog.length > 0 && !hasResults;
+
+  // The event's start date is the first entry in `dates` (YYYY-MM-DD), matching
+  // how the rest of the app treats dates[0]. The catalog only appears once that
+  // date has arrived (from the start of that day onward).
+  const eventStarted = useMemo(() => {
+    const d = show?.dates?.[0];
+    if (!d) return false;
+    const parts = d.split("-");
+    if (parts.length !== 3) return false;
+    const [y, m, day] = parts.map((p) => parseInt(p, 10));
+    if (isNaN(y) || isNaN(m) || isNaN(day)) return false;
+    const start = new Date(y, m - 1, day, 0, 0, 0, 0);
+    return Date.now() >= start.getTime();
+  }, [show?.dates]);
+
+  const showCatalogTab = catalog.length > 0 && !hasResults && eventStarted;
 
   // Entry closes at the end of last_date_of_entry (YYYY-MM-DD). No deadline
   // set (null) keeps entry open.
@@ -1120,7 +1135,7 @@ export default function ShowDetailScreen() {
     );
   }
 
-  if (activeTab === "catalog") {
+  if (activeTab === "catalog" && showCatalogTab) {
     return (
       <View style={styles.container}>
         <ScrollView
