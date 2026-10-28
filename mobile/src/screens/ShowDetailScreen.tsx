@@ -890,11 +890,24 @@ export default function ShowDetailScreen() {
   const hasResults = isShowType && results.length > 0;
   const showCatalogTab = catalog.length > 0 && !hasResults;
 
+  // Entry closes at the end of last_date_of_entry (YYYY-MM-DD). No deadline
+  // set (null) keeps entry open.
+  const isEntryClosed = useMemo(() => {
+    const d = show?.last_date_of_entry;
+    if (!d) return false;
+    const parts = d.split("-");
+    if (parts.length !== 3) return false;
+    const [y, m, day] = parts.map((p) => parseInt(p, 10));
+    if (isNaN(y) || isNaN(m) || isNaN(day)) return false;
+    const deadline = new Date(y, m - 1, day, 23, 59, 59, 999);
+    return Date.now() > deadline.getTime();
+  }, [show?.last_date_of_entry]);
+
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
     ...(hasResults ? [{ key: "results" as TabKey, label: "Results", count: results.length }] : []),
     ...(showCatalogTab ? [{ key: "catalog" as TabKey, label: "Catalog", count: catalog.length }] : []),
-    ...(user ? [{ key: "entry" as TabKey, label: "Entry Form" }] : []),
+    ...(user && !isEntryClosed ? [{ key: "entry" as TabKey, label: "Entry Form" }] : []),
   ];
 
   if (isLoading) {
@@ -1033,7 +1046,7 @@ export default function ShowDetailScreen() {
     </>
   );
 
-  if (activeTab === "entry" && user) {
+  if (activeTab === "entry" && user && !isEntryClosed) {
     return (
       <ScrollView
         style={styles.container}
