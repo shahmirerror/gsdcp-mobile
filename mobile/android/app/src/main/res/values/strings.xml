@@ -1,0 +1,8 @@
+<resources>
+  <string name="app_name">GSDCP</string>
+  <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+  <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+  <string name="facebook_app_id">1163768342978668</string>
+  <string name="facebook_client_token">2590d50c2f1e259266caa05aac242cb3</string>
+  <string name="fb_login_protocol_scheme">fb1163768342978668</string>
+</resources>

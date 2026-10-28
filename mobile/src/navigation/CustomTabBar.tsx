@@ -19,7 +19,7 @@ import { COLORS } from "../lib/theme";
 const logoSquare = require("../../assets/logo-square.png");
 
 const VISIBLE_TABS = [
-  "DogsTab",
+  "RecentMatingsTab",
   "BreedersTab",
   "HomeTab",
   "ShowsTab",
@@ -27,7 +27,7 @@ const VISIBLE_TABS = [
 ];
 
 const TAB_ROOT_SCREENS: Record<string, string> = {
-  DogsTab: "DogSearch",
+  RecentMatingsTab: "RecentMatingsList",
   BreedersTab: "BreederDirectory",
   ShowsTab: "ShowsList",
   ProfileTab: "ProfileHome",
@@ -37,7 +37,7 @@ const MENU_TAB_ROOT_SCREENS: Record<string, string> = {
   TheClubTab: "TheClubHome",
   KennelDirectoryTab: "KennelDirectory",
   MemberDirectoryTab: "MemberDirectory",
-  RecentMatingsTab: "RecentMatingsList",
+  DogsTab: "DogSearch",
 };
 
 const TAB_CONFIG: Record<
@@ -48,7 +48,11 @@ const TAB_CONFIG: Record<
     iconFocused: keyof typeof Ionicons.glyphMap;
   }
 > = {
-  DogsTab: { label: "Dogs", icon: "paw-outline", iconFocused: "paw" },
+  RecentMatingsTab: {
+    label: "Litters",
+    icon: "heart-outline",
+    iconFocused: "heart",
+  },
   BreedersTab: {
     label: "Breeders",
     icon: "people-outline",
@@ -85,9 +89,9 @@ const MENU_ITEMS = [
     border: COLORS.primary,
   },
   {
-    label: "Recent\nMatings",
-    icon: "heart" as keyof typeof Ionicons.glyphMap,
-    route: "RecentMatingsTab",
+    label: "Dogs",
+    icon: "paw" as keyof typeof Ionicons.glyphMap,
+    route: "DogsTab",
     dx: 83,
     dy: -143,
     iconColor: COLORS.primary,
@@ -206,10 +210,21 @@ export default function CustomTabBar({
     const isFocused = state.index === globalIndex;
     const cfg = TAB_CONFIG[route.name];
 
+    // Switch to a tab. The Litters tab (RecentMatingsTab) always returns to its
+    // litters-on-ground root, never the "all matings" screen the dashboard can
+    // push into this stack; other tabs keep their navigation state as usual.
+    const switchToTab = () => {
+      if (route.name === "RecentMatingsTab") {
+        navigation.navigate(route.name as any, { screen: "RecentMatingsList" });
+      } else {
+        navigation.navigate(route.name as any);
+      }
+    };
+
     const onPress = () => {
       if (closeFirst) {
         closeMenu();
-        setTimeout(() => navigation.navigate(route.name as any), 220);
+        setTimeout(switchToTab, 220);
         return;
       }
       const event = navigation.emit({
@@ -223,7 +238,7 @@ export default function CustomTabBar({
             screen: TAB_ROOT_SCREENS[route.name],
           });
         } else if (!isFocused) {
-          navigation.navigate(route.name as any);
+          switchToTab();
         }
       }
     };

@@ -105,7 +105,16 @@ export default function DashboardScreen() {
   });
 
   const recentNews = (newsData ?? []).slice(0, 2);
-  const recentMatings = (dashboard?.recentMatings ?? []).slice(0, 3);
+  // Recent Matings: the two newest matings without a litter on the ground yet.
+  const recentMatings = (dashboard?.recentMatings ?? [])
+    .filter((m) => m.litter_on_ground !== true)
+    .slice(0, 2);
+  // Upcoming Litters: the two newest litters already on the ground, served on
+  // the dashboard payload. Entries can arrive as placeholder nulls, so drop
+  // those before rendering.
+  const upcomingLitters = (dashboard?.upcomingLitters ?? [])
+    .filter((m): m is RecentMating => !!m)
+    .slice(0, 2);
 
   const season = getCurrentSeason();
 
@@ -187,12 +196,91 @@ export default function DashboardScreen() {
       </TouchableOpacity>
     ) : null;
 
+  // Shared list card for the "Recent Matings" and "Upcoming Litters" sections —
+  // identical rows, only the leading icon and empty copy differ.
+  const matingListCard = (
+    items: RecentMating[],
+    loading: boolean,
+    icon: "heart" | "paw",
+    emptyText: string,
+  ) => {
+    if (loading) {
+      return (
+        <View style={styles.loadingCard}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        </View>
+      );
+    }
+    if (items.length === 0) {
+      return (
+        <View style={styles.activityCard}>
+          <Text style={styles.emptyText}>{emptyText}</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.activityCard}>
+        {items.map((mating, i) => {
+          const date = parseMatingDate(mating.mating_date);
+          return (
+            <TouchableOpacity
+              key={mating.id}
+              style={[
+                styles.litterItem,
+                i < items.length - 1 && styles.litterItemBorder,
+              ]}
+              activeOpacity={0.7}
+              onPress={() => setPreviewMating(mating)}
+              data-testid={`card-litter-${i}`}
+            >
+              <View style={styles.litterIconWrap}>
+                <Ionicons name={icon} size={14} color={COLORS.accent} />
+              </View>
+              <View style={styles.litterTextWrap}>
+                <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
+                <Text style={styles.litterPairing}>
+                  {mating.sire.name.trim()} × {mating.dam.name.trim()}
+                </Text>
+                <View style={styles.litterMeta}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={11}
+                    color={COLORS.textMuted}
+                  />
+                  <Text style={styles.litterMetaText}>{date.full}</Text>
+                  {mating.city ? (
+                    <>
+                      <Text style={styles.litterMetaDot}>·</Text>
+                      <Ionicons
+                        name="location-outline"
+                        size={11}
+                        color={COLORS.textMuted}
+                      />
+                      <Text style={styles.litterMetaText}>{mating.city}</Text>
+                    </>
+                  ) : null}
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={14}
+                color={COLORS.textMuted}
+              />
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
   const matingsSection = (
     <View style={[styles.section, isTablet && styles.sectionFlush]}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Matings</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate("RecentMatingsTab")}
+          onPress={() =>
+            navigation.navigate("RecentMatingsTab", { screen: "AllMatings" })
+          }
           activeOpacity={0.7}
           data-testid="link-view-all-matings"
         >
@@ -200,67 +288,28 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
-        <View style={styles.loadingCard}>
-          <ActivityIndicator size="small" color={COLORS.primary} />
-        </View>
-      ) : recentMatings.length > 0 ? (
-        <View style={styles.activityCard}>
-          {recentMatings.map((mating, i) => {
-            const date = parseMatingDate(mating.mating_date);
-            return (
-              <TouchableOpacity
-                key={mating.id}
-                style={[
-                  styles.litterItem,
-                  i < recentMatings.length - 1 && styles.litterItemBorder,
-                ]}
-                activeOpacity={0.7}
-                onPress={() => setPreviewMating(mating)}
-                data-testid={`card-litter-${i}`}
-              >
-                <View style={styles.litterIconWrap}>
-                  <Ionicons name="heart" size={14} color={COLORS.accent} />
-                </View>
-                <View style={styles.litterTextWrap}>
-                  <Text style={styles.litterKennel}>{mating.kennel_name}</Text>
-                  <Text style={styles.litterPairing}>
-                    {mating.sire.name.trim()} × {mating.dam.name.trim()}
-                  </Text>
-                  <View style={styles.litterMeta}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={11}
-                      color={COLORS.textMuted}
-                    />
-                    <Text style={styles.litterMetaText}>{date.full}</Text>
-                    {mating.city ? (
-                      <>
-                        <Text style={styles.litterMetaDot}>·</Text>
-                        <Ionicons
-                          name="location-outline"
-                          size={11}
-                          color={COLORS.textMuted}
-                        />
-                        <Text style={styles.litterMetaText}>{mating.city}</Text>
-                      </>
-                    ) : null}
-                  </View>
-                </View>
-                <Ionicons
-                  name="chevron-forward"
-                  size={14}
-                  color={COLORS.textMuted}
-                />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ) : (
-        <View style={styles.activityCard}>
-          <Text style={styles.emptyText}>No recent matings found.</Text>
-        </View>
-      )}
+      {matingListCard(recentMatings, isLoading, "heart", "No recent matings found.")}
+    </View>
+  );
+
+  const littersSection = (
+    <View style={[styles.section, isTablet && styles.sectionFlush]}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Upcoming Litters</Text>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("RecentMatingsTab", {
+              screen: "RecentMatingsList",
+            })
+          }
+          activeOpacity={0.7}
+          data-testid="link-view-all-litters"
+        >
+          <Text style={styles.seeAllText}>See All</Text>
+        </TouchableOpacity>
+      </View>
+
+      {matingListCard(upcomingLitters, isLoading, "paw", "No upcoming litters.")}
     </View>
   );
 
@@ -489,7 +538,10 @@ export default function DashboardScreen() {
             {statsBlock}
             {heroSection}
             <View style={styles.twoCol}>
-              <View style={styles.colLeft}>{matingsSection}</View>
+              <View style={styles.colLeft}>
+                {matingsSection}
+                {littersSection}
+              </View>
               <View style={styles.colRight}>
                 {eventsSection}
                 {newsSection}
@@ -500,6 +552,7 @@ export default function DashboardScreen() {
           <>
             {statsBlock}
             {matingsSection}
+            {littersSection}
             {eventsSection}
             {newsSection}
           </>
@@ -768,9 +821,9 @@ export default function DashboardScreen() {
                                       style={styles.lbName}
                                       numberOfLines={1}
                                     >
-                                      Litter {entry.litter_letter}
+                                      {entry.litter_letter} Litter
                                       {entry.kennel
-                                        ? ` from ${entry.kennel}`
+                                        ? ` - ${entry.kennel}`
                                         : ""}
                                     </Text>
                                     <Text style={styles.lbMeta}>

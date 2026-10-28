@@ -81,7 +81,10 @@ export type ProfileStackParamList = {
 };
 
 export type RecentMatingsStackParamList = {
-  RecentMatingsList: undefined;
+  // Litters view — only matings with a litter on the ground.
+  RecentMatingsList: { onGroundOnly?: boolean } | undefined;
+  // Recent Matings view (from the dashboard) — all matings.
+  AllMatings: { onGroundOnly?: boolean } | undefined;
   DogProfile: { id: string; name?: string };
   KennelProfile: { id: string; name?: string };
   MemberProfile: { id: string; member?: any };
@@ -243,7 +246,17 @@ function ProfileStackNavigator() {
 function RecentMatingsStackNavigator() {
   return (
     <RecentMatingsStack.Navigator screenOptions={{ headerShown: false }}>
-      <RecentMatingsStack.Screen name="RecentMatingsList" component={RecentMatingsScreen} />
+      {/* Litters tab root: litters on the ground only */}
+      <RecentMatingsStack.Screen
+        name="RecentMatingsList"
+        component={RecentMatingsScreen}
+        initialParams={{ onGroundOnly: true }}
+      />
+      {/* Recent Matings (opened from the dashboard): all matings */}
+      <RecentMatingsStack.Screen
+        name="AllMatings"
+        component={RecentMatingsScreen}
+      />
       <RecentMatingsStack.Screen name="DogProfile" component={DogProfileScreen} />
       <RecentMatingsStack.Screen name="KennelProfile" component={KennelProfileScreen} />
       <RecentMatingsStack.Screen name="MemberProfile" component={MemberProfileScreen} />
@@ -331,14 +344,18 @@ export default function AppNavigator() {
           tabBar={(props) => <CustomTabBar {...props} />}
           screenOptions={{ headerShown: false }}
         >
-          <Tab.Screen name="DogsTab" component={DogsStackNavigator} options={{ title: "Dogs" }} />
+          {/* Registration order sets the visible bottom-bar order: the tab bar
+              uses visibleRoutes[2] as the center Home button, so HomeTab must
+              stay third among the five VISIBLE_TABS. Recent Litters occupies the
+              leftmost slot (formerly Dogs); Dogs now lives in the hold menu. */}
+          <Tab.Screen name="RecentMatingsTab" component={RecentMatingsStackNavigator} options={{ title: "Litters" }} />
           <Tab.Screen name="BreedersTab" component={BreedersStackNavigator} options={{ title: "Active Breeders" }} />
           <Tab.Screen name="HomeTab" component={DashboardScreen} options={{ title: "Home" }} />
           <Tab.Screen name="ShowsTab" component={ShowsStackNavigator} options={{ title: "Shows" }} />
           <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} options={{ title: "Profile" }} />
+          <Tab.Screen name="DogsTab" component={DogsStackNavigator} options={{ title: "Dogs" }} />
           <Tab.Screen name="KennelDirectoryTab" component={KennelDirectoryStackNavigator} />
           <Tab.Screen name="MemberDirectoryTab" component={MemberDirectoryStackNavigator} />
-          <Tab.Screen name="RecentMatingsTab" component={RecentMatingsStackNavigator} />
           <Tab.Screen name="TheClubTab" component={TheClubStackNavigator} />
           <Tab.Screen name="VirtualBreedingTab" component={VirtualBreedingScreen} />
         </Tab.Navigator>
