@@ -17,7 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from "../lib/theme";
-import { fetchShow, ShowDetail, ShowResultEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry, fetchMeetingStatus, MeetingStatusResult, bookMeetingSeat } from "../lib/api";
+import { fetchShow, ShowDetail, ShowResultEntry, ShowCatalogEntry, ShowJudge, fetchRemainingDogs, RemainingDog, verifyEntry, submitEntry, fetchMeetingStatus, MeetingStatusResult, bookMeetingSeat } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import BottomSheetModal from "../components/BottomSheetModal";
 import { formatDate } from "../lib/dateUtils";
@@ -46,7 +46,7 @@ const STATUS_COLORS: Record<string, string> = {
   Past: "#9CA3AF",
 };
 
-type TabKey = "info" | "results" | "entry";
+type TabKey = "info" | "results" | "catalog" | "entry";
 
 function InfoRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return (
@@ -96,6 +96,29 @@ function ResultRow({ entry, onPress }: { entry: ShowResultEntry; onPress: () => 
         {entry.KP && (
           <Text style={styles.resultKp}>KP {entry.KP}</Text>
         )}
+        {entry.owner_names ? (
+          <Text style={styles.resultOwner} numberOfLines={1}>{entry.owner_names}</Text>
+        ) : null}
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
+    </TouchableOpacity>
+  );
+}
+
+function CatalogRow({ entry, onPress }: { entry: ShowCatalogEntry; onPress: () => void }) {
+  // KP / foreign_reg_no can arrive as numbers — coerce before string methods.
+  const kp = String(entry.KP ?? "").trim();
+  const foreign = String(entry.foreign_reg_no ?? "").trim();
+  const subLine = kp && kp !== "0" ? `KP ${kp}` : foreign;
+  const catalogNo = String(entry.catalog_no ?? "").trim();
+  return (
+    <TouchableOpacity style={styles.resultRow} onPress={onPress} activeOpacity={0.7} data-testid={`catalog-${entry.dog_id}`}>
+      <View style={styles.catalogNoBadge}>
+        <Text style={styles.catalogNoText}>{catalogNo || "—"}</Text>
+      </View>
+      <View style={styles.resultInfo}>
+        <Text style={styles.resultName} numberOfLines={1}>{(entry.dog_name || "").trim() || "Unnamed Dog"}</Text>
+        {subLine ? <Text style={styles.resultKp}>{subLine}</Text> : null}
         {entry.owner_names ? (
           <Text style={styles.resultOwner} numberOfLines={1}>{entry.owner_names}</Text>
         ) : null}
@@ -745,6 +768,7 @@ export default function ShowDetailScreen() {
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [popupJudge, setPopupJudge] = useState<ShowJudge | null>(null);
   const [popupDog, setPopupDog] = useState<ShowResultEntry | null>(null);
+  const [catalogSearch, setCatalogSearch] = useState("");
 
   const { data: show, isLoading, isError, refetch, isRefetching } = useQuery<ShowDetail>({
     queryKey: ["shows", id],
@@ -830,9 +854,41 @@ export default function ShowDetailScreen() {
 
   const isShowType = show?.event_type === "Show";
 
+  const catalog = show?.showCatalog || [];
+
+  // Section the catalog into CONTIGUOUS runs, preserving the backend's exact
+  // order. A new section starts whenever the class (which already encodes
+  // gender) or hair type changes from the previous entry — so the running
+  // order is never resorted. Search filters first, then re-sections.
+  const catalogSections = useMemo(() => {
+    const q = catalogSearch.trim().toLowerCase();
+    const matches = (e: ShowCatalogEntry) => {
+      if (!q) return true;
+      return (
+        (e.dog_name || "").toLowerCase().includes(q) ||
+        String(e.KP ?? "").toLowerCase().includes(q) ||
+        String(e.catalog_no ?? "").toLowerCase().includes(q) ||
+        String(e.foreign_reg_no ?? "").toLowerCase().includes(q) ||
+        (e.owner_names || "").toLowerCase().includes(q)
+      );
+    };
+    const sections: { key: string; cls: string; hair: string; data: ShowCatalogEntry[] }[] = [];
+    catalog.forEach((entry) => {
+      if (!matches(entry)) return;
+      const cls = normalize(entry.class || "Other");
+      const hair = (entry.hair || "").trim() || normalizeHair(entry.hair);
+      const key = `${cls}||${hair}`;
+      const last = sections[sections.length - 1];
+      if (last && last.key === key) last.data.push(entry);
+      else sections.push({ key, cls, hair, data: [entry] });
+    });
+    return sections;
+  }, [catalog, catalogSearch]);
+
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Info" },
     ...(isShowType ? [{ key: "results" as TabKey, label: "Results", count: results.length }] : []),
+    ...(catalog.length ? [{ key: "catalog" as TabKey, label: "Catalog", count: catalog.length }] : []),
     ...(user ? [{ key: "entry" as TabKey, label: "Entry Form" }] : []),
   ];
 
@@ -1035,6 +1091,85 @@ export default function ShowDetailScreen() {
                   onPress={() => setPopupJudge(judge)}
                 />
               ))}
+            </View>
+          )}
+
+          <View style={{ height: 32 }} />
+        </ScrollView>
+        {renderJudgePopup()}
+        {renderDogPopup()}
+      </View>
+    );
+  }
+
+  if (activeTab === "catalog") {
+    return (
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          bounces={true}
+          overScrollMode="always"
+          stickyHeaderIndices={[1]}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+          }
+        >
+          <View>{renderHeader()}</View>
+
+          <View style={styles.searchBarWrap}>
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={16} color={COLORS.textMuted} />
+              <TextInput
+                style={styles.catalogSearchInput}
+                placeholder="Search dog, KP, or catalog no."
+                placeholderTextColor={COLORS.textMuted}
+                value={catalogSearch}
+                onChangeText={setCatalogSearch}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+                data-testid="input-catalog-search"
+              />
+              {catalogSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setCatalogSearch("")} data-testid="btn-catalog-search-clear">
+                  <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {catalogSections.length > 0 ? (
+            <View style={styles.catalogList}>
+              {catalogSections.map((section) => (
+                <View key={section.key}>
+                  <View style={styles.catalogSectionHeader}>
+                    <Text style={styles.catalogSectionTitle}>{section.cls}</Text>
+                    <Text style={styles.catalogSectionHair}>{section.hair}</Text>
+                  </View>
+                  {section.data.map((item, index) => (
+                    <CatalogRow
+                      key={`${item.dog_id}-${item.catalog_no ?? index}`}
+                      entry={item}
+                      onPress={() => handleDogPress(item)}
+                    />
+                  ))}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="search-outline" size={32} color={COLORS.primary} />
+              </View>
+              <Text style={styles.emptyTitle}>No Matches</Text>
+              <Text style={styles.emptyDesc}>
+                {catalogSearch.trim()
+                  ? `No dogs match "${catalogSearch.trim()}".`
+                  : "The catalog is empty for this event."}
+              </Text>
             </View>
           )}
 
@@ -1489,6 +1624,70 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: "hidden",
+  },
+  searchBarWrap: {
+    backgroundColor: "#f6f8f7",
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.sm,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    height: 42,
+  },
+  catalogSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    paddingVertical: 0,
+  },
+  catalogList: {
+    marginHorizontal: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+  },
+  catalogSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    backgroundColor: `${COLORS.primary}0D`,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(15,92,59,0.05)",
+  },
+  catalogSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  catalogSectionHair: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: COLORS.textMuted,
+  },
+  catalogNoBadge: {
+    minWidth: 44,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: `${COLORS.primary}14`,
+    alignItems: "center",
+  },
+  catalogNoText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.primary,
   },
   resultRow: {
     flexDirection: "row",

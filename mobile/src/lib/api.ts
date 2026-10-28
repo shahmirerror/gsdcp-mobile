@@ -368,8 +368,18 @@ export type ShowResultEntry = {
   owner_membership_nos: string | null;
 };
 
+export type ShowCatalogEntry = ShowResultEntry & {
+  // Printed catalog / running number. Comes from an integer DB column, so it
+  // can arrive as a number (coerce with String() before string methods).
+  catalog_no: string | number | null;
+  class_id?: string | number | null;
+};
+
 export type ShowDetail = Show & {
   showResults: ShowResultEntry[] | null;
+  // Ordered exactly as the backend returns it; the UI sections it into
+  // contiguous runs by class (which already encodes gender) + hair type.
+  showCatalog: ShowCatalogEntry[] | null;
 };
 
 export async function fetchShows(): Promise<Show[]> {
