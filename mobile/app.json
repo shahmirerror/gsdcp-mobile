@@ -2,7 +2,7 @@
   "expo": {
     "name": "GSDCP",
     "slug": "gsdcp-mobile",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -23,7 +23,11 @@
         "NSPhotoLibraryUsageDescription": "Used to select a profile photo from your library.",
         "NSPhotoLibraryAddUsageDescription": "Used to save photos to your library.",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "forceStaticLinking": [
+          "RNFBApp",
+          "RNFBAuth"
+      ]
     },
     "android": {
       "adaptiveIcon": {
