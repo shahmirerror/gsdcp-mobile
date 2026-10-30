@@ -980,6 +980,8 @@ export type RecentMating = {
   } | null;
   puppy_dob?: { whelping_date?: string | null } | null;
   breeder?: string | null;
+  // Breeder's phone, served inline so the share sheet needs no secondary call.
+  breeder_phone?: string | null;
 };
 
 export type MatingsPage = {
@@ -999,6 +1001,30 @@ export async function fetchRecentMatingsPage(
     data: json.data.upcomingLitters as RecentMating[],
     pagination: json.pagination as PaginationMeta,
   };
+}
+
+// Dedicated "litters on the ground" feed (the Litters tab). Separate from
+// recent-matings so the backend can return only litters already on the ground.
+// The array shape is accepted under data.litters / data.upcomingLitters / data
+// so a backend tweak to the payload key doesn't break the client.
+export async function fetchLittersPage(
+  page: number = 1,
+  perPage: number = 15,
+): Promise<MatingsPage> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  const res = await fetch(`${BASE_URL}/litters?${params.toString()}`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch litters");
+  const d = json.data ?? {};
+  // The payload array lives under data.litters / data.upcomingLitters (or is
+  // data itself). The backend may send it as an object keyed by index rather
+  // than a plain array when it filters without re-indexing, so coerce with
+  // Object.values and drop any stray nulls.
+  const raw = Array.isArray(d) ? d : (d.litters ?? d.upcomingLitters ?? d);
+  const data: RecentMating[] = (
+    Array.isArray(raw) ? raw : Object.values(raw ?? {})
+  ).filter(Boolean) as RecentMating[];
+  return { data, pagination: json.pagination as PaginationMeta };
 }
 
 export type DashboardData = {

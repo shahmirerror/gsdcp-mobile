@@ -27,8 +27,11 @@ import {
   NewsItem,
   RecentMating,
 } from "../lib/api";
+import { parentSubFromMating } from "../lib/litterShare";
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
+import LitterShareModal from "../components/LitterShareModal";
+import type { LitterShareCardProps } from "../components/LitterShareCard";
 
 const logo = require("../../assets/splash-logo.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -87,7 +90,42 @@ export default function DashboardScreen() {
     new Set(),
   );
   const [showLegal, setShowLegal] = useState(false);
+  const [litterShareBusy, setLitterShareBusy] = useState(false);
+  const [litterShareCard, setLitterShareCard] =
+    useState<LitterShareCardProps | null>(null);
   const { isTablet } = useResponsive();
+
+  // Assemble the "Litter on Ground" share card from a mating record. Puppy
+  // counts, whelping date and breeder phone all come inline off the record.
+  const handleShareLitter = (m: RecentMating) => {
+    if (litterShareBusy) return;
+    setLitterShareBusy(true);
+    try {
+      const breederPhone = m.breeder_phone ?? (m as any).phone ?? "";
+      const male = m.puppy_count?.male_puppies;
+      const female = m.puppy_count?.female_puppies;
+      const hasCounts = male != null || female != null;
+      const healthy = Number(male ?? 0) + Number(female ?? 0);
+      const card: LitterShareCardProps = {
+        kennelSuffix: m.kennel_name,
+        sireName: m.sire?.name,
+        sireSub: parentSubFromMating(m.sire),
+        damName: m.dam?.name,
+        damSub: parentSubFromMating(m.dam),
+        whelpingDate: formatDate(m.puppy_dob?.whelping_date),
+        totalPups: hasCounts ? String(healthy) : null,
+        malePups: male != null ? String(male) : null,
+        femalePups: female != null ? String(female) : null,
+        breederName: m.breeder ?? null,
+        breederPhone,
+        breederCity: m.city,
+      };
+      setPreviewMating(null);
+      setLitterShareCard(card);
+    } finally {
+      setLitterShareBusy(false);
+    }
+  };
 
   const {
     data: dashboard,
@@ -915,10 +953,34 @@ export default function DashboardScreen() {
                       </View>
                     </>
                   )}
+
+                {previewMating.litter_on_ground && (
+                  <TouchableOpacity
+                    style={styles.shareLitterBtn}
+                    activeOpacity={0.85}
+                    disabled={litterShareBusy}
+                    onPress={() => handleShareLitter(previewMating)}
+                  >
+                    {litterShareBusy ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="share-social" size={18} color="#fff" />
+                    )}
+                    <Text style={styles.shareLitterBtnText}>
+                      {litterShareBusy ? "Preparing…" : "Share Litter on Ground"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             );
           })()}
       </BottomSheetModal>
+
+      <LitterShareModal
+        visible={!!litterShareCard}
+        onClose={() => setLitterShareCard(null)}
+        card={litterShareCard ?? {}}
+      />
 
       {/* Legal Disclosure Modal */}
       <BottomSheetModal visible={showLegal} onClose={() => setShowLegal(false)}>
@@ -1724,6 +1786,17 @@ const styles = StyleSheet.create({
   lbInfo: { flex: 1 },
   lbName: { fontSize: FONT_SIZES.sm, fontWeight: "600", color: COLORS.text },
   lbMeta: { fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  shareLitterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+    marginTop: 16,
+  },
+  shareLitterBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   lbDropdown: {
     paddingLeft: 16,
     borderLeftWidth: 2,

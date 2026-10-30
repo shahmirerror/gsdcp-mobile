@@ -290,9 +290,9 @@ function DogsTab({ dogs, onDogPress }: { dogs: MemberOwnedDog[]; onDogPress: (d:
     const q = query.trim().toLowerCase();
     return dogs.filter((d) => {
       if (sex !== "All" && d.sex?.toLowerCase() !== sex.toLowerCase()) return false;
-      if (titlesOnly && d.titles.length === 0) return false;
+      if (titlesOnly && (d.titles?.length ?? 0) === 0) return false;
       if (q) {
-        const inName = d.dog_name.toLowerCase().includes(q);
+        const inName = (d.dog_name ?? "").toLowerCase().includes(q);
         const inKP   = (d.KP ?? "").toLowerCase().includes(q);
         const inReg  = (d.foreign_reg_no ?? "").toLowerCase().includes(q);
         if (!inName && !inKP && !inReg) return false;

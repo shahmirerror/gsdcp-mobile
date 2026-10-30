@@ -188,11 +188,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
           ? pbs.mother.map(String)
           : positions.filter((_, i) => sides[i] === "mother");
 
-        const genLabel = `${sirePositions.join(",")} - ${damPositions.join(",")} (Sire - Dam)`;
-
-        const patternLabel = entry.line_breeding_pattern
-          ? entry.line_breeding_pattern.replace(/_/g, " ")
-          : null;
+        const genLabel = `${sirePositions.join(",")} - ${damPositions.join(",")}`;
 
         if ((entry.type === "litter_pair" || entry.type === "litter_group") && Array.isArray(entry.dogs) && entry.dogs.length > 0) {
           const isExpanded = expandedLitters.has(idx);
@@ -243,14 +239,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
             onPress={() => entry.id ? navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: String(entry.id), name: entry.dog_name } }) : undefined}
           >
             <View style={styles.lineBreedInfo}>
-              <View style={styles.lineBreedNameRow}>
-                <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
-                {patternLabel && (
-                  <View style={styles.patternBadge}>
-                    <Text style={styles.patternBadgeText}>{patternLabel}</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
               <Text style={styles.lineBreedMeta}>{genLabel}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />

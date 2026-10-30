@@ -850,15 +850,6 @@ export default function DogProfileScreen() {
         >
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.shareButton}
-          onPress={() => setShareOpen(true)}
-          activeOpacity={0.7}
-          data-testid="btn-share-profile"
-        >
-          <Ionicons name="share-social" size={20} color="#fff" />
-        </TouchableOpacity>
       </ImageBackground>
 
       <View style={styles.profileSection}>
@@ -928,6 +919,16 @@ export default function DogProfileScreen() {
         {showStudBookTwo ? (
           <Text style={styles.studBookMark}>Stud Book 2</Text>
         ) : null}
+
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={() => setShareOpen(true)}
+          activeOpacity={0.8}
+          data-testid="btn-share-profile"
+        >
+          <Ionicons name="share-social" size={16} color="#fff" />
+          <Text style={styles.shareButtonText}>Share Profile</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.tabBarWrap, { paddingTop: insets.top + 6 }]}>
@@ -2012,16 +2013,20 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   shareButton: {
-    position: "absolute",
-    top: 48,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
-    zIndex: 10,
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: BORDER_RADIUS.full,
+    marginTop: 14,
+  },
+  shareButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
   },
   shareScreen: {
     flex: 1,

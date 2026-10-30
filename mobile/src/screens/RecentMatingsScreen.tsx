@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
 import {
   fetchRecentMatingsPage,
-  fetchKennelDetail,
+  fetchLittersPage,
   MatingsPage,
   RecentMating,
 } from "../lib/api";
@@ -207,13 +207,8 @@ export default function RecentMatingsScreen() {
     if (litterShareBusy) return;
     setLitterShareBusy(true);
     try {
-      let breederPhone = "";
-      try {
-        const k = await fetchKennelDetail(m.kennel_id);
-        breederPhone = k?.kennels?.phone ?? "";
-      } catch {
-        /* phone is optional */
-      }
+      // Breeder phone is served inline on the record now — no secondary call.
+      const breederPhone = m.breeder_phone ?? (m as any).phone ?? "";
       // Puppy counts + whelping date now come straight off the mating record.
       const male = m.puppy_count?.male_puppies;
       const female = m.puppy_count?.female_puppies;
@@ -266,8 +261,11 @@ export default function RecentMatingsScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<MatingsPage>({
-    queryKey: ["/api/mobile/recent-matings"],
-    queryFn: ({ pageParam }) => fetchRecentMatingsPage(pageParam as number, 15),
+    queryKey: [onGroundOnly ? "/api/mobile/litters" : "/api/mobile/recent-matings"],
+    queryFn: ({ pageParam }) =>
+      onGroundOnly
+        ? fetchLittersPage(pageParam as number, 15)
+        : fetchRecentMatingsPage(pageParam as number, 15),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage?.pagination?.hasMorePages
@@ -284,6 +282,20 @@ export default function RecentMatingsScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  // The /litters feed filters server-side after pagination, so early pages can
+  // come back empty while more pages (with the actual litters) still exist. An
+  // empty FlatList won't reliably fire onEndReached, so keep pulling pages until
+  // some rows arrive or the feed is exhausted — otherwise the list would get
+  // stuck showing "No litters found" before the data ever loads.
+  const stillLoadingMore = matings.length === 0 && hasNextPage;
+  const showInitialLoader = isLoading || (stillLoadingMore && !isError);
+
+  useEffect(() => {
+    if (!isLoading && stillLoadingMore && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isLoading, stillLoadingMore, isFetchingNextPage, fetchNextPage]);
+
   const cities = useMemo(() => {
     const citySet = new Set<string>();
     matings.forEach((m) => {
@@ -298,19 +310,18 @@ export default function RecentMatingsScreen() {
     if (q) {
       results = results.filter(
         (m) =>
-          m.kennel_name.toLowerCase().includes(q) ||
-          m.sire.name.toLowerCase().includes(q) ||
-          m.dam.name.toLowerCase().includes(q) ||
-          (m.city && m.city.toLowerCase().includes(q)),
+          m.kennel_name?.toLowerCase().includes(q) ||
+          m.sire?.name?.toLowerCase().includes(q) ||
+          m.dam?.name?.toLowerCase().includes(q) ||
+          m.city?.toLowerCase().includes(q),
       );
     }
     if (cityFilter !== "All")
       results = results.filter((m) => m.city === cityFilter);
-    // Litters view: restrict to matings with a litter on the ground.
-    if (onGroundOnly)
-      results = results.filter((m) => m.litter_on_ground === true);
+    // The Litters tab now pulls from the dedicated /litters endpoint, which
+    // already returns only litters on the ground — no client-side filter needed.
     return results;
-  }, [matings, search, cityFilter, onGroundOnly]);
+  }, [matings, search, cityFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -387,14 +398,17 @@ export default function RecentMatingsScreen() {
         </View>
       )}
 
-      {/* Count row */}
-      <View style={styles.countRow}>
-        <Text style={styles.count} data-testid="text-mating-count">
-          {filtered.length} {filtered.length === 1 ? nounS : nounP}
-        </Text>
-      </View>
+      {/* Count row — hidden until we actually have rows, so it never flashes
+          "0 litters" while early empty pages are still loading. */}
+      {!showInitialLoader && (
+        <View style={styles.countRow}>
+          <Text style={styles.count} data-testid="text-mating-count">
+            {filtered.length} {filtered.length === 1 ? nounS : nounP}
+          </Text>
+        </View>
+      )}
 
-      {isLoading ? (
+      {showInitialLoader ? (
         <ActivityIndicator
           size="large"
           color={COLORS.primary}

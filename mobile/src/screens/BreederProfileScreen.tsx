@@ -288,7 +288,7 @@ function DogListSection({
       if (titledFilter === "Yes" && (d.titles?.length ?? 0) === 0) return false;
       if (titledFilter === "No" && (d.titles?.length ?? 0) > 0) return false;
       if (q) {
-        const inName = d.name.toLowerCase().includes(q);
+        const inName = (d.name ?? "").toLowerCase().includes(q);
         const inKP   = (d.KP ?? "").toLowerCase().includes(q);
         const inReg  = (d.foreign_reg_no ?? "").toLowerCase().includes(q);
         if (!inName && !inKP && !inReg) return false;
