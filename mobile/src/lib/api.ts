@@ -368,8 +368,18 @@ export type ShowResultEntry = {
   owner_membership_nos: string | null;
 };
 
+export type ShowCatalogEntry = ShowResultEntry & {
+  // Printed catalog / running number. Comes from an integer DB column, so it
+  // can arrive as a number (coerce with String() before string methods).
+  catalog_no: string | number | null;
+  class_id?: string | number | null;
+};
+
 export type ShowDetail = Show & {
   showResults: ShowResultEntry[] | null;
+  // Ordered exactly as the backend returns it; the UI sections it into
+  // contiguous runs by class (which already encodes gender) + hair type.
+  showCatalog: ShowCatalogEntry[] | null;
 };
 
 export async function fetchShows(): Promise<Show[]> {
@@ -944,11 +954,13 @@ export async function fetchBreeder(id: string, listBreeder?: Breeder): Promise<B
 export type MatingDog = {
   name: string;
   id: string;
-  KP: string | null;
+  KP: string | number | null;
   foreign_reg_no: string | null;
   hair: string | null;
   imageUrl: string | null;
   color: string | null;
+  title?: string | null; // show title, e.g. "V", "SG"
+  hd_ed?: string | null; // "HD / ED", e.g. "Normal / Normal"
 };
 
 export type RecentMating = {
@@ -962,6 +974,14 @@ export type RecentMating = {
   city: string | null;
   litter_on_ground?: boolean;
   line_breeding?: LineBreedingEntry[] | null;
+  puppy_count?: {
+    male_puppies?: number | string | null;
+    female_puppies?: number | string | null;
+  } | null;
+  puppy_dob?: { whelping_date?: string | null } | null;
+  breeder?: string | null;
+  // Breeder's phone, served inline so the share sheet needs no secondary call.
+  breeder_phone?: string | null;
 };
 
 export type MatingsPage = {
@@ -983,12 +1003,39 @@ export async function fetchRecentMatingsPage(
   };
 }
 
+// Dedicated "litters on the ground" feed (the Litters tab). Separate from
+// recent-matings so the backend can return only litters already on the ground.
+// The array shape is accepted under data.litters / data.upcomingLitters / data
+// so a backend tweak to the payload key doesn't break the client.
+export async function fetchLittersPage(
+  page: number = 1,
+  perPage: number = 15,
+): Promise<MatingsPage> {
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  const res = await fetch(`${BASE_URL}/litters?${params.toString()}`);
+  const json = await res.json();
+  if (!json.success) throw new Error("Failed to fetch litters");
+  const d = json.data ?? {};
+  // The payload array lives under data.litters / data.upcomingLitters (or is
+  // data itself). The backend may send it as an object keyed by index rather
+  // than a plain array when it filters without re-indexing, so coerce with
+  // Object.values and drop any stray nulls.
+  const raw = Array.isArray(d) ? d : (d.litters ?? d.upcomingLitters ?? d);
+  const data: RecentMating[] = (
+    Array.isArray(raw) ? raw : Object.values(raw ?? {})
+  ).filter(Boolean) as RecentMating[];
+  return { data, pagination: json.pagination as PaginationMeta };
+}
+
 export type DashboardData = {
   totalDogs: number;
   totalKennels: number;
   totalShows: number;
   upcomingShows: Show[];
   recentMatings: RecentMating[];
+  // Latest litters already on the ground. The backend may send placeholder
+  // nulls before the data is populated, so callers filter those out.
+  upcomingLitters?: (RecentMating | null)[] | null;
 };
 
 export async function fetchDashboard(): Promise<DashboardData> {
@@ -1463,8 +1510,8 @@ export type LitterInspection = {
 
 export type LitterInspectionDetail = {
   id: string;
-  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
-  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null };
+  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null; hair?: string | null; title?: string | null; hd_ed?: string | null };
+  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; date_of_birth: string | null; imageUrl: string | null; hair?: string | null; title?: string | null; hd_ed?: string | null };
   male_puppies: string | null;
   female_puppies: string | null;
   expired_puppies: string | null;
@@ -1622,8 +1669,8 @@ export type LitterPuppy = {
 
 export type LitterRegistrationDetail = {
   id: string;
-  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null };
-  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null };
+  sire: { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null; hair?: string | null; title?: string | null; hd_ed?: string | null };
+  dam:  { id: string; name: string; KP: string; foreign_reg_no: string | null; color: string | null; imageUrl: string | null; hair?: string | null; title?: string | null; hd_ed?: string | null };
   dob: string | null;
   puppies: LitterPuppy[];
   male_puppies: number | null;
@@ -1681,8 +1728,10 @@ export async function fetchLitterRegistrations(
 }
 
 export async function fetchLitterRegistrationDetail(id: string, userId: number): Promise<LitterRegistrationDetail> {
-  const numericId = id.replace(/^litt-/, "");
-  const res = await fetch(`${BASE_URL}/litter-registrations/${numericId}?user_id=${userId}`, {
+  // The registration detail route expects the full "litt-123" id (unlike the
+  // inspection route, which wants the bare number). Stripping the prefix makes
+  // the backend 500 with LITTER_REGISTRATION_ERROR, so pass the id as-is.
+  const res = await fetch(`${BASE_URL}/litter-registrations/${encodeURIComponent(id)}?user_id=${userId}`, {
     headers: { Accept: "application/json" },
   });
   const json = await res.json();
@@ -1819,8 +1868,10 @@ export async function fetchVirtualBreeding(
 export type DogSearchResult = {
   id: string;
   dog_name: string;
-  KP: string | null;
-  foreign_reg_no: string | null;
+  // KP / foreign_reg_no come from integer DB columns, so the API can send them
+  // as numbers — String() them before any string method (see kpLabel).
+  KP: string | number | null;
+  foreign_reg_no: string | number | null;
   sex: string;
   color: string;
   // The API returns owners as an array of objects (NOT a plain string). Render

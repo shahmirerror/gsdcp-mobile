@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,15 +11,23 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useResponsive } from "../lib/useResponsive";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
-import { fetchRecentMatingsPage, MatingsPage, RecentMating } from "../lib/api";
+import {
+  fetchRecentMatingsPage,
+  fetchLittersPage,
+  MatingsPage,
+  RecentMating,
+} from "../lib/api";
+import { parentSubFromMating } from "../lib/litterShare";
 import BottomSheetModal from "../components/BottomSheetModal";
 import LazyImage from "../components/LazyImage";
+import LitterShareModal from "../components/LitterShareModal";
+import type { LitterShareCardProps } from "../components/LitterShareCard";
 
 const MONTHS = [
   "Jan",
@@ -172,37 +180,75 @@ function MatingRow({
 export default function RecentMatingsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  // "Litters" view (the bottom-nav tab) only shows matings with a litter on the
+  // ground; the "Recent Matings" view (opened from the dashboard) shows them all.
+  const onGroundOnly: boolean = route.params?.onGroundOnly === true;
+  const nounS = onGroundOnly ? "litter" : "mating";
+  const nounP = onGroundOnly ? "litters" : "matings";
   const { isTablet, isWide } = useResponsive();
   const numColumns = isWide ? 3 : isTablet ? 2 : 1;
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("All");
-  const [litterFilter, setLitterFilter] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempCity, setTempCity] = useState<string>("All");
   const [expandedLitters, setExpandedLitters] = useState<Set<number>>(
     new Set(),
   );
-  const [tempLitter, setTempLitter] = useState(false);
   const [previewMating, setPreviewMating] = useState<RecentMating | null>(null);
+  const [litterShareBusy, setLitterShareBusy] = useState(false);
+  const [litterShareCard, setLitterShareCard] =
+    useState<LitterShareCardProps | null>(null);
 
-  const activeFilterCount =
-    (cityFilter !== "All" ? 1 : 0) + (litterFilter ? 1 : 0);
+  // Assemble + enrich the "Litter on Ground" card from a mating. The public
+  // matings feed has no puppy counts / whelping date, so those stay blank;
+  // sire/dam health is enriched from their profiles and phone from the kennel.
+  const handleShareLitter = async (m: RecentMating) => {
+    if (litterShareBusy) return;
+    setLitterShareBusy(true);
+    try {
+      // Breeder phone is served inline on the record now — no secondary call.
+      const breederPhone = m.breeder_phone ?? (m as any).phone ?? "";
+      // Puppy counts + whelping date now come straight off the mating record.
+      const male = m.puppy_count?.male_puppies;
+      const female = m.puppy_count?.female_puppies;
+      const hasCounts = male != null || female != null;
+      const healthy = Number(male ?? 0) + Number(female ?? 0);
+      const card: LitterShareCardProps = {
+        kennelSuffix: m.kennel_name,
+        sireName: m.sire?.name,
+        sireSub: parentSubFromMating(m.sire),
+        damName: m.dam?.name,
+        damSub: parentSubFromMating(m.dam),
+        whelpingDate: formatDate(m.puppy_dob?.whelping_date),
+        totalPups: hasCounts ? String(healthy) : null,
+        malePups: male != null ? String(male) : null,
+        femalePups: female != null ? String(female) : null,
+        breederName: m.breeder ?? null,
+        breederPhone,
+        breederCity: m.city,
+      };
+      setPreviewMating(null);
+      setLitterShareCard(card);
+    } finally {
+      setLitterShareBusy(false);
+    }
+  };
+
+  const activeFilterCount = cityFilter !== "All" ? 1 : 0;
 
   const openFilters = () => {
     setTempCity(cityFilter);
-    setTempLitter(litterFilter);
     setShowFilterModal(true);
   };
 
   const applyFilters = () => {
     setCityFilter(tempCity);
-    setLitterFilter(tempLitter);
     setShowFilterModal(false);
   };
 
   const resetFilters = () => {
     setTempCity("All");
-    setTempLitter(false);
   };
 
   const {
@@ -215,8 +261,11 @@ export default function RecentMatingsScreen() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<MatingsPage>({
-    queryKey: ["/api/mobile/recent-matings"],
-    queryFn: ({ pageParam }) => fetchRecentMatingsPage(pageParam as number, 15),
+    queryKey: [onGroundOnly ? "/api/mobile/litters" : "/api/mobile/recent-matings"],
+    queryFn: ({ pageParam }) =>
+      onGroundOnly
+        ? fetchLittersPage(pageParam as number, 15)
+        : fetchRecentMatingsPage(pageParam as number, 15),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage?.pagination?.hasMorePages
@@ -233,6 +282,20 @@ export default function RecentMatingsScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  // The /litters feed filters server-side after pagination, so early pages can
+  // come back empty while more pages (with the actual litters) still exist. An
+  // empty FlatList won't reliably fire onEndReached, so keep pulling pages until
+  // some rows arrive or the feed is exhausted — otherwise the list would get
+  // stuck showing "No litters found" before the data ever loads.
+  const stillLoadingMore = matings.length === 0 && hasNextPage;
+  const showInitialLoader = isLoading || (stillLoadingMore && !isError);
+
+  useEffect(() => {
+    if (!isLoading && stillLoadingMore && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isLoading, stillLoadingMore, isFetchingNextPage, fetchNextPage]);
+
   const cities = useMemo(() => {
     const citySet = new Set<string>();
     matings.forEach((m) => {
@@ -247,18 +310,18 @@ export default function RecentMatingsScreen() {
     if (q) {
       results = results.filter(
         (m) =>
-          m.kennel_name.toLowerCase().includes(q) ||
-          m.sire.name.toLowerCase().includes(q) ||
-          m.dam.name.toLowerCase().includes(q) ||
-          (m.city && m.city.toLowerCase().includes(q)),
+          m.kennel_name?.toLowerCase().includes(q) ||
+          m.sire?.name?.toLowerCase().includes(q) ||
+          m.dam?.name?.toLowerCase().includes(q) ||
+          m.city?.toLowerCase().includes(q),
       );
     }
     if (cityFilter !== "All")
       results = results.filter((m) => m.city === cityFilter);
-    if (litterFilter)
-      results = results.filter((m) => m.litter_on_ground === true);
+    // The Litters tab now pulls from the dedicated /litters endpoint, which
+    // already returns only litters on the ground — no client-side filter needed.
     return results;
-  }, [matings, search, cityFilter, litterFilter]);
+  }, [matings, search, cityFilter]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -326,23 +389,8 @@ export default function RecentMatingsScreen() {
               </TouchableOpacity>
             </View>
           )}
-          {litterFilter && (
-            <View style={[styles.activeChip, styles.activeChipGreen]}>
-              <Ionicons name="paw" size={11} color="#fff" />
-              <Text style={styles.activeChipTextWhite}>Litter on Ground</Text>
-              <TouchableOpacity
-                onPress={() => setLitterFilter(false)}
-                data-testid="btn-remove-litter-filter"
-              >
-                <Ionicons name="close" size={14} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          )}
           <TouchableOpacity
-            onPress={() => {
-              setCityFilter("All");
-              setLitterFilter(false);
-            }}
+            onPress={() => setCityFilter("All")}
             data-testid="btn-clear-all-filters"
           >
             <Text style={styles.clearAllText}>Clear all</Text>
@@ -350,14 +398,17 @@ export default function RecentMatingsScreen() {
         </View>
       )}
 
-      {/* Count row */}
-      <View style={styles.countRow}>
-        <Text style={styles.count} data-testid="text-mating-count">
-          {filtered.length} {filtered.length === 1 ? "mating" : "matings"}
-        </Text>
-      </View>
+      {/* Count row — hidden until we actually have rows, so it never flashes
+          "0 litters" while early empty pages are still loading. */}
+      {!showInitialLoader && (
+        <View style={styles.countRow}>
+          <Text style={styles.count} data-testid="text-mating-count">
+            {filtered.length} {filtered.length === 1 ? nounS : nounP}
+          </Text>
+        </View>
+      )}
 
-      {isLoading ? (
+      {showInitialLoader ? (
         <ActivityIndicator
           size="large"
           color={COLORS.primary}
@@ -371,7 +422,7 @@ export default function RecentMatingsScreen() {
             size={48}
             color={COLORS.textMuted}
           />
-          <Text style={styles.emptyTitle}>Failed to load matings</Text>
+          <Text style={styles.emptyTitle}>Failed to load {nounP}</Text>
           <Text style={styles.emptyDesc}>
             Could not connect to the server. Please try again.
           </Text>
@@ -414,7 +465,7 @@ export default function RecentMatingsScreen() {
                 style={{ paddingVertical: 20 }}
               />
             ) : !hasNextPage && matings.length > 0 ? (
-              <Text style={styles.endText}>All matings loaded</Text>
+              <Text style={styles.endText}>All {nounP} loaded</Text>
             ) : null
           }
           ListEmptyComponent={
@@ -424,11 +475,11 @@ export default function RecentMatingsScreen() {
                 size={48}
                 color={COLORS.textMuted}
               />
-              <Text style={styles.emptyTitle}>No matings found</Text>
+              <Text style={styles.emptyTitle}>No {nounP} found</Text>
               <Text style={styles.emptyDesc}>
-                {search || cityFilter !== "All" || litterFilter
+                {search || cityFilter !== "All"
                   ? "Try adjusting your search or filters."
-                  : "No matings have been recorded recently."}
+                  : `No ${nounP} have been recorded recently.`}
               </Text>
             </View>
           }
@@ -687,9 +738,9 @@ export default function RecentMatingsScreen() {
                                       style={styles.lbName}
                                       numberOfLines={1}
                                     >
-                                      Litter {entry.litter_letter}
+                                      {entry.litter_letter} Litter
                                       {entry.kennel
-                                        ? ` from ${entry.kennel}`
+                                        ? ` - ${entry.kennel}`
                                         : ""}
                                     </Text>
                                     <Text style={styles.lbMeta}>
@@ -778,10 +829,34 @@ export default function RecentMatingsScreen() {
                       </View>
                     </>
                   )}
+
+                {previewMating.litter_on_ground && (
+                  <TouchableOpacity
+                    style={styles.shareLitterBtn}
+                    activeOpacity={0.85}
+                    disabled={litterShareBusy}
+                    onPress={() => handleShareLitter(previewMating)}
+                  >
+                    {litterShareBusy ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="share-social" size={18} color="#fff" />
+                    )}
+                    <Text style={styles.shareLitterBtnText}>
+                      {litterShareBusy ? "Preparing…" : "Share Litter on Ground"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             );
           })()}
       </BottomSheetModal>
+
+      <LitterShareModal
+        visible={!!litterShareCard}
+        onClose={() => setLitterShareCard(null)}
+        card={litterShareCard ?? {}}
+      />
 
       {/* Filter modal */}
       <BottomSheetModal
@@ -799,47 +874,7 @@ export default function RecentMatingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.filterSectionTitle}>Status</Text>
-          <TouchableOpacity
-            style={[
-              styles.litterToggle,
-              tempLitter && styles.litterToggleActive,
-            ]}
-            onPress={() => setTempLitter(!tempLitter)}
-            activeOpacity={0.7}
-            data-testid="filter-litter-toggle"
-          >
-            <Ionicons
-              name="paw"
-              size={16}
-              color={tempLitter ? "#fff" : COLORS.primary}
-            />
-            <Text
-              style={[
-                styles.litterToggleText,
-                tempLitter && styles.litterToggleTextActive,
-              ]}
-            >
-              Litter on Ground
-            </Text>
-            <View
-              style={[
-                styles.toggleSwitch,
-                tempLitter && styles.toggleSwitchActive,
-              ]}
-            >
-              <View
-                style={[
-                  styles.toggleThumb,
-                  tempLitter && styles.toggleThumbActive,
-                ]}
-              />
-            </View>
-          </TouchableOpacity>
-
-          <Text style={[styles.filterSectionTitle, { marginTop: 20 }]}>
-            City
-          </Text>
+          <Text style={styles.filterSectionTitle}>City</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1220,6 +1255,18 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   applyButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  shareLitterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+    marginTop: 16,
+  },
+  shareLitterBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 
   previewHeader: {
     flexDirection: "row",

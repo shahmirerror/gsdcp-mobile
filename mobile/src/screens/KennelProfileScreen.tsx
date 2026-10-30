@@ -24,6 +24,9 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { useResponsive } from "../lib/useResponsive";
 import { formatDate } from "../lib/dateUtils";
 import { fetchKennelDetail, KennelDetail, KennelMating, KennelBreeder, Breeder } from "../lib/api";
+import { fetchParentSub } from "../lib/litterShare";
+import LitterShareModal from "../components/LitterShareModal";
+import type { LitterShareCardProps } from "../components/LitterShareCard";
 import type { KennelDirectoryStackParamList } from "../navigation/AppNavigator";
 
 type Nav = NativeStackNavigationProp<KennelDirectoryStackParamList, "KennelProfile">;
@@ -67,10 +70,14 @@ function MatingRow({
   mating,
   onSirePress,
   onDamPress,
+  onShare,
+  shareBusy,
 }: {
   mating: KennelMating;
   onSirePress: () => void;
   onDamPress: () => void;
+  onShare?: () => void;
+  shareBusy?: boolean;
 }) {
   return (
     <View style={styles.matingCard}>
@@ -133,6 +140,24 @@ function MatingRow({
           </>
         ) : null}
       </View>
+
+      {onShare ? (
+        <TouchableOpacity
+          style={styles.shareLitterBtn}
+          onPress={onShare}
+          disabled={shareBusy}
+          activeOpacity={0.85}
+        >
+          {shareBusy ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="share-social" size={16} color="#fff" />
+          )}
+          <Text style={styles.shareLitterBtnText}>
+            {shareBusy ? "Preparing…" : "Share Litter on Ground"}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -164,6 +189,10 @@ export default function KennelProfileScreen() {
       tabScrollRef.current?.scrollTo({ x: Math.max(0, x - 16), animated: true });
     }
   }, [activeTab]);
+
+  const [litterShareBusy, setLitterShareBusy] = useState(false);
+  const [litterShareCard, setLitterShareCard] =
+    useState<LitterShareCardProps | null>(null);
 
   const { data, isLoading, isError, refetch, isRefetching } =
     useQuery<KennelDetail>({
@@ -220,6 +249,34 @@ export default function KennelProfileScreen() {
         : null;
   const showEmail = kennel.email || primaryBreeder?.email || null;
 
+  // Assemble the "Litter on Ground" card from a kennel mating. KennelMating has
+  // no title/HD-ED, so the sire/dam sub-lines are enriched from their profiles;
+  // it also carries no whelping date or male/female split, so those stay blank.
+  const handleShareLitter = async (m: KennelMating) => {
+    if (litterShareBusy) return;
+    setLitterShareBusy(true);
+    try {
+      const sireSub = await fetchParentSub(m.sire_dog_id);
+      const damSub = await fetchParentSub(m.dam_dog_id);
+      setLitterShareCard({
+        kennelSuffix: kennel.suffix || kennel.prefix || kennel.kennelName,
+        sireName: m.sire_name,
+        sireSub,
+        damName: m.dam_name,
+        damSub,
+        whelpingDate: null,
+        totalPups: m.puppies != null ? String(m.puppies) : null,
+        malePups: null,
+        femalePups: null,
+        breederName: primaryBreeder?.name ?? null,
+        breederPhone: showPhone,
+        breederCity: kennel.city ?? null,
+      });
+    } finally {
+      setLitterShareBusy(false);
+    }
+  };
+
   // Only show tabs that have content; Details is always present.
   const tabs: { key: TabKey; label: string; icon: string; count?: number }[] = [
     { key: "details" as const, label: "Details", icon: "information-circle-outline" as const },
@@ -237,6 +294,7 @@ export default function KennelProfileScreen() {
   };
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
@@ -549,6 +607,12 @@ export default function KennelProfileScreen() {
                         name: m.dam_name.trim(),
                       })
                     }
+                    onShare={
+                      Number(m.puppies) > 0
+                        ? () => handleShareLitter(m)
+                        : undefined
+                    }
+                    shareBusy={litterShareBusy}
                   />
                 </View>
               ))}
@@ -568,6 +632,13 @@ export default function KennelProfileScreen() {
 
       <View style={{ height: 32 }} />
     </ScrollView>
+
+    <LitterShareModal
+      visible={!!litterShareCard}
+      onClose={() => setLitterShareCard(null)}
+      card={litterShareCard ?? {}}
+    />
+    </>
   );
 }
 
@@ -962,6 +1033,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.textMuted,
     marginHorizontal: 2,
   },
+  shareLitterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  shareLitterBtnText: { color: "#fff", fontSize: FONT_SIZES.sm, fontWeight: "700" },
   emptyState: {
     alignItems: "center",
     paddingTop: 40,

@@ -265,9 +265,9 @@ export default function ShowsScreen() {
     if (q) {
       results = results.filter(
         (s) =>
-          s.name.toLowerCase().includes(q) ||
-          (s.city && s.city.toLowerCase().includes(q)) ||
-          s.judges.some((j) => j.full_name.toLowerCase().includes(q)),
+          s.name?.toLowerCase().includes(q) ||
+          s.city?.toLowerCase().includes(q) ||
+          s.judges?.some((j) => j.full_name?.toLowerCase().includes(q)),
       );
     }
 

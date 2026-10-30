@@ -25,17 +25,19 @@ type Nav = NativeStackNavigationProp<any>;
 type SelectedDog = {
   id: string;
   name: string;
-  KP: string | null;
-  foreign_reg_no?: string | null;
+  KP: string | number | null;
+  foreign_reg_no?: string | number | null;
   sex: string;
   color: string;
   owner: string;
 };
 
-function kpLabel(kp?: string | null, foreign?: string | null): string {
-  const k = (kp ?? "").trim();
+function kpLabel(kp?: string | number | null, foreign?: string | number | null): string {
+  // KP / foreign_reg_no come from integer DB columns, so the API can send them
+  // as numbers — always String() before calling string methods or the render crashes.
+  const k = String(kp ?? "").trim();
   if (k && k !== "0") return `KP ${k}`;
-  const f = (foreign ?? "").trim();
+  const f = String(foreign ?? "").trim();
   return f || "—";
 }
 
@@ -186,11 +188,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
           ? pbs.mother.map(String)
           : positions.filter((_, i) => sides[i] === "mother");
 
-        const genLabel = `${sirePositions.join(",")} - ${damPositions.join(",")} (Sire - Dam)`;
-
-        const patternLabel = entry.line_breeding_pattern
-          ? entry.line_breeding_pattern.replace(/_/g, " ")
-          : null;
+        const genLabel = `${sirePositions.join(",")} - ${damPositions.join(",")}`;
 
         if ((entry.type === "litter_pair" || entry.type === "litter_group") && Array.isArray(entry.dogs) && entry.dogs.length > 0) {
           const isExpanded = expandedLitters.has(idx);
@@ -207,7 +205,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
               >
                 <View style={styles.lineBreedInfo}>
                   <Text style={styles.lineBreedName} numberOfLines={1}>
-                    Litter {entry.litter_letter}{entry.kennel ? ` from ${entry.kennel}` : ""}
+                    {entry.litter_letter} Litter{entry.kennel ? ` - ${entry.kennel}` : ""}
                   </Text>
                   <Text style={styles.lineBreedMeta}>{genLabel}</Text>
                 </View>
@@ -241,14 +239,7 @@ function LineBreedingSection({ entries }: { entries: LineBreedingEntry[] }) {
             onPress={() => entry.id ? navigation.navigate("DogsTab", { screen: "DogProfile", params: { id: String(entry.id), name: entry.dog_name } }) : undefined}
           >
             <View style={styles.lineBreedInfo}>
-              <View style={styles.lineBreedNameRow}>
-                <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
-                {patternLabel && (
-                  <View style={styles.patternBadge}>
-                    <Text style={styles.patternBadgeText}>{patternLabel}</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={styles.lineBreedName} numberOfLines={1}>{entry.dog_name}</Text>
               <Text style={styles.lineBreedMeta}>{genLabel}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />

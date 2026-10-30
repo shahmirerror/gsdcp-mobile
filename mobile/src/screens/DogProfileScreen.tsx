@@ -15,6 +15,8 @@ import {
   LayoutChangeEvent,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Modal,
+  Dimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -47,8 +49,34 @@ import LazyImage from "../components/LazyImage";
 import TransferDogModal from "../components/TransferDogModal";
 import LockedRecord from "../components/LockedRecord";
 import ImageCropModal from "../components/ImageCropModal";
+import ShareDogCard from "../components/ShareDogCard";
+import {
+  captureDogCard,
+  shareImageWithLink,
+  dogShareUrl,
+} from "../lib/shareDogProfile";
 
 const heroBg = require("../../assets/hero-bg.png");
+
+/**
+ * Strips the kennel affix shared by a set of litter-mate names, leaving the
+ * call names (e.g. ["Battösai von FürstenKämpfer", "Baba Yaga von FürstenKämpfer"]
+ * → ["Battösai", "Baba Yaga"]). Works by removing the longest common trailing
+ * token run (the kennel suffix), always keeping at least one token.
+ */
+function stripSharedKennelAffix(names: string[]): string[] {
+  if (names.length < 2) return names;
+  const toks = names.map((n) => n.split(/\s+/).filter(Boolean));
+  const minLen = Math.min(...toks.map((t) => t.length));
+  let common = 0;
+  for (let k = 1; k < minLen; k++) {
+    const ref = toks[0][toks[0].length - k].toLowerCase();
+    if (toks.every((t) => t[t.length - k]?.toLowerCase() === ref)) common = k;
+    else break;
+  }
+  if (common === 0) return names;
+  return toks.map((t) => t.slice(0, t.length - common).join(" "));
+}
 
 
 function DetailItem({
@@ -316,6 +344,12 @@ export default function DogProfileScreen() {
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [showTransferForm, setShowTransferForm] = useState(false);
+
+  // Shareable dog-profile card (story image) state.
+  const shareCardRef = useRef<View>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+
   // Chosen photo awaiting the crop step (dog photos crop to 640:432, matching
   // the web app cropper and the on-screen preview frame).
   const [cropState, setCropState] = useState<
@@ -475,6 +509,129 @@ export default function DogProfileScreen() {
     if (years > 0) return months > 0 ? `${years}y ${months}m` : `${years}y`;
     return months > 0 ? `${months}m` : "< 1m";
   })();
+
+  /* ── Shareable card data ─────────────────────────────────────────────────
+   * Maps the dog detail onto the GSDCP share template. Sire/dam sub-lines pull
+   * from the first pedigree generation when available; anything missing is just
+   * omitted so the card stays clean. */
+  const regNumber =
+    dog.KP && String(dog.KP).trim() && String(dog.KP) !== "0"
+      ? `KP ${dog.KP}`
+      : dog.foreign_reg_no
+        ? String(dog.foreign_reg_no)
+        : "";
+
+  const gen1: Record<string, any> =
+    pedigree && !Array.isArray(pedigree) ? ((pedigree as any).gen1 ?? {}) : {};
+  const parentSub = (anc: any): string => {
+    if (!anc || typeof anc === "string") return "";
+    const coat = anc.hair ?? anc.coat ?? null;
+    const hd = anc.hd ?? null;
+    const ed = anc.ed ?? null;
+    const parts: string[] = [];
+    if (anc.show_title) parts.push(String(anc.show_title));
+    if (coat) parts.push(String(coat));
+    if (hd || ed) parts.push(`${hd ?? "—"}/${ed ?? "—"}`);
+    return parts.join(" | ");
+  };
+
+  // Show every common ancestor with its line-breeding positions, e.g.
+  // "Vegas du Haut Mansard (5 - 5,5) · Furbo I degli Achei (4 - 3)".
+  const lineBreedingSummary = (() => {
+    const parts = (lineBreeding as LineBreedingEntry[])
+      .map((e) => {
+        if (!e) return "";
+        const pbs = e.positions_by_side;
+        const positions = Array.isArray(e.positions) ? e.positions.map(String) : [];
+        const sides = Array.isArray(e.sides) ? e.sides.map(String) : [];
+        const sirePos = Array.isArray(pbs?.father)
+          ? pbs!.father!.map(String)
+          : positions.filter((_, i) => sides[i] === "father");
+        const damPos = Array.isArray(pbs?.mother)
+          ? pbs!.mother!.map(String)
+          : positions.filter((_, i) => sides[i] === "mother");
+        const posLabel = [sirePos.join(","), damPos.join(",")]
+          .filter(Boolean)
+          .join(" - ");
+        // For a litter the API puts the member dogs in `dog_name` (e.g.
+        // "Waga / Wasa"); surface it as "W Litter - {kennel} (Waga / Wasa)".
+        const isLitter = !!e.type?.includes("litter");
+        const litterDogs =
+          (e.dog_name && e.dog_name.trim()) ||
+          (Array.isArray(e.dogs)
+            ? e.dogs.map((d) => d.dog_name).filter(Boolean).join(" / ")
+            : "");
+        const name = isLitter
+          ? `${e.litter_letter ?? ""} Litter`.trim() +
+            (e.kennel ? ` - ${e.kennel}` : "") +
+            (litterDogs ? ` (${litterDogs})` : "")
+          : (e.dog_name && e.dog_name.trim()) || "";
+        if (!name) return "";
+        return posLabel ? `(${posLabel}) ${name}` : name;
+      })
+      .filter(Boolean);
+    if (parts.length === 0) return "No common ancestors found in 5 generations";
+    return parts.join(", ");
+  })();
+
+  // Sibling call names — the shared kennel affix is stripped.
+  const siblingsSummary = (() => {
+    const names = (siblings as Dog[])
+      .map((s) => s?.dog_name)
+      .filter((n): n is string => Boolean(n && n.trim()))
+      .map((n) => n.trim());
+    if (names.length === 0) return "";
+    const call = stripSharedKennelAffix(names);
+    return call.slice(0, 6).join(", ") + (call.length > 6 ? `, +${call.length - 6} more` : "");
+  })();
+
+  const ownerName = Array.isArray(dog.owner) ? (dog.owner[0]?.name ?? "") : "";
+  const ownerCity = Array.isArray(dog.owner) ? (dog.owner[0]?.city ?? "") : "";
+
+  const shareCardProps = {
+    name: dog.dog_name,
+    showTitle: dog.show_rating || (dog.titles?.length ? dog.titles.join(" ") : ""),
+    regNumber,
+    imageUri: localImageUri ?? (dog.imageUrl && dog.imageUrl.length > 0 ? dog.imageUrl : null),
+    gender: dog.sex,
+    dob: dog.dob ? formatDate(dog.dob) : "",
+    chip: dog.microchip,
+    colour: dog.color,
+    coat: dog.hair,
+    sireName: dog.sire,
+    sireSub: parentSub(gen1.sire),
+    damName: dog.dam,
+    damSub: parentSub(gen1.dam),
+    lineBreeding: lineBreedingSummary,
+    siblings: siblingsSummary,
+    breeder: dog.breeder,
+    owner: ownerName,
+    city: ownerCity,
+    workingTitle: dog.working_title,
+    survey: dog.breed_survey_period,
+  };
+
+  const handleDoShare = async () => {
+    if (shareBusy) return;
+    setShareBusy(true);
+    try {
+      // Let the card (and any just-decoded photo) finish painting before the snapshot.
+      await new Promise((r) => setTimeout(r, 120));
+      const uri = await captureDogCard(shareCardRef);
+      const link = dogShareUrl(dog.dog_name, dog.foreign_reg_no);
+      const ok = await shareImageWithLink(uri, link, {
+        title: `Share ${dog.dog_name}`,
+        message: dog.dog_name,
+      });
+      if (!ok) {
+        Alert.alert("Sharing unavailable", "Sharing isn't supported on this device.");
+      }
+    } catch {
+      Alert.alert("Could not share", "Please try again.");
+    } finally {
+      setShareBusy(false);
+    }
+  };
 
   // Only surface tabs that actually have content, with counts on the data tabs,
   // so most dogs fit without a horizontal scroll and never land on an empty tab.
@@ -762,6 +919,16 @@ export default function DogProfileScreen() {
         {showStudBookTwo ? (
           <Text style={styles.studBookMark}>Stud Book 2</Text>
         ) : null}
+
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={() => setShareOpen(true)}
+          activeOpacity={0.8}
+          data-testid="btn-share-profile"
+        >
+          <Ionicons name="share-social" size={16} color="#fff" />
+          <Text style={styles.shareButtonText}>Share Profile</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.tabBarWrap, { paddingTop: insets.top + 6 }]}>
@@ -966,8 +1133,8 @@ export default function DogProfileScreen() {
                               style={styles.lineBreedName}
                               numberOfLines={1}
                             >
-                              Litter {entry.litter_letter}
-                              {entry.kennel ? ` from ${entry.kennel}` : ""}
+                              {entry.litter_letter} Litter
+                              {entry.kennel ? ` - ${entry.kennel}` : ""}
                             </Text>
                             <Text style={styles.lineBreedMeta}>
                               {genLabel}
@@ -1717,6 +1884,88 @@ export default function DogProfileScreen() {
         }}
       />
     )}
+
+    {/* ── Share profile: full-screen preview + actions (ShepherdIQ-style) ── */}
+    <Modal
+      visible={shareOpen}
+      animationType="slide"
+      onRequestClose={() => setShareOpen(false)}
+      statusBarTranslucent
+    >
+      {(() => {
+        const previewW = Math.min(Dimensions.get("window").width - 32, 400);
+        const scale = previewW / 1080;
+        const previewH = 1920 * scale;
+        return (
+          <View style={styles.shareScreen}>
+            {/* Header */}
+            <View style={[styles.shareHeader, { paddingTop: insets.top + 6 }]}>
+              <TouchableOpacity
+                onPress={() => setShareOpen(false)}
+                style={styles.shareHeaderBack}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="arrow-back" size={24} color="#0F172A" />
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.shareHeaderKicker}>SHARE PROFILE</Text>
+                <Text style={styles.shareHeaderTitle} numberOfLines={1}>
+                  {dog.dog_name}
+                </Text>
+              </View>
+            </View>
+
+            {/* Live scaled preview — captured full-res on share */}
+            <ScrollView
+              contentContainerStyle={styles.sharePreviewScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.sharePreviewShadow}>
+                <View
+                  style={{
+                    width: previewW,
+                    height: previewH,
+                    overflow: "hidden",
+                    borderRadius: 14,
+                  }}
+                >
+                  <View
+                    style={{
+                      position: "absolute",
+                      left: (previewW - 1080) / 2,
+                      top: (previewH - 1920) / 2,
+                      transform: [{ scale }],
+                    }}
+                  >
+                    <ShareDogCard ref={shareCardRef} {...shareCardProps} />
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Action panel */}
+            <View style={[styles.sharePanel, { paddingBottom: insets.bottom + 12 }]}>
+              <TouchableOpacity
+                style={[styles.sharePanelBtn, { flex: 1 }]}
+                onPress={handleDoShare}
+                activeOpacity={0.85}
+                disabled={shareBusy}
+              >
+                {shareBusy ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="share-social" size={18} color="#fff" />
+                )}
+                <Text style={styles.sharePanelBtnText}>
+                  {shareBusy ? "Preparing…" : "Share"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })()}
+    </Modal>
     </>
   );
 }
@@ -1762,6 +2011,110 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
+  },
+  shareButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: BORDER_RADIUS.full,
+    marginTop: 14,
+  },
+  shareButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  shareScreen: {
+    flex: 1,
+    backgroundColor: "#f6f8f7",
+  },
+  shareHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  shareHeaderBack: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shareHeaderKicker: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    color: COLORS.textMuted,
+  },
+  shareHeaderTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginTop: 1,
+  },
+  sharePreviewScroll: {
+    flexGrow: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  sharePreviewShadow: {
+    borderRadius: 18,
+    backgroundColor: "#fff",
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 28,
+    elevation: 10,
+  },
+  sharePanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  sharePanelLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+  },
+  sharePanelLinkText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.textSecondary,
+  },
+  sharePanelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 14,
+    minWidth: 130,
+  },
+  sharePanelBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
   },
   profileSection: {
     alignItems: "center",

@@ -23,6 +23,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from "../lib/theme";
 import { formatDate } from "../lib/dateUtils";
+import { fetchParentSub, parentSubFromMating } from "../lib/litterShare";
+import LitterShareModal from "../components/LitterShareModal";
+import type { LitterShareCardProps } from "../components/LitterShareCard";
 import {
   fetchMemberDetail,
   Member,
@@ -1327,6 +1330,10 @@ const DOG_HAIR_OPTS   = ["All", "Stock Hair", "Long Stock Hair"] as const;
 function DogsTab({ userId }: { userId: string }) {
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
+  // `userId` is the member_id (what fetchMyDogs expects). Ownership changes are
+  // keyed on the account id, so the transfer modal gets user.id — not member_id,
+  // which the backend would resolve to the wrong member ("insufficient funds").
+  const { user } = useAuth();
   const [previewDog, setPreviewDog]       = useState<MemberOwnedDog | null>(null);
   const [search, setSearch]               = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -1684,7 +1691,7 @@ function DogsTab({ userId }: { userId: string }) {
           KP: transferDog.KP,
           foreign_reg_no: transferDog.foreign_reg_no,
         } : null}
-        userId={userId}
+        userId={String(user?.id ?? "")}
         onSuccess={handleTransferSuccess}
       />
 
@@ -2149,17 +2156,19 @@ function certDogToDog(d: DogCardShape, sex: string): Dog {
 type DogOption = {
   id: string;
   name: string;
-  KP: string | null;
-  foreign_reg_no?: string | null;
+  KP: string | number | null;
+  foreign_reg_no?: string | number | null;
   owner?: string;
   sex?: string;
   color?: string;
 };
 
-function kpLabel(kp?: string | null, foreign?: string | null): string {
-  const k = (kp ?? "").trim();
+function kpLabel(kp?: string | number | null, foreign?: string | number | null): string {
+  // KP / foreign_reg_no come from integer DB columns, so the API can send them
+  // as numbers — always String() before calling string methods or the render crashes.
+  const k = String(kp ?? "").trim();
   if (k && k !== "0") return `KP ${k}`;
-  const f = (foreign ?? "").trim();
+  const f = String(foreign ?? "").trim();
   return f || "—";
 }
 
@@ -2236,7 +2245,7 @@ function DogDropdown({
           .filter(
             (d) =>
               (d.name ?? "").toLowerCase().includes(q) ||
-              (d.KP ?? "").toLowerCase().includes(q),
+              String(d.KP ?? "").toLowerCase().includes(q),
           )
           .slice(0, 50),
       );
@@ -3399,6 +3408,50 @@ function LitterInspectionTab() {
       refetchOnMount: "always",
     });
 
+  // "Litter on Ground" share card — assembled from the inspection record, the
+  // breeder (logged-in user) and the sire/dam profiles (enriched for health).
+  const [litterShareBusy, setLitterShareBusy] = useState(false);
+  const [litterShareCard, setLitterShareCard] =
+    useState<LitterShareCardProps | null>(null);
+
+  const handleShareLitter = async (d: LitterInspectionDetail) => {
+    if (litterShareBusy) return;
+    setLitterShareBusy(true);
+    try {
+      // Prefer the record's own title/hd_ed (same as the recent-matings card);
+      // fall back to a full dog-profile fetch when those keys aren't present.
+      const sireSub =
+        parentSubFromMating(d.sire) || (await fetchParentSub(d.sire?.id));
+      const damSub =
+        parentSubFromMating(d.dam) || (await fetchParentSub(d.dam?.id));
+      let kennelSuffix = "";
+      try {
+        const prof = await fetchProfileShow(user!.id);
+        const k = prof?.myKennel as any;
+        kennelSuffix =
+          k?.suffix || k?.prefix || k?.kennelName || k?.kennel_name || "";
+      } catch {
+        /* kennel affix is optional */
+      }
+      setLitterShareCard({
+        kennelSuffix,
+        sireName: d.sire?.name,
+        sireSub,
+        damName: d.dam?.name,
+        damSub,
+        whelpingDate: d.whelping_date ? formatDate(d.whelping_date) : null,
+        totalPups: d.total_puppies != null ? String(d.total_puppies) : null,
+        malePups: d.male_puppies,
+        femalePups: d.female_puppies,
+        breederName: user?.name || null,
+        breederPhone: user?.phone || null,
+        breederCity: user?.city || null,
+      });
+    } finally {
+      setLitterShareBusy(false);
+    }
+  };
+
   const setNum = (key: keyof typeof form) => (v: string) =>
     setForm((f) => ({ ...f, [key]: v.replace(/[^0-9]/g, "") }));
 
@@ -3448,9 +3501,9 @@ function LitterInspectionTab() {
         sire_id: parseInt(inspSire.id.replace(/^dog-/, ""), 10),
         dam_id: parseInt(inspDam.id.replace(/^dog-/, ""), 10),
         sire_name: inspSire.name,
-        sire_kp: inspSire.KP,
+        sire_kp: String(inspSire.KP ?? ""),
         dam_name: inspDam.name,
-        dam_kp: inspDam.KP,
+        dam_kp: String(inspDam.KP ?? ""),
         date_of_whelping: whelpingApiDate,
         date_of_inspection: today,
         total_puppies: form.totalPups.trim() || undefined,
@@ -3591,12 +3644,36 @@ function LitterInspectionTab() {
                 </Text>
               </View>
             )}
+
+            {detail.status === "Approved" && (
+              <TouchableOpacity
+                style={tStyles.shareLitterBtn}
+                activeOpacity={0.85}
+                disabled={litterShareBusy}
+                onPress={() => handleShareLitter(detail)}
+              >
+                {litterShareBusy ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="share-social" size={18} color="#fff" />
+                )}
+                <Text style={tStyles.shareLitterBtnText}>
+                  {litterShareBusy ? "Preparing…" : "Share Litter on Ground"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <Text style={tStyles.emptyRowText}>
             Could not load inspection details.
           </Text>
         )}
+
+        <LitterShareModal
+          visible={!!litterShareCard}
+          onClose={() => setLitterShareCard(null)}
+          card={litterShareCard ?? {}}
+        />
       </View>
     );
   }
@@ -4076,6 +4153,55 @@ function LitterRegistrationTab() {
       refetchOnMount: "always",
     });
 
+  // "Litter on Ground" share card (same as inspections; approved regs only).
+  const [litterShareBusy, setLitterShareBusy] = useState(false);
+  const [litterShareCard, setLitterShareCard] =
+    useState<LitterShareCardProps | null>(null);
+
+  const handleShareLitter = async (d: LitterRegistrationDetail) => {
+    if (litterShareBusy) return;
+    setLitterShareBusy(true);
+    try {
+      // Prefer the record's own title/hd_ed (same as the recent-matings card);
+      // fall back to a full dog-profile fetch when those keys aren't present.
+      const sireSub =
+        parentSubFromMating(d.sire) || (await fetchParentSub(d.sire?.id));
+      const damSub =
+        parentSubFromMating(d.dam) || (await fetchParentSub(d.dam?.id));
+      let kennelSuffix = "";
+      try {
+        const prof = await fetchProfileShow(user!.id);
+        const k = prof?.myKennel as any;
+        kennelSuffix =
+          k?.suffix || k?.prefix || k?.kennelName || k?.kennel_name || "";
+      } catch {
+        /* optional */
+      }
+      const pups = d.puppies ?? [];
+      const males =
+        pups.filter((p) => p.sex === "Male").length || d.male_puppies || 0;
+      const females =
+        pups.filter((p) => p.sex === "Female").length || d.female_puppies || 0;
+      const total = pups.length || d.puppy_count || males + females;
+      setLitterShareCard({
+        kennelSuffix,
+        sireName: d.sire?.name,
+        sireSub,
+        damName: d.dam?.name,
+        damSub,
+        whelpingDate: d.dob ? formatDate(d.dob) : null,
+        totalPups: total ? String(total) : null,
+        malePups: males ? String(males) : null,
+        femalePups: females ? String(females) : null,
+        breederName: user?.name || null,
+        breederPhone: user?.phone || null,
+        breederCity: user?.city || null,
+      });
+    } finally {
+      setLitterShareBusy(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!regSire) {
       setSubmitError("Sire dog is required.");
@@ -4124,10 +4250,10 @@ function LitterRegistrationTab() {
         kennel_id: user!.myKennel?.kennel_id ?? null,
         sire_id: parsedSireId,
         sire_name: regSire.name,
-        sire_kp: regSire.KP,
+        sire_kp: String(regSire.KP ?? ""),
         dam_id: parsedDamId,
         dam_name: regDam.name,
-        dam_kp: regDam.KP,
+        dam_kp: String(regDam.KP ?? ""),
         date_of_whelping: whelpingApiDate,
         male_pups: malePups,
         female_pups: femalePups,
@@ -4469,12 +4595,36 @@ function LitterRegistrationTab() {
                 })}
               </>
             )}
+
+            {detail.status === "Approved" && (
+              <TouchableOpacity
+                style={tStyles.shareLitterBtn}
+                activeOpacity={0.85}
+                disabled={litterShareBusy}
+                onPress={() => handleShareLitter(detail)}
+              >
+                {litterShareBusy ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="share-social" size={18} color="#fff" />
+                )}
+                <Text style={tStyles.shareLitterBtnText}>
+                  {litterShareBusy ? "Preparing…" : "Share Litter on Ground"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <Text style={tStyles.emptyRowText}>
             Could not load registration details.
           </Text>
         )}
+
+        <LitterShareModal
+          visible={!!litterShareCard}
+          onClose={() => setLitterShareCard(null)}
+          card={litterShareCard ?? {}}
+        />
       </View>
     );
   }
@@ -7046,6 +7196,18 @@ const tStyles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
+
+  shareLitterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: 14,
+    marginTop: 16,
+  },
+  shareLitterBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 
   /* ── Load more button ── */
   loadMoreBtn: {

@@ -9,6 +9,8 @@ import { AuthProvider } from "./src/contexts/AuthContext";
 import { useAppUpdate } from "./src/lib/useAppUpdate";
 import { handleNotificationResponse } from "./src/lib/notifications";
 import { initGlobalErrorReporting, flushPendingErrorReport } from "./src/lib/errorReporting";
+import { initFacebookAnalytics } from "./src/lib/facebookAnalytics";
+import { initDeepLinks } from "./src/lib/deepLinks";
 
 const splashLogo = require("./assets/splash-logo.png");
 const ccmsLogo = require("./assets/ccms-logo.png");
@@ -122,6 +124,12 @@ function AppContent() {
   useEffect(() => {
     initGlobalErrorReporting();
     flushPendingErrorReport();
+    // Meta (Facebook) SDK for ads & marketing attribution. No-ops until real
+    // credentials are set in app.json and the app is rebuilt natively.
+    initFacebookAnalytics();
+    // Deep links: open shared gsdcp.org/view_dogs/… links straight into the app.
+    const cleanupDeepLinks = initDeepLinks();
+    return () => cleanupDeepLinks();
   }, []);
 
   // Handle notification taps (foreground + background + killed-state)
